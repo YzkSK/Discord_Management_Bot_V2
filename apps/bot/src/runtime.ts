@@ -3,6 +3,12 @@ import { parseAppEnv } from "@discord-bot/config";
 import type { DbConnection } from "@discord-bot/db";
 import { createDbConnection } from "@discord-bot/db";
 import { realtimeDefaultDisabledEvents } from "@discord-bot/shared";
+import type { Client } from "discord.js";
+
+import {
+  createDiscordClient,
+  installDiscordLifecycleLogging
+} from "./discord/client.js";
 
 export interface BotRuntime {
   start: () => Promise<void>;
@@ -12,12 +18,15 @@ export interface BotRuntime {
 export interface BotRuntimeOptions {
   env?: AppEnv;
   createDb?: (databaseUrl: string) => DbConnection;
+  createDiscord?: () => Client;
 }
 
 export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
   const env = options.env ?? parseAppEnv();
   const createDb = options.createDb ?? createDbConnection;
+  const createDiscord = options.createDiscord ?? createDiscordClient;
   let dbConnection: DbConnection | null = null;
+  let discordClient: Client | null = null;
   let started = false;
 
   return {
@@ -27,6 +36,9 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
       }
 
       dbConnection = createDb(env.DATABASE_URL);
+      discordClient = createDiscord();
+      installDiscordLifecycleLogging(discordClient);
+      await discordClient.login(env.DISCORD_BOT_TOKEN);
       started = true;
 
       console.log("bot runtime started", {
@@ -42,6 +54,8 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
       }
 
       started = false;
+      discordClient?.destroy();
+      discordClient = null;
       await dbConnection?.close();
       dbConnection = null;
 
