@@ -6,7 +6,7 @@ The full product specification is in `discord_bot_complete_detailed_specificatio
 
 ## Requirements
 
-- Node.js 22 LTS
+- Node.js 24 LTS
 - pnpm 10+
 - Docker / Docker Compose
 
