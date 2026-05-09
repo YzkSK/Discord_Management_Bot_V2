@@ -9,6 +9,7 @@ import {
   createDiscordClient,
   installDiscordLifecycleLogging
 } from "./discord/client.js";
+import { installInteractionRouter } from "./discord/interactions.js";
 
 export interface BotRuntime {
   start: () => Promise<void>;
@@ -38,6 +39,7 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
       dbConnection = createDb(env.DATABASE_URL);
       discordClient = createDiscord();
       installDiscordLifecycleLogging(discordClient);
+      installInteractionRouter(discordClient);
       await discordClient.login(env.DISCORD_BOT_TOKEN);
       started = true;
 
