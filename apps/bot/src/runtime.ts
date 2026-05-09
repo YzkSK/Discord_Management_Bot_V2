@@ -1,7 +1,7 @@
 import type { AppEnv } from "@discord-bot/config";
 import { parseAppEnv } from "@discord-bot/config";
 import type { DbConnection } from "@discord-bot/db";
-import { createDbConnection } from "@discord-bot/db";
+import { createDbConnection, recordSystemBotStarted } from "@discord-bot/db";
 import { realtimeDefaultDisabledEvents } from "@discord-bot/shared";
 import type { Client } from "discord.js";
 
@@ -41,6 +41,9 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
       installDiscordLifecycleLogging(discordClient);
       installInteractionRouter(discordClient, { db: dbConnection.db });
       await discordClient.login(env.DISCORD_BOT_TOKEN);
+      await recordStartupLog(dbConnection, env).catch((error: unknown) => {
+        console.error("failed to record bot startup log", error);
+      });
       started = true;
 
       console.log("bot runtime started", {
@@ -64,4 +67,13 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
       console.log("bot runtime stopped", { reason });
     }
   };
+}
+
+async function recordStartupLog(dbConnection: DbConnection, env: AppEnv) {
+  await recordSystemBotStarted(dbConnection.db, {
+    dashboardUrl: env.PUBLIC_DASHBOARD_URL,
+    logLevel: env.LOG_LEVEL,
+    nodeVersion: process.version,
+    startedAt: new Date().toISOString()
+  });
 }
