@@ -109,6 +109,19 @@ importers:
         specifier: '*'
         version: 6.0.3
 
+  packages/discord-core:
+    dependencies:
+      '@discord-bot/shared':
+        specifier: workspace:*
+        version: link:../shared
+      discord.js:
+        specifier: '*'
+        version: 14.26.4
+    devDependencies:
+      typescript:
+        specifier: '*'
+        version: 6.0.3
+
   packages/shared:
     dependencies:
       zod:

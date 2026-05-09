@@ -1,0 +1,26 @@
+{
+  "name": "@discord-bot/discord-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "node -e \"console.log('discord-core: no tests yet')\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@discord-bot/shared": "workspace:*",
+    "discord.js": "*"
+  },
+  "devDependencies": {
+    "typescript": "*"
+  }
+}
