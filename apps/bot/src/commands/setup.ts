@@ -3,6 +3,8 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder
 } from "discord.js";
+import type { DbClient } from "@discord-bot/db";
+import { ensureGuildSetup } from "@discord-bot/db";
 
 export const setupCommand = new SlashCommandBuilder()
   .setName("setup")
@@ -10,8 +12,13 @@ export const setupCommand = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
   .setDMPermission(false);
 
+export interface SetupCommandContext {
+  db: DbClient;
+}
+
 export async function handleSetupCommand(
-  interaction: ChatInputCommandInteraction
+  interaction: ChatInputCommandInteraction,
+  context: SetupCommandContext
 ) {
   if (!interaction.guildId) {
     await interaction.reply({
@@ -29,8 +36,13 @@ export async function handleSetupCommand(
     return;
   }
 
+  await ensureGuildSetup(context.db, {
+    guildId: interaction.guildId,
+    name: interaction.guild?.name ?? null
+  });
+
   await interaction.reply({
-    content: "Setup command received. Guild registration is handled next.",
+    content: "Setup complete. This guild is registered.",
     ephemeral: true
   });
 }

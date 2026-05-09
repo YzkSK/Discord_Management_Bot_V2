@@ -39,7 +39,7 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
       dbConnection = createDb(env.DATABASE_URL);
       discordClient = createDiscord();
       installDiscordLifecycleLogging(discordClient);
-      installInteractionRouter(discordClient);
+      installInteractionRouter(discordClient, { db: dbConnection.db });
       await discordClient.login(env.DISCORD_BOT_TOKEN);
       started = true;
 
