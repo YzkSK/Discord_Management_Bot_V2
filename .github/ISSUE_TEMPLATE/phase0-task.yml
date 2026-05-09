@@ -1,0 +1,43 @@
+name: Phase0 Task
+description: Track a small Phase0 implementation task.
+title: "Phase0: "
+labels: ["phase:0", "type:task"]
+body:
+  - type: textarea
+    id: purpose
+    attributes:
+      label: Purpose
+      description: What does this issue accomplish?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What is included and excluded?
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done When
+      description: Checklist for closing this issue.
+      value: |
+        - [ ] Implementation is complete
+        - [ ] Relevant docs are updated
+        - [ ] Verification commands pass
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification Commands
+      value: |
+        ```bash
+        pnpm lint
+        pnpm typecheck
+        pnpm test
+        pnpm build
+        ```
+    validations:
+      required: true
