@@ -122,6 +122,19 @@ importers:
         specifier: '*'
         version: 6.0.3
 
+  packages/logger:
+    dependencies:
+      '@discord-bot/db':
+        specifier: workspace:*
+        version: link:../db
+      '@discord-bot/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      typescript:
+        specifier: '*'
+        version: 6.0.3
+
   packages/shared:
     dependencies:
       zod:
