@@ -1,6 +1,6 @@
 # Discord Integrated Management Bot
 
-Phase0 foundation for a Discord operations platform with bot, dashboard, database, Redis, VOICEVOX, CI, and GitHub Issue based development workflow.
+Foundation for a Discord operations platform with bot, dashboard, database, Redis, VOICEVOX, CI, and GitHub Issue based development workflow.
 
 The full product specification is in `discord_bot_complete_detailed_specification.md`.
 
@@ -33,6 +33,12 @@ On Linux/macOS, use `cp .env.example .env`.
 - `pnpm db:generate`: generate Drizzle migrations
 - `pnpm db:migrate`: apply Drizzle migrations
 
+## Current Phase Status
+
+- Phase0: repository, workspace, config, DB schema, Docker Compose, and CI foundation.
+- Phase1: bot runtime, Discord client, `/setup`, guild registration, and startup logging.
+- Phase2: logging ingestion, Redis Stream foundation, bot message log handlers, Dashboard logs API, and Dashboard logs page.
+
 ## Phase0 Completion Criteria
 
 - Workspace, packages, apps, Docker Compose, Drizzle, config validation, and CI are present.
@@ -53,3 +59,7 @@ Work is tracked with GitHub Issues.
 - Squash merge is the default; regular merge is allowed when the internal commit history matters.
 
 See `.github/ISSUE_TEMPLATE` and `.github/PULL_REQUEST_TEMPLATE` for the working format.
+
+## Logging
+
+Phase2 logging details are documented in `docs/logging-workflow.md`.
