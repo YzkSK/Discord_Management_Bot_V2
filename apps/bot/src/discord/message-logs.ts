@@ -15,7 +15,12 @@ import {
   type RedisStreamWriter
 } from "@discord-bot/redis";
 import type { NormalizedEvent } from "@discord-bot/shared";
-import { Events, type Client } from "discord.js";
+import {
+  Events,
+  type Client,
+  type Message,
+  type PartialMessage
+} from "discord.js";
 
 export interface InstallMessageLogHandlersOptions {
   db: DbClient;
@@ -42,16 +47,32 @@ export function installMessageLogHandlers(
   });
 
   client.on(Events.MessageCreate, (message) => {
+    if (shouldSkipMessageLog(message)) {
+      return;
+    }
+
     dispatcher.dispatch(normalizeMessageCreate(message));
   });
 
   client.on(Events.MessageUpdate, (oldMessage, newMessage) => {
+    if (shouldSkipMessageLog(newMessage)) {
+      return;
+    }
+
     dispatcher.dispatch(normalizeMessageUpdate(oldMessage, newMessage));
   });
 
   client.on(Events.MessageDelete, (message) => {
+    if (shouldSkipMessageLog(message)) {
+      return;
+    }
+
     dispatcher.dispatch(normalizeMessageDelete(message));
   });
+}
+
+export function shouldSkipMessageLog(message: Message | PartialMessage) {
+  return message.author?.bot === true;
 }
 
 async function writeMessageLogEvent(
