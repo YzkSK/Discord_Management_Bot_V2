@@ -12,7 +12,7 @@ export interface ResolveDashboardAccessInput {
   db: DbClient;
   guildId: string;
   userId: string | undefined;
-  ownerId: string | undefined;
+  isGuildOwner?: boolean;
   roleIds?: string[];
   requiredRole?: DashboardAccessRole;
 }
@@ -41,7 +41,7 @@ async function resolveDashboardAccessRole(input: ResolveDashboardAccessInput) {
     return null;
   }
 
-  if (input.ownerId === input.userId) {
+  if (input.isGuildOwner) {
     return "owner";
   }
 

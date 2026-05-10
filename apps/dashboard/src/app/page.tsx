@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 import { getDashboardSession } from "../auth";
 
 import { AuthStatus } from "./auth-status";
@@ -15,6 +17,10 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const session = await getDashboardSession();
+
+  if (!session?.user) {
+    redirect("/login");
+  }
 
   return (
     <main className="min-h-screen px-6 py-8">
