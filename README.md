@@ -23,6 +23,31 @@ pnpm build
 
 On Linux/macOS, use `cp .env.example .env`.
 
+## Docker Test Startup
+
+For an all-Docker test startup, keep Discord secrets and app secrets in `.env`, then run:
+
+```bash
+docker compose --profile app up -d --build
+docker compose --profile app logs -f bot
+```
+
+The app containers override service URLs internally, so the same `.env` can keep the local pnpm values:
+
+```env
+DATABASE_URL=postgres://discord_bot:discord_bot@localhost:5432/discord_bot
+REDIS_URL=redis://localhost:6379
+VOICEVOX_URL=http://localhost:50021
+```
+
+Inside Docker, Compose changes those URLs to `postgres`, `redis`, and `voicevox` service names. The dashboard is available at `http://localhost:3000`.
+
+To stop the Docker app stack:
+
+```bash
+docker compose --profile app down
+```
+
 ## Scripts
 
 - `pnpm dev`: run workspace dev tasks
