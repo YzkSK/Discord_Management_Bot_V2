@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { loadRootEnv } from "./dotenv.js";
+
 const logLevelSchema = z.enum(["trace", "debug", "info", "warn", "error"]);
 
 export const appEnvSchema = z.object({
@@ -29,15 +31,18 @@ export type DatabaseEnv = z.infer<typeof databaseEnvSchema>;
 export type RedisEnv = z.infer<typeof redisEnvSchema>;
 
 export function parseAppEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
+  loadRootEnv();
   return appEnvSchema.parse(env);
 }
 
 export function parseDatabaseEnv(
   env: NodeJS.ProcessEnv = process.env
 ): DatabaseEnv {
+  loadRootEnv();
   return databaseEnvSchema.parse(env);
 }
 
 export function parseRedisEnv(env: NodeJS.ProcessEnv = process.env): RedisEnv {
+  loadRootEnv();
   return redisEnvSchema.parse(env);
 }
