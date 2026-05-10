@@ -54,6 +54,15 @@ export function LogsExplorer() {
   );
 
   async function loadLogs(nextFilters: LogFilters) {
+    if (!nextFilters.guildId.trim()) {
+      setLogs([]);
+      setNextCursor(null);
+      setError("Enter a guild ID to load logs.");
+      setExpandedId(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setExpandedId(null);
@@ -129,7 +138,7 @@ export function LogsExplorer() {
           <FilterInput
             label="Guild"
             onChange={(value) => setFilters({ ...filters, guildId: value })}
-            placeholder="guild id"
+            placeholder="required guild id"
             value={filters.guildId}
           />
           <FilterInput

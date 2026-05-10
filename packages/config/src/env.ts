@@ -27,6 +27,7 @@ export const redisEnvSchema = appEnvSchema.pick({
 });
 
 export const dashboardAuthEnvSchema = z.object({
+  DISCORD_BOT_TOKEN: z.string().optional(),
   DISCORD_CLIENT_ID: z.string().default(""),
   DISCORD_CLIENT_SECRET: z.string().default(""),
   NEXTAUTH_SECRET: z.string().optional(),

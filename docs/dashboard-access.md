@@ -42,3 +42,17 @@ Dashboard grants are stored in `dashboard_access_grants`.
 
 This issue defines the role model and persistence. Page/API enforcement is
 handled separately in #49. Access-management UI is not part of this issue.
+
+## Protected Routes
+
+Dashboard pages redirect unauthenticated users to `/login`.
+
+Dashboard APIs return JSON errors:
+
+- `400` when a required `guildId` is missing.
+- `401` when the request is not authenticated.
+- `403` when the authenticated user cannot access the guild Dashboard.
+
+For logs, `/api/logs` requires `guildId` and at least `viewer` access. The
+Discord server owner is treated as `owner`; other users need a matching
+`dashboard_access_grants` user or role grant.

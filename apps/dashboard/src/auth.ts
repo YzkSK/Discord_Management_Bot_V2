@@ -26,7 +26,11 @@ export const authOptions: AuthOptions = {
     strategy: "jwt"
   },
   callbacks: {
-    jwt({ token }) {
+    jwt({ account, token }) {
+      if (account?.access_token) {
+        token.discordAccessToken = account.access_token;
+      }
+
       return token;
     },
     session({ session, token }) {

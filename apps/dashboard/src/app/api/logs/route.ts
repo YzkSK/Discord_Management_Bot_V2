@@ -4,11 +4,26 @@ import {
   type ListLogEventsInput
 } from "@discord-bot/db";
 import { NextResponse, type NextRequest } from "next/server";
+import { authorizeDashboardApi } from "../../../dashboard-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams;
+  const guildId = optionalParam(query, "guildId");
+  const authorization = await authorizeDashboardApi({
+    request,
+    guildId,
+    requiredRole: "viewer"
+  });
+
+  if (!authorization.allowed) {
+    return NextResponse.json(
+      { error: authorization.error },
+      { status: authorization.status }
+    );
+  }
+
   const dbConnection = createDbConnection();
 
   try {
