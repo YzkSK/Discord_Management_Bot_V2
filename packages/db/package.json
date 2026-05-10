@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@discord-bot/config": "workspace:*",
+    "@discord-bot/shared": "workspace:*",
     "drizzle-orm": "*",
     "postgres": "*"
   },
