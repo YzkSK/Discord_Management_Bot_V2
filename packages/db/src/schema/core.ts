@@ -56,6 +56,42 @@ export const guildConfigs = pgTable(
   })
 );
 
+export const dashboardAccessGrants = pgTable(
+  "dashboard_access_grants",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    guildId: text("guild_id").notNull(),
+    targetType: text("target_type").notNull(),
+    targetId: text("target_id").notNull(),
+    role: text("role").notNull().default("viewer"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  (table) => ({
+    dashboardAccessGrantGuildTargetIdx: uniqueIndex(
+      "dashboard_access_grants_guild_target_idx"
+    ).on(table.guildId, table.targetType, table.targetId),
+    dashboardAccessGrantGuildIdx: index(
+      "dashboard_access_grants_guild_id_idx"
+    ).on(table.guildId),
+    dashboardAccessGrantTargetIdx: index(
+      "dashboard_access_grants_target_idx"
+    ).on(table.targetType, table.targetId),
+    targetTypeCheck: check(
+      "dashboard_access_grants_target_type_check",
+      sql`${table.targetType} in ('user', 'role')`
+    ),
+    roleCheck: check(
+      "dashboard_access_grants_role_check",
+      sql`${table.role} in ('viewer', 'admin')`
+    )
+  })
+);
+
 export const logs = pgTable(
   "logs",
   {
