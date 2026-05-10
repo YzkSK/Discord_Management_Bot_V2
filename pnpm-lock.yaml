@@ -54,6 +54,9 @@ importers:
       '@discord-bot/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@discord-bot/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@discord-bot/shared':
         specifier: workspace:*
         version: link:../../packages/shared

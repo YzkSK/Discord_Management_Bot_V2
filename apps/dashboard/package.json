@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@discord-bot/config": "workspace:*",
+    "@discord-bot/db": "workspace:*",
     "@discord-bot/shared": "workspace:*",
     "next": "*",
     "react": "*",

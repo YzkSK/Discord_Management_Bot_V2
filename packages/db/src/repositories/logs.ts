@@ -1,4 +1,5 @@
 import type { DbClient } from "../client.js";
+import { and, desc, eq, ilike, lte, type SQL } from "drizzle-orm";
 import { logs } from "../schema/index.js";
 
 export interface InsertLogEventInput {
@@ -11,6 +12,22 @@ export interface InsertLogEventInput {
   receivedAt?: Date;
   realtimeEnabled?: boolean;
   payload?: Record<string, unknown>;
+}
+
+export interface ListLogEventsInput {
+  guildId?: string;
+  eventName?: string;
+  actorId?: string;
+  channelId?: string;
+  messageId?: string;
+  search?: string;
+  before?: Date;
+  limit?: number;
+}
+
+export interface ListLogEventsResult {
+  items: Awaited<ReturnType<typeof listLogEventsQuery>>;
+  nextCursor: string | null;
 }
 
 export async function insertLogEvent(
@@ -39,6 +56,22 @@ export async function insertLogEvent(
   return log;
 }
 
+export async function listLogEvents(
+  db: DbClient,
+  input: ListLogEventsInput = {}
+): Promise<ListLogEventsResult> {
+  const limit = clampLimit(input.limit);
+  const items = await listLogEventsQuery(db, input, limit + 1);
+  const hasMore = items.length > limit;
+  const visibleItems = hasMore ? items.slice(0, limit) : items;
+  const lastItem = visibleItems.at(-1);
+
+  return {
+    items: visibleItems,
+    nextCursor: hasMore && lastItem ? lastItem.receivedAt.toISOString() : null
+  };
+}
+
 export async function recordSystemBotStarted(
   db: DbClient,
   payload: Record<string, unknown>
@@ -52,4 +85,61 @@ export async function recordSystemBotStarted(
     realtimeEnabled: false,
     payload
   });
+}
+
+function listLogEventsQuery(
+  db: DbClient,
+  input: ListLogEventsInput,
+  limit: number
+) {
+  const filters = buildLogFilters(input);
+
+  return db
+    .select()
+    .from(logs)
+    .where(filters.length > 0 ? and(...filters) : undefined)
+    .orderBy(desc(logs.receivedAt))
+    .limit(limit);
+}
+
+function buildLogFilters(input: ListLogEventsInput): SQL[] {
+  const filters: SQL[] = [];
+
+  if (input.guildId) {
+    filters.push(eq(logs.guildId, input.guildId));
+  }
+
+  if (input.eventName) {
+    filters.push(eq(logs.eventName, input.eventName));
+  }
+
+  if (input.actorId) {
+    filters.push(eq(logs.actorId, input.actorId));
+  }
+
+  if (input.channelId) {
+    filters.push(eq(logs.channelId, input.channelId));
+  }
+
+  if (input.messageId) {
+    filters.push(eq(logs.messageId, input.messageId));
+  }
+
+  if (input.search) {
+    filters.push(ilike(logs.eventName, `%${input.search}%`));
+  }
+
+  if (input.before) {
+    filters.push(lte(logs.receivedAt, input.before));
+  }
+
+  return filters;
+}
+
+function clampLimit(limit = 50) {
+  if (!Number.isFinite(limit)) {
+    return 50;
+  }
+
+  return Math.min(Math.max(Math.trunc(limit), 1), 100);
 }
