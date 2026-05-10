@@ -26,6 +26,15 @@ importers:
       '@discord-bot/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@discord-bot/discord-core':
+        specifier: workspace:*
+        version: link:../../packages/discord-core
+      '@discord-bot/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
+      '@discord-bot/redis':
+        specifier: workspace:*
+        version: link:../../packages/redis
       '@discord-bot/shared':
         specifier: workspace:*
         version: link:../../packages/shared
