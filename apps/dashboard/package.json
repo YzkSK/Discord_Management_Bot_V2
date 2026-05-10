@@ -16,6 +16,7 @@
     "@discord-bot/db": "workspace:*",
     "@discord-bot/shared": "workspace:*",
     "next": "*",
+    "next-auth": "^4.24.14",
     "react": "*",
     "react-dom": "*"
   },
