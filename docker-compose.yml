@@ -44,11 +44,18 @@ services:
       dockerfile: apps/bot/Dockerfile
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgres://discord_bot:discord_bot@postgres:5432/discord_bot
+      REDIS_URL: redis://redis:6379
+      VOICEVOX_URL: http://voicevox:50021
+      PUBLIC_DASHBOARD_URL: http://localhost:3000
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      voicevox:
+        condition: service_started
     profiles:
       - app
 
@@ -58,6 +65,11 @@ services:
       dockerfile: apps/dashboard/Dockerfile
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgres://discord_bot:discord_bot@postgres:5432/discord_bot
+      REDIS_URL: redis://redis:6379
+      VOICEVOX_URL: http://voicevox:50021
+      PUBLIC_DASHBOARD_URL: http://localhost:3000
     ports:
       - "3000:3000"
     depends_on:
