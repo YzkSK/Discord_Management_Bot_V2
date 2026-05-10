@@ -26,9 +26,17 @@ export const redisEnvSchema = appEnvSchema.pick({
   REDIS_URL: true
 });
 
+export const dashboardAuthEnvSchema = z.object({
+  DISCORD_CLIENT_ID: z.string().default(""),
+  DISCORD_CLIENT_SECRET: z.string().default(""),
+  NEXTAUTH_SECRET: z.string().optional(),
+  NEXTAUTH_URL: z.string().url().optional()
+});
+
 export type AppEnv = z.infer<typeof appEnvSchema>;
 export type DatabaseEnv = z.infer<typeof databaseEnvSchema>;
 export type RedisEnv = z.infer<typeof redisEnvSchema>;
+export type DashboardAuthEnv = z.infer<typeof dashboardAuthEnvSchema>;
 
 export function parseAppEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
   loadRootEnv();
@@ -45,4 +53,11 @@ export function parseDatabaseEnv(
 export function parseRedisEnv(env: NodeJS.ProcessEnv = process.env): RedisEnv {
   loadRootEnv();
   return redisEnvSchema.parse(env);
+}
+
+export function parseDashboardAuthEnv(
+  env: NodeJS.ProcessEnv = process.env
+): DashboardAuthEnv {
+  loadRootEnv();
+  return dashboardAuthEnvSchema.parse(env);
 }

@@ -49,6 +49,7 @@ services:
       REDIS_URL: redis://redis:6379
       VOICEVOX_URL: http://voicevox:50021
       PUBLIC_DASHBOARD_URL: http://localhost:3000
+      NEXTAUTH_URL: http://localhost:3000
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,6 +71,7 @@ services:
       REDIS_URL: redis://redis:6379
       VOICEVOX_URL: http://voicevox:50021
       PUBLIC_DASHBOARD_URL: http://localhost:3000
+      NEXTAUTH_URL: http://localhost:3000
     ports:
       - "3000:3000"
     depends_on:

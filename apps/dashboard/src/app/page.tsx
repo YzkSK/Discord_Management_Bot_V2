@@ -1,3 +1,7 @@
+import { getDashboardSession } from "../auth";
+
+import { AuthStatus } from "./auth-status";
+
 const phase0Items = [
   "Workspace",
   "Config validation",
@@ -7,17 +11,24 @@ const phase0Items = [
   "Issue workflow"
 ];
 
-export default function HomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const session = await getDashboardSession();
+
   return (
     <main className="min-h-screen px-6 py-8">
       <section className="mx-auto flex max-w-5xl flex-col gap-6">
-        <header className="border-b border-slate-700 pb-5">
-          <p className="text-sm uppercase tracking-wide text-cyan-300">
-            Phase0 Foundation
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold">
-            Discord Integrated Management Bot
-          </h1>
+        <header className="flex flex-col gap-4 border-b border-slate-700 pb-5 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-wide text-cyan-300">
+              Phase3 Foundation
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold">
+              Discord Integrated Management Bot
+            </h1>
+          </div>
+          <AuthStatus session={session} />
         </header>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
