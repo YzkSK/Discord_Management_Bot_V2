@@ -15,6 +15,9 @@
   "dependencies": {
     "@discord-bot/config": "workspace:*",
     "@discord-bot/db": "workspace:*",
+    "@discord-bot/discord-core": "workspace:*",
+    "@discord-bot/logger": "workspace:*",
+    "@discord-bot/redis": "workspace:*",
     "@discord-bot/shared": "workspace:*",
     "discord.js": "*"
   },

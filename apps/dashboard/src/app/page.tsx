@@ -30,6 +30,13 @@ export default function HomePage() {
             </div>
           ))}
         </div>
+
+        <a
+          className="inline-flex h-11 w-fit items-center border border-teal-500 px-4 text-sm font-semibold text-teal-200 hover:bg-teal-500 hover:text-slate-950"
+          href="/logs"
+        >
+          Open Logs
+        </a>
       </section>
     </main>
   );

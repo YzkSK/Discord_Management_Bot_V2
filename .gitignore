@@ -25,7 +25,7 @@ backups/
 !packages/db/drizzle/*.sql
 
 # logs
-logs/
+/logs/
 *.log
 npm-debug.log*
 pnpm-debug.log*
