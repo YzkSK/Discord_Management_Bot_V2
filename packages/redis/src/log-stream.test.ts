@@ -6,6 +6,7 @@ import {
   REALTIME_LOGS_STREAM_PREFIX,
   appendLogEventToStream,
   appendRealtimeLogEventToStream,
+  readRealtimeLogEvents,
   toLogStreamFields
 } from "./log-stream.js";
 
@@ -93,5 +94,32 @@ describe("appendRealtimeLogEventToStream", () => {
     );
 
     assert.equal(id, null);
+  });
+});
+
+describe("readRealtimeLogEvents", () => {
+  it("reads realtime stream messages", async () => {
+    const redis = {
+      async xRead() {
+        return [
+          {
+            name: "rt:logs:guild-1",
+            messages: [
+              {
+                id: "1-0",
+                message: toLogStreamFields(event, { realtimeEnabled: true })
+              }
+            ]
+          }
+        ];
+      }
+    };
+
+    const [realtimeEvent] = await readRealtimeLogEvents(redis, "guild-1", "$");
+
+    assert.equal(realtimeEvent?.id, "1-0");
+    assert.equal(realtimeEvent?.eventName, "message.update");
+    assert.equal(realtimeEvent?.guildId, "guild-1");
+    assert.equal(realtimeEvent?.realtimeEnabled, true);
   });
 });

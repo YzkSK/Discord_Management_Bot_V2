@@ -3,7 +3,7 @@ import {
   normalizedEventSchema
 } from "@discord-bot/shared";
 
-import type { RedisClient } from "./client.js";
+import type { RedisClient, RedisStreamMessage } from "./client.js";
 
 export const LOGS_STREAM_KEY = "logs:events";
 export const REALTIME_LOGS_STREAM_PREFIX = "rt:logs:";
@@ -30,6 +30,13 @@ export interface RedisStreamWriter {
     id: "*",
     fields: Record<string, string>
   ) => Promise<string | null>;
+}
+
+export interface RedisStreamReader {
+  xRead: (
+    streams: Array<{ key: string; id: string }>,
+    options?: { BLOCK?: number; COUNT?: number }
+  ) => Promise<Array<{ name: string; messages: RedisStreamMessage[] }> | null>;
 }
 
 export async function appendLogEventToStream(
@@ -77,10 +84,60 @@ export function toLogStreamFields(
   };
 }
 
+export async function readRealtimeLogEvents(
+  redis: RedisStreamReader,
+  guildId: string,
+  lastId: string,
+  options: { blockMs?: number; count?: number } = {}
+) {
+  const result = await redis.xRead(
+    [{ key: `${REALTIME_LOGS_STREAM_PREFIX}${guildId}`, id: lastId }],
+    {
+      BLOCK: options.blockMs ?? 5000,
+      COUNT: options.count ?? 25
+    }
+  );
+
+  return (
+    result?.flatMap((stream) => stream.messages.map(toRealtimeLogMessage)) ?? []
+  );
+}
+
+export function toRealtimeLogMessage(message: RedisStreamMessage) {
+  return {
+    id: message.id,
+    eventName: message.message.event_name ?? "",
+    guildId: emptyToNull(message.message.guild_id),
+    actorId: emptyToNull(message.message.actor_id),
+    channelId: emptyToNull(message.message.channel_id),
+    messageId: emptyToNull(message.message.message_id),
+    eventTimestamp: message.message.event_timestamp ?? "",
+    receivedAt: message.message.received_at ?? "",
+    realtimeEnabled: message.message.realtime_enabled === "1",
+    payload: parsePayload(message.message.payload)
+  };
+}
+
 export function asRedisStreamWriter(redis: RedisClient): RedisStreamWriter {
   return {
     xAdd(key, id, fields) {
       return redis.xAdd(key, id, fields);
     }
   };
+}
+
+function emptyToNull(value: string | undefined) {
+  return value ? value : null;
+}
+
+function parsePayload(value: string | undefined) {
+  if (!value) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return {};
+  }
 }
