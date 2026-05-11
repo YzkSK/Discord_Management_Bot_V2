@@ -48,12 +48,20 @@ export default async function HomePage() {
           ))}
         </div>
 
-        <a
-          className="inline-flex h-11 w-fit items-center border border-teal-500 px-4 text-sm font-semibold text-teal-200 hover:bg-teal-500 hover:text-slate-950"
-          href="/logs"
-        >
-          Open Logs
-        </a>
+        <div className="flex flex-wrap gap-3">
+          <a
+            className="inline-flex h-11 w-fit items-center border border-teal-500 px-4 text-sm font-semibold text-teal-200 hover:bg-teal-500 hover:text-slate-950"
+            href="/logs"
+          >
+            Open Logs
+          </a>
+          <a
+            className="inline-flex h-11 w-fit items-center border border-slate-600 px-4 text-sm font-semibold text-slate-100 hover:border-slate-400"
+            href="/settings"
+          >
+            Open Settings
+          </a>
+        </div>
       </section>
     </main>
   );
