@@ -56,3 +56,33 @@ Dashboard APIs return JSON errors:
 For logs, `/api/logs` requires `guildId` and at least `viewer` access. The
 Discord server owner is treated as `owner`; other users need a matching
 `dashboard_access_grants` user or role grant.
+
+For settings, `/api/settings` requires `guildId` and at least `viewer` access
+for `GET`. Updating settings with `PATCH` requires `admin` or `owner`.
+
+## Auth Setup
+
+Discord Developer Portal setup required for local Dashboard auth:
+
+- Add `http://localhost:3000/api/auth/callback/discord` to OAuth2 redirects.
+- Keep `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `NEXTAUTH_SECRET`, and
+  `NEXTAUTH_URL=http://localhost:3000` in `.env`.
+- Invite the bot to the test guild so role-based grants can be checked.
+- Use the Discord server owner account for the first owner-level Dashboard
+  check.
+
+The `/setup` command is not required for the server owner to access the
+Dashboard. `/setup` still creates the `guilds` and `guild_configs` rows used by
+the Phase3 settings page.
+
+## Guild Settings
+
+Phase3 exposes a minimal settings foundation:
+
+- Page: `/settings`
+- API: `GET /api/settings?guildId=<guild id>`
+- API: `PATCH /api/settings`
+- Supported field: `logMode`
+- Allowed `logMode` values: `full`, `metadata_only`, `disabled`
+
+This is a functional foundation, not final Dashboard UI polish.

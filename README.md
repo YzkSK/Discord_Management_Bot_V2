@@ -25,7 +25,7 @@ On Linux/macOS, use `cp .env.example .env`.
 
 ## Docker Test Startup
 
-For an all-Docker test startup, keep Discord secrets and app secrets in `.env`, then run:
+For an all-Docker test startup, start Docker Desktop or the Linux Docker daemon, keep Discord secrets and app secrets in `.env`, then run:
 
 ```bash
 docker compose --profile app up -d --build
@@ -41,6 +41,14 @@ VOICEVOX_URL=http://localhost:50021
 ```
 
 Inside Docker, Compose changes those URLs to `postgres`, `redis`, and `voicevox` service names. The dashboard is available at `http://localhost:3000`.
+
+For Dashboard auth, the Discord Developer Portal OAuth2 redirect must include:
+
+```text
+http://localhost:3000/api/auth/callback/discord
+```
+
+The Dashboard uses Discord OAuth with `identify` and `guilds`. The server owner is treated as Dashboard `owner`; non-owner access is controlled by `dashboard_access_grants`.
 
 To stop the Docker app stack:
 
@@ -63,6 +71,7 @@ docker compose --profile app down
 - Phase0: repository, workspace, config, DB schema, Docker Compose, and CI foundation.
 - Phase1: bot runtime, Discord client, `/setup`, guild registration, and startup logging.
 - Phase2: logging ingestion, Redis Stream foundation, bot message log handlers, Dashboard logs API, and Dashboard logs page.
+- Phase3: Dashboard Discord auth, owner/admin/viewer access checks, realtime logs Socket.io foundation, and guild settings foundation.
 
 ## Phase0 Completion Criteria
 
@@ -88,3 +97,10 @@ See `.github/ISSUE_TEMPLATE` and `.github/PULL_REQUEST_TEMPLATE` for the working
 ## Logging
 
 Phase2 logging details are documented in `docs/logging-workflow.md`.
+
+## Dashboard
+
+Phase3 Dashboard access, auth, realtime, settings, and verification notes are documented in:
+
+- `docs/dashboard-access.md`
+- `docs/phase3-verification.md`
