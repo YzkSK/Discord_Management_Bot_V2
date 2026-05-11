@@ -1,6 +1,13 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { io } from "socket.io-client";
+
+import {
+  realtimeErrorEventName,
+  realtimeLogsEventName,
+  realtimeLogsSubscribeEventName
+} from "../../realtime-events";
 
 interface LogItem {
   id: string;
@@ -43,10 +50,54 @@ export function LogsExplorer() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [realtimeStatus, setRealtimeStatus] = useState("offline");
 
   useEffect(() => {
     void loadLogs(appliedFilters);
   }, [appliedFilters]);
+
+  useEffect(() => {
+    const guildId = appliedFilters.guildId.trim();
+
+    if (!guildId) {
+      setRealtimeStatus("offline");
+      return;
+    }
+
+    const socket = io({
+      path: "/socket.io"
+    });
+
+    setRealtimeStatus("connecting");
+
+    socket.on("connect", () => {
+      setRealtimeStatus("live");
+      socket.emit(realtimeLogsSubscribeEventName, { guildId });
+    });
+
+    socket.on(realtimeLogsEventName, (event: LogItem) => {
+      setLogs((currentLogs) => {
+        if (currentLogs.some((log) => log.id === event.id)) {
+          return currentLogs;
+        }
+
+        return [event, ...currentLogs].slice(0, 100);
+      });
+    });
+
+    socket.on(realtimeErrorEventName, (payload: { error?: string }) => {
+      setRealtimeStatus("error");
+      setError(payload.error ?? "Realtime logs failed.");
+    });
+
+    socket.on("disconnect", () => {
+      setRealtimeStatus("offline");
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [appliedFilters.guildId]);
 
   const activeFilterCount = useMemo(
     () => Object.values(appliedFilters).filter(Boolean).length,
@@ -54,6 +105,15 @@ export function LogsExplorer() {
   );
 
   async function loadLogs(nextFilters: LogFilters) {
+    if (!nextFilters.guildId.trim()) {
+      setLogs([]);
+      setNextCursor(null);
+      setError("Enter a guild ID to load logs.");
+      setExpandedId(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setExpandedId(null);
@@ -113,6 +173,7 @@ export function LogsExplorer() {
           <div className="text-sm text-slate-300">
             {logs.length} shown
             {activeFilterCount > 0 ? ` / ${activeFilterCount} filters` : ""}
+            {appliedFilters.guildId ? ` / realtime ${realtimeStatus}` : ""}
           </div>
         </header>
 
@@ -129,7 +190,7 @@ export function LogsExplorer() {
           <FilterInput
             label="Guild"
             onChange={(value) => setFilters({ ...filters, guildId: value })}
-            placeholder="guild id"
+            placeholder="required guild id"
             value={filters.guildId}
           />
           <FilterInput

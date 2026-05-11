@@ -4,20 +4,24 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "next build",
+    "build": "next build && tsc -p tsconfig.server.json",
     "dev": "next dev",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "start": "next start",
+    "start": "node dist/server.js",
     "test": "node -e \"console.log('dashboard: no tests yet')\"",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@discord-bot/config": "workspace:*",
     "@discord-bot/db": "workspace:*",
+    "@discord-bot/redis": "workspace:*",
     "@discord-bot/shared": "workspace:*",
     "next": "*",
+    "next-auth": "^4.24.14",
     "react": "*",
-    "react-dom": "*"
+    "react-dom": "*",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.0",

@@ -8,6 +8,13 @@
       "when": 1778340974619,
       "tag": "0000_nifty_scorpion",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778438780807,
+      "tag": "0001_outstanding_sunfire",
+      "breakpoints": true
     }
   ]
 }

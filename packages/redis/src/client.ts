@@ -9,6 +9,15 @@ export interface RedisClient {
     id: "*",
     fields: Record<string, string>
   ) => Promise<string | null>;
+  xRead: (
+    streams: Array<{ key: string; id: string }>,
+    options?: { BLOCK?: number; COUNT?: number }
+  ) => Promise<Array<{ name: string; messages: RedisStreamMessage[] }> | null>;
+}
+
+export interface RedisStreamMessage {
+  id: string;
+  message: Record<string, string>;
 }
 
 export interface RedisConnection {
