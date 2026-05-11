@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   index,
+  integer,
   jsonb,
   pgTable,
   text,
@@ -38,6 +39,8 @@ export const guildConfigs = pgTable(
       .notNull()
       .references(() => guilds.id, { onDelete: "cascade" }),
     logMode: text("log_mode").notNull().default("full"),
+    tempVoiceCreateChannelId: text("temp_voice_create_channel_id"),
+    tempVoiceCategoryId: text("temp_voice_category_id"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -115,5 +118,106 @@ export const logs = pgTable(
     actorIdIdx: index("logs_actor_id_idx").on(table.actorId),
     channelIdIdx: index("logs_channel_id_idx").on(table.channelId),
     receivedAtIdx: index("logs_received_at_idx").on(table.receivedAt)
+  })
+);
+
+export const callSessions = pgTable(
+  "call_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    guildId: text("guild_id").notNull(),
+    channelId: text("channel_id").notNull(),
+    status: text("status").notNull().default("active"),
+    startedAt: timestamp("started_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  (table) => ({
+    callSessionsGuildIdx: index("call_sessions_guild_id_idx").on(
+      table.guildId
+    ),
+    callSessionsChannelStatusIdx: index(
+      "call_sessions_channel_status_idx"
+    ).on(table.channelId, table.status),
+    statusCheck: check(
+      "call_sessions_status_check",
+      sql`${table.status} in ('active', 'ended')`
+    )
+  })
+);
+
+export const tempVoiceChannels = pgTable(
+  "temp_voice_channels",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    guildId: text("guild_id").notNull(),
+    channelId: text("channel_id").notNull(),
+    ownerId: text("owner_id").notNull(),
+    creationChannelId: text("creation_channel_id").notNull(),
+    controlChannelId: text("control_channel_id"),
+    callSessionId: uuid("call_session_id").references(() => callSessions.id, {
+      onDelete: "set null"
+    }),
+    deleteScheduledAt: timestamp("delete_scheduled_at", {
+      withTimezone: true
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  (table) => ({
+    tempVoiceChannelsChannelIdx: uniqueIndex(
+      "temp_voice_channels_channel_id_idx"
+    ).on(table.channelId),
+    tempVoiceChannelsGuildIdx: index("temp_voice_channels_guild_id_idx").on(
+      table.guildId
+    ),
+    tempVoiceChannelsOwnerIdx: index("temp_voice_channels_owner_id_idx").on(
+      table.ownerId
+    )
+  })
+);
+
+export const callSessionMembers = pgTable(
+  "call_session_members",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    callSessionId: uuid("call_session_id")
+      .notNull()
+      .references(() => callSessions.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    joinOrder: integer("join_order").notNull(),
+    joinedAt: timestamp("joined_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    leftAt: timestamp("left_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  (table) => ({
+    callSessionMembersSessionUserIdx: uniqueIndex(
+      "call_session_members_session_user_idx"
+    ).on(table.callSessionId, table.userId),
+    callSessionMembersSessionJoinedIdx: index(
+      "call_session_members_session_joined_idx"
+    ).on(table.callSessionId, table.joinedAt),
+    joinOrderCheck: check(
+      "call_session_members_join_order_check",
+      sql`${table.joinOrder} >= 0`
+    )
   })
 );

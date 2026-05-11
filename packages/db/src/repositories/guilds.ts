@@ -65,6 +65,8 @@ export async function getGuildConfigByGuildId(db: DbClient, guildId: string) {
       guildName: guilds.name,
       isActive: guilds.isActive,
       logMode: guildConfigs.logMode,
+      tempVoiceCreateChannelId: guildConfigs.tempVoiceCreateChannelId,
+      tempVoiceCategoryId: guildConfigs.tempVoiceCategoryId,
       updatedAt: guildConfigs.updatedAt
     })
     .from(guilds)
@@ -99,6 +101,44 @@ export async function updateGuildConfigByGuildId(
       target: guildConfigs.guildRefId,
       set: {
         logMode: input.logMode,
+        updatedAt: sql`now()`
+      }
+    })
+    .returning();
+
+  return config ?? null;
+}
+
+export async function updateGuildTempVoiceConfigByGuildId(
+  db: DbClient,
+  input: {
+    guildId: string;
+    tempVoiceCreateChannelId?: string | null;
+    tempVoiceCategoryId?: string | null;
+  }
+) {
+  const [guild] = await db
+    .select({ id: guilds.id })
+    .from(guilds)
+    .where(eq(guilds.guildId, input.guildId))
+    .limit(1);
+
+  if (!guild) {
+    return null;
+  }
+
+  const [config] = await db
+    .insert(guildConfigs)
+    .values({
+      guildRefId: guild.id,
+      tempVoiceCreateChannelId: input.tempVoiceCreateChannelId ?? null,
+      tempVoiceCategoryId: input.tempVoiceCategoryId ?? null
+    })
+    .onConflictDoUpdate({
+      target: guildConfigs.guildRefId,
+      set: {
+        tempVoiceCreateChannelId: input.tempVoiceCreateChannelId ?? null,
+        tempVoiceCategoryId: input.tempVoiceCategoryId ?? null,
         updatedAt: sql`now()`
       }
     })

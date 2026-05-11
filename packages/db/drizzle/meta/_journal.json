@@ -15,6 +15,13 @@
       "when": 1778438780807,
       "tag": "0001_outstanding_sunfire",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778508653084,
+      "tag": "0002_thankful_nocturne",
+      "breakpoints": true
     }
   ]
 }
