@@ -168,6 +168,22 @@ export async function scheduleTempVoiceChannelDelete(
   return tempVoiceChannel ?? null;
 }
 
+export async function clearTempVoiceChannelDeleteSchedule(
+  db: DbClient,
+  channelId: string
+) {
+  const [tempVoiceChannel] = await db
+    .update(tempVoiceChannels)
+    .set({
+      deleteScheduledAt: null,
+      updatedAt: sql`now()`
+    })
+    .where(eq(tempVoiceChannels.channelId, channelId))
+    .returning();
+
+  return tempVoiceChannel ?? null;
+}
+
 export async function endTempVoiceChannel(
   db: DbClient,
   input: { channelId: string; endedAt?: Date }
