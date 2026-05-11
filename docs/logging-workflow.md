@@ -33,11 +33,11 @@ Implemented in Phase2:
 - `apps/dashboard`
   - Exposes `GET /api/logs`.
   - Provides `/logs` with search, filters, paging, and raw payload review.
+  - Serves the first Socket.io realtime log subscription path.
 
 Not implemented in Phase2:
 
 - Dashboard authentication and RBAC.
-- Socket.io realtime UI subscriptions.
 - Redis consumer groups, pending recovery, and retry workers.
 - Full Discord event coverage beyond message events.
 - Live production deployment.
@@ -51,6 +51,20 @@ Not implemented in Phase2:
   - Only receives events whose realtime policy resolves to enabled.
 
 High-frequency events such as `message.create` remain realtime disabled by default. Important update/delete/system-error events are realtime enabled by default.
+
+## Realtime Dashboard Logs
+
+Phase3 adds a Socket.io foundation for live log delivery.
+
+- Socket path: `/socket.io`
+- Subscribe event: `logs:subscribe`
+- Payload: `{ "guildId": "<discord guild id>" }`
+- Server event: `logs:event`
+- Error event: `logs:error`
+
+The Dashboard logs page opens the socket only after a guild ID is selected. The socket uses the same browser session cookie as the Dashboard and checks viewer-or-higher access before reading from `rt:logs:<guildId>`.
+
+Realtime delivery reads from the per-guild Redis Stream and does not replace durable ingestion. All events still go through PostgreSQL and the durable `logs:events` stream first. The realtime policy remains the filter for high-frequency events, so `message.create` is still not streamed by default.
 
 ## Dashboard Logs API
 

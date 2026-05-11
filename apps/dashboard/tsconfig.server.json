@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": [
+    "src/authorization.ts",
+    "src/discord-api.ts",
+    "src/realtime.ts",
+    "src/realtime-events.ts",
+    "src/server.ts",
+    "src/types/**/*.d.ts"
+  ]
+}
