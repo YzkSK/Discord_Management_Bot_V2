@@ -13,6 +13,7 @@ import {
 } from "./discord/client.js";
 import { installInteractionRouter } from "./discord/interactions.js";
 import { installMessageLogHandlers } from "./discord/message-logs.js";
+import { installVoiceStateHandlers } from "./discord/voice-state.js";
 
 export interface BotRuntime {
   start: () => Promise<void>;
@@ -51,6 +52,7 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
         db: dbConnection.db,
         redis: redisConnection.client
       });
+      installVoiceStateHandlers(discordClient);
       await discordClient.login(env.DISCORD_BOT_TOKEN);
       await recordStartupLog(dbConnection, env).catch((error: unknown) => {
         console.error("failed to record bot startup log", error);
