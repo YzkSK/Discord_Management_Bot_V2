@@ -17,7 +17,15 @@ export interface VoiceStateTransition {
 }
 
 export interface InstallVoiceStateHandlersOptions {
-  onTransition?: (transition: VoiceStateTransition) => void | Promise<void>;
+  onTransition?: (
+    transition: VoiceStateTransition,
+    context: VoiceStateTransitionContext
+  ) => void | Promise<void>;
+}
+
+export interface VoiceStateTransitionContext {
+  oldState: VoiceState;
+  newState: VoiceState;
 }
 
 export function installVoiceStateHandlers(
@@ -34,7 +42,10 @@ export function installVoiceStateHandlers(
       return;
     }
 
-    void handleVoiceStateTransition(transition, options);
+    void handleVoiceStateTransition(transition, options, {
+      oldState,
+      newState
+    });
   });
 }
 
@@ -96,10 +107,11 @@ function resolveTransitionType(
 
 async function handleVoiceStateTransition(
   transition: VoiceStateTransition,
-  options: InstallVoiceStateHandlersOptions
+  options: InstallVoiceStateHandlersOptions,
+  context: VoiceStateTransitionContext
 ) {
   if (options.onTransition) {
-    await options.onTransition(transition);
+    await options.onTransition(transition, context);
     return;
   }
 
