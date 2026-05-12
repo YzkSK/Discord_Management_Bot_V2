@@ -22,6 +22,8 @@ import {
   type PartialMessage
 } from "discord.js";
 
+import { sendEventToConfiguredLogChannel } from "./log-channel.js";
+
 export interface InstallMessageLogHandlersOptions {
   db: DbClient;
   redis: RedisStreamWriter;
@@ -37,7 +39,12 @@ export function installMessageLogHandlers(
       {
         name: "message-log-writer",
         handle(event) {
-          return writeMessageLogEvent(event, options.redis, logIngestion);
+          return writeMessageLogEvent(
+            event,
+            options.redis,
+            logIngestion,
+            client
+          );
         }
       }
     ],
@@ -78,12 +85,16 @@ export function shouldSkipMessageLog(message: Message | PartialMessage) {
 async function writeMessageLogEvent(
   event: NormalizedEvent,
   redis: RedisStreamWriter,
-  logIngestion: ReturnType<typeof createLogIngestionService>
+  logIngestion: ReturnType<typeof createLogIngestionService>,
+  client: Client
 ) {
   const realtimeEnabled = resolveRealtimeEnabled(event.eventName);
 
   await logIngestion.ingest(event, { realtimeEnabled });
   await appendLogEventToStream(redis, event, { realtimeEnabled });
+  await sendEventToConfiguredLogChannel(client, event).catch((error: unknown) => {
+    console.warn("failed to send log event to configured channel", error);
+  });
 
   if (realtimeEnabled) {
     await appendRealtimeLogEventToStream(redis, event, { realtimeEnabled });
