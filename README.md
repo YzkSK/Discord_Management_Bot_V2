@@ -73,6 +73,7 @@ docker compose --profile app down
 - Phase2: logging ingestion, Redis Stream foundation, bot message log handlers, Dashboard logs API, and Dashboard logs page.
 - Phase3: Dashboard Discord auth, owner/admin/viewer access checks, realtime logs Socket.io foundation, and guild settings foundation.
 - Phase4: Temp VC database, `/setup temp-vc`, Components V2 control channel message, generated voice channel lifecycle, and verification docs.
+- Phase5: Recruitment database, `/setup recruitment`, `/recruitment create`, join/leave/close interactions, and verification docs.
 
 ## Phase0 Completion Criteria
 
@@ -109,3 +110,7 @@ Phase3 Dashboard access, auth, realtime, settings, and verification notes are do
 Phase4 Temp VC setup and verification notes are documented in:
 
 - `docs/temp-vc.md`
+
+Phase5 Recruitment setup and verification notes are documented in:
+
+- `docs/recruitment.md`
