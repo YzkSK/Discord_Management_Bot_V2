@@ -13,6 +13,10 @@ import {
 
 import { createComponentsV2TextMessage } from "../discord/components-v2.js";
 import { logChannelTopicMarker, markLogChannel } from "../discord/log-channel.js";
+import {
+  markRecruitmentChannel,
+  recruitmentChannelTopicMarker
+} from "../discord/recruitment-channel.js";
 
 export const setupCommand = new SlashCommandBuilder()
   .setName("setup")
@@ -46,6 +50,18 @@ export const setupCommand = new SlashCommandBuilder()
         option
           .setName("channel")
           .setDescription("Text channel where detected log events are posted.")
+          .addChannelTypes(ChannelType.GuildText)
+          .setRequired(true)
+      )
+  )
+  .addSubcommand((subcommand) =>
+    subcommand
+      .setName("recruitment")
+      .setDescription("Configure the recruitment posting channel.")
+      .addChannelOption((option) =>
+        option
+          .setName("channel")
+          .setDescription("Text channel where recruitment posts are sent.")
           .addChannelTypes(ChannelType.GuildText)
           .setRequired(true)
       )
@@ -88,6 +104,9 @@ export async function handleSetupCommand(
   switch (subcommand) {
     case "logs":
       await handleLogsSetup(interaction, context, guildId);
+      return;
+    case "recruitment":
+      await handleRecruitmentSetup(interaction, context, guildId);
       return;
     case "temp-vc":
       await handleTempVoiceSetup(interaction, context, guildId);
@@ -190,6 +209,43 @@ async function handleLogsSetup(
       lines: [
         `Log channel: <#${channel.id}>`,
         `Marker: ${logChannelTopicMarker}`
+      ],
+      privateResponse: true
+    })
+  });
+}
+
+async function handleRecruitmentSetup(
+  interaction: ChatInputCommandInteraction,
+  context: SetupCommandContext,
+  guildId: string
+) {
+  const channel = interaction.options.getChannel("channel", true);
+
+  if (channel.type !== ChannelType.GuildText) {
+    await interaction.reply({
+      ...createComponentsV2TextMessage({
+        title: "Recruitment setup failed",
+        lines: ["Recruitment channel must be a text channel."],
+        privateResponse: true
+      })
+    });
+    return;
+  }
+
+  await ensureGuildSetup(context.db, {
+    guildId,
+    name: interaction.guild?.name ?? null
+  });
+
+  await markRecruitmentChannel(channel as TextChannel);
+
+  await interaction.reply({
+    ...createComponentsV2TextMessage({
+      title: "Recruitment setup complete",
+      lines: [
+        `Recruitment channel: <#${channel.id}>`,
+        `Marker: ${recruitmentChannelTopicMarker}`
       ],
       privateResponse: true
     })
