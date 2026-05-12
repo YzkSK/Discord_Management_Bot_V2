@@ -1,4 +1,8 @@
 import type { DbClient } from "@discord-bot/db";
+import {
+  getActiveTempVoiceChannelByChannelId,
+  getGuildConfigByGuildId
+} from "@discord-bot/db";
 import type { RedisStreamWriter } from "@discord-bot/redis";
 import type { NormalizedEvent } from "@discord-bot/shared";
 import {
@@ -32,6 +36,7 @@ import {
   writeWithAuditLog
 } from "./audit-log.js";
 import { createDiscordLogWriter } from "./log-writer.js";
+import { isTempVoiceAuditReason } from "./temp-voice-log-suppression.js";
 
 export interface InstallGatewayLogHandlersOptions {
   db: DbClient;
@@ -124,12 +129,11 @@ export function installGatewayLogHandlers(
   });
 
   client.on(Events.ChannelCreate, (channel) => {
-    writeWithAuditLog(
+    writeChannelLifecycleEvent(
       write,
-      createChannelEvent("channel.create", channel, { channel: channelPayload(channel) }),
-      getChannelGuild(channel),
-      AuditLogEvent.ChannelCreate,
-      channel.id
+      "channel.create",
+      channel,
+      AuditLogEvent.ChannelCreate
     );
   });
 
@@ -148,12 +152,11 @@ export function installGatewayLogHandlers(
   });
 
   client.on(Events.ChannelDelete, (channel) => {
-    writeWithAuditLog(
+    writeChannelLifecycleEvent(
       write,
-      createChannelEvent("channel.delete", channel, { channel: channelPayload(channel) }),
-      getChannelGuild(channel),
-      AuditLogEvent.ChannelDelete,
-      channel.id
+      "channel.delete",
+      channel,
+      AuditLogEvent.ChannelDelete
     );
   });
 
@@ -358,7 +361,7 @@ export function installGatewayLogHandlers(
   });
 
   client.on(Events.VoiceStateUpdate, (oldState, newState) => {
-    write(createVoiceEvent(oldState, newState));
+    void writeVoiceStateEvent(write, oldState, newState, options.db);
   });
 
   client.on(Events.WebhooksUpdate, (channel) => {
@@ -370,6 +373,79 @@ export function installGatewayLogHandlers(
       channel.id
     );
   });
+}
+
+function writeChannelLifecycleEvent(
+  write: (event: NormalizedEvent) => void,
+  eventName: "channel.create" | "channel.delete",
+  channel: DMChannel | GuildTextBasedChannel | NonThreadGuildBasedChannel,
+  action: AuditLogEvent.ChannelCreate | AuditLogEvent.ChannelDelete
+) {
+  const event = createChannelEvent(eventName, channel, {
+    channel: channelPayload(channel)
+  });
+  const guild = getChannelGuild(channel);
+
+  void Promise.resolve()
+    .then(() => lookupAuditLog(guild, action, channel.id))
+    .then((auditLog) => {
+      if (isTempVoiceAuditReason(auditLog.reason)) {
+        return;
+      }
+
+      write(applyAuditLog(event, auditLog));
+    })
+    .catch((error: unknown) => {
+      console.warn("failed to enrich channel lifecycle log event", {
+        eventName,
+        guildId: event.guildId,
+        error
+      });
+      write(event);
+    });
+}
+
+async function writeVoiceStateEvent(
+  write: (event: NormalizedEvent) => void,
+  oldState: VoiceState,
+  newState: VoiceState,
+  db: DbClient
+) {
+  if (await shouldSuppressTempVoiceStateEvent(oldState, newState, db)) {
+    return;
+  }
+
+  write(createVoiceEvent(oldState, newState));
+}
+
+async function shouldSuppressTempVoiceStateEvent(
+  oldState: VoiceState,
+  newState: VoiceState,
+  db: DbClient
+) {
+  const config = await getGuildConfigByGuildId(db, newState.guild.id);
+
+  if (!config?.tempVoiceCreateChannelId) {
+    return false;
+  }
+
+  if (newState.channelId === config.tempVoiceCreateChannelId) {
+    return true;
+  }
+
+  if (
+    oldState.channelId === config.tempVoiceCreateChannelId &&
+    newState.channelId
+  ) {
+    const tempVoiceChannel = await getActiveTempVoiceChannelByChannelId(
+      db,
+      newState.channelId
+    );
+
+    return tempVoiceChannel !== null;
+  }
+
+  return false;
 }
 
 export function resolveVoiceStateLogEventName(

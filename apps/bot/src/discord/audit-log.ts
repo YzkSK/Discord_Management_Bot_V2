@@ -18,6 +18,7 @@ export interface AuditLogLookupResult {
   status: "matched" | "not_found" | "missing_permission" | "missing_guild" | "error";
   actorId: string | null;
   payload: Record<string, unknown>;
+  reason: string | null;
 }
 
 export async function lookupAuditLog(
@@ -29,6 +30,7 @@ export async function lookupAuditLog(
     return {
       status: "missing_guild",
       actorId: null,
+      reason: null,
       payload: {
         status: "missing_guild",
         action,
@@ -41,6 +43,7 @@ export async function lookupAuditLog(
     return {
       status: "missing_permission",
       actorId: null,
+      reason: null,
       payload: {
         status: "missing_permission",
         action,
@@ -60,6 +63,7 @@ export async function lookupAuditLog(
       return {
         status: "not_found",
         actorId: null,
+        reason: null,
         payload: {
           status: "not_found",
           action,
@@ -71,6 +75,7 @@ export async function lookupAuditLog(
     return {
       status: "matched",
       actorId: entry.executorId,
+      reason: entry.reason,
       payload: {
         status: "matched",
         id: entry.id,
@@ -86,6 +91,7 @@ export async function lookupAuditLog(
     return {
       status: "error",
       actorId: null,
+      reason: null,
       payload: {
         status: "error",
         action,
