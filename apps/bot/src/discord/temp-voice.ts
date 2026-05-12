@@ -179,7 +179,7 @@ async function createGeneratedChannel(
   });
 
   try {
-    await createTempVoiceChannel(db, {
+    const createdTempVoice = await createTempVoiceChannel(db, {
       guildId: transition.guildId,
       channelId: channel.id,
       ownerId: transition.userId,
@@ -194,6 +194,7 @@ async function createGeneratedChannel(
       channelId: channel.id,
       payload: {
         ownerId: transition.userId,
+        callSessionId: createdTempVoice.callSession.id,
         creationChannelId: input.creationChannelId,
         tempVoiceChannelId: channel.id,
         tempVoiceChannelName: channel.name,
@@ -357,6 +358,7 @@ async function deleteIfStillEmpty(
       channelId: deletedTempVoiceChannel.channelId,
       payload: {
         ownerId: deletedTempVoiceChannel.ownerId,
+        callSessionId: deletedTempVoiceChannel.callSessionId,
         tempVoiceChannelId: deletedTempVoiceChannel.channelId,
         tempVoiceChannelName: freshChannel.name,
         controlChannelId: deletedTempVoiceChannel.controlChannelId,

@@ -18,6 +18,9 @@ Phase4 adds the first Temp VC foundation.
 - Call state is tracked in `call_sessions` and `call_session_members`.
 - Temp VC creation is logged as one `voice.temp.created` event. The internal
   channel creation and member move events are suppressed from generic logs.
+  The log payload includes the stable `callSessionId`, `ownerId`, and readable
+  channel names so it can be searched after the generated Discord channel is
+  gone.
 - When a member leaves a Temp VC, membership is updated.
 - If the owner leaves, the next active member is recalculated from
   `joined_at` / `join_order`.
