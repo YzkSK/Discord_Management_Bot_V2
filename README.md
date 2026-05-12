@@ -69,10 +69,10 @@ docker compose --profile app down
 ## Current Phase Status
 
 - Phase0: repository, workspace, config, DB schema, Docker Compose, and CI foundation.
-- Phase1: bot runtime, Discord client, `/setup`, guild registration, and startup logging.
+- Phase1: bot runtime, Discord client, command registration, and startup logging.
 - Phase2: logging ingestion, Redis Stream foundation, bot message log handlers, Dashboard logs API, and Dashboard logs page.
 - Phase3: Dashboard Discord auth, owner/admin/viewer access checks, realtime logs Socket.io foundation, and guild settings foundation.
-- Phase4: Temp VC database, voice state handler, generated voice channel lifecycle, and verification docs.
+- Phase4: Temp VC database, `/setup temp-vc`, Components V2 control channel message, generated voice channel lifecycle, and verification docs.
 
 ## Phase0 Completion Criteria
 

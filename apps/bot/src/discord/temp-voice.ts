@@ -1,7 +1,6 @@
 import {
   ChannelType,
   type Client,
-  EmbedBuilder,
   type GuildBasedChannel,
   PermissionFlagsBits,
   type TextChannel,
@@ -27,6 +26,7 @@ import {
   type VoiceStateTransition,
   type VoiceStateTransitionContext
 } from "./voice-state.js";
+import { createComponentsV2TextMessage } from "./components-v2.js";
 
 const emptyDeleteDelayMs = 5000;
 
@@ -231,20 +231,16 @@ async function sendControlChannelMessage(
   channel: TextChannel,
   input: { ownerId: string; tempVoiceChannelId: string }
 ) {
-  const embed = new EmbedBuilder()
-    .setTitle("Temp VC Control")
-    .setDescription("Control buttons will be added in a later issue.")
-    .addFields(
-      { name: "Owner", value: `<@${input.ownerId}>`, inline: true },
-      {
-        name: "Voice Channel",
-        value: `<#${input.tempVoiceChannelId}>`,
-        inline: true
-      }
-    )
-    .setTimestamp(new Date());
-
-  await channel.send({ embeds: [embed] });
+  await channel.send(
+    createComponentsV2TextMessage({
+      title: "Temp VC Control",
+      lines: [
+        `Owner: <@${input.ownerId}>`,
+        `Voice channel: <#${input.tempVoiceChannelId}>`,
+        "Control buttons will be added in a later issue."
+      ]
+    })
+  );
 }
 
 async function transferOwnerIfNeeded(db: DbClient, channelId: string) {

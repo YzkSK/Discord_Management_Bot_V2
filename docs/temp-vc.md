@@ -6,12 +6,14 @@ Phase4 adds the first Temp VC foundation.
 
 - A configured creation voice channel acts as the trigger.
 - When a non-bot member joins that creation VC, the bot creates a generated
-  voice channel named `🎮 {username}`.
+  voice channel named `U+1F3AE {username}`.
 - The member is moved into the generated voice channel.
-- A control text channel named `control-🎮 {username}` is created next to the
-  generated voice channel.
+- A control text channel named `control-U+1F3AE {username}` is created next to
+  the generated voice channel.
 - The control text channel is visible to the Temp VC owner and hidden from
   everyone else.
+- The control text channel posts its initial owner/channel summary with
+  Discord Components V2.
 - Generated Temp VCs are tracked in `temp_voice_channels`.
 - Call state is tracked in `call_sessions` and `call_session_members`.
 - When a member leaves a Temp VC, membership is updated.
@@ -40,7 +42,8 @@ Phase4 adds:
 - `guild_configs.temp_voice_create_channel_id`
 - `guild_configs.temp_voice_category_id`
 
-The creation channel must be configured before the bot can create Temp VCs.
+The creation channel must be configured with `/setup temp-vc` before the bot can
+create Temp VCs.
 
 ## Configure A Test Guild
 
@@ -50,20 +53,20 @@ Run migrations first:
 pnpm db:migrate
 ```
 
-Then set the creation VC for a guild. Replace the IDs before running:
+Then register slash commands if needed:
 
 ```bash
-docker compose exec postgres psql -U discord_bot -d discord_bot -c "update guild_configs set temp_voice_create_channel_id = '<creation voice channel id>', temp_voice_category_id = '<category id or null>' from guilds where guild_configs.guild_ref_id = guilds.id and guilds.guild_id = '<guild id>';"
+pnpm --filter @discord-bot/bot commands:register
 ```
 
-If no category is needed, use SQL `null`:
+Then run the Temp VC setup command in Discord:
 
-```bash
-docker compose exec postgres psql -U discord_bot -d discord_bot -c "update guild_configs set temp_voice_create_channel_id = '<creation voice channel id>', temp_voice_category_id = null from guilds where guild_configs.guild_ref_id = guilds.id and guilds.guild_id = '<guild id>';"
+```text
+/setup temp-vc creation-channel:<voice channel> category:<optional category>
 ```
 
-The guild must already have `guilds` and `guild_configs` rows. Running `/setup`
-in the guild creates those rows.
+This command creates or updates the required `guilds` and `guild_configs` rows.
+There is no separate guild registration setup command.
 
 ## Bot Permissions
 
@@ -96,15 +99,17 @@ docker compose --profile app logs -f bot
 
 ## Manual Check
 
-1. Run `/setup` in the test guild if the guild is not initialized.
-2. Apply DB migrations.
-3. Configure `temp_voice_create_channel_id`.
+1. Apply DB migrations.
+2. Register slash commands.
+3. Run `/setup temp-vc`.
 4. Start the bot.
 5. Join the configured creation VC.
-6. Confirm a `🎮 {username}` voice channel is created.
+6. Confirm a `U+1F3AE {username}` voice channel is created.
 7. Confirm you are moved into the generated VC.
-8. Leave the generated VC.
-9. Confirm it is deleted after about 5 seconds.
+8. Confirm the private control text channel is created with a Components V2
+   message.
+9. Leave the generated VC.
+10. Confirm both generated channels are deleted after about 5 seconds.
 
 ## Verification Commands
 
