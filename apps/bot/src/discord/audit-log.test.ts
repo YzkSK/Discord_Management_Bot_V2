@@ -13,6 +13,7 @@ describe("applyAuditLog", () => {
       applyAuditLog(event, {
         status: "matched",
         actorId: "audit-actor",
+        reason: "changed by moderator",
         payload: {
           status: "matched",
           executorId: "audit-actor"
@@ -27,6 +28,7 @@ describe("applyAuditLog", () => {
     const enriched = applyAuditLog(event, {
       status: "not_found",
       actorId: null,
+      reason: null,
       payload: {
         status: "not_found"
       }

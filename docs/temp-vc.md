@@ -16,12 +16,16 @@ Phase4 adds the first Temp VC foundation.
   Discord Components V2.
 - Generated Temp VCs are tracked in `temp_voice_channels`.
 - Call state is tracked in `call_sessions` and `call_session_members`.
+- Temp VC creation is logged as one `voice.temp.created` event. The internal
+  channel creation and member move events are suppressed from generic logs.
 - When a member leaves a Temp VC, membership is updated.
 - If the owner leaves, the next active member is recalculated from
   `joined_at` / `join_order`.
 - If the Temp VC becomes empty, it is scheduled for deletion after 5 seconds.
 - When the generated voice channel is deleted, the control text channel is also
   deleted.
+- Temp VC deletion is logged as one `voice.temp.deleted` event. The internal
+  channel delete events are suppressed from generic logs.
 
 ## Deferred
 

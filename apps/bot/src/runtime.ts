@@ -57,7 +57,10 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
         db: dbConnection.db,
         redis: redisConnection.client
       });
-      installTempVoiceHandlers(discordClient, { db: dbConnection.db });
+      installTempVoiceHandlers(discordClient, {
+        db: dbConnection.db,
+        redis: redisConnection.client
+      });
       await discordClient.login(env.DISCORD_BOT_TOKEN);
       await recordStartupLog(dbConnection, env).catch((error: unknown) => {
         console.error("failed to record bot startup log", error);

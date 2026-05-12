@@ -5,6 +5,12 @@ import {
   formatTempVoiceChannelName,
   formatTempVoiceControlChannelName
 } from "./temp-voice.js";
+import {
+  isTempVoiceAuditReason,
+  tempVoiceControlCreateReason,
+  tempVoiceCreateReason,
+  tempVoiceDeleteReason
+} from "./temp-voice-log-suppression.js";
 
 describe("formatTempVoiceChannelName", () => {
   it("formats the generated temp voice channel name", () => {
@@ -16,5 +22,12 @@ describe("formatTempVoiceChannelName", () => {
       formatTempVoiceControlChannelName("Yuzuki"),
       "control-🎮 Yuzuki"
     );
+  });
+  it("detects temp voice audit reasons for generic log suppression", () => {
+    assert.equal(isTempVoiceAuditReason(tempVoiceCreateReason), true);
+    assert.equal(isTempVoiceAuditReason(tempVoiceControlCreateReason), true);
+    assert.equal(isTempVoiceAuditReason(tempVoiceDeleteReason), true);
+    assert.equal(isTempVoiceAuditReason("regular channel change"), false);
+    assert.equal(isTempVoiceAuditReason(null), false);
   });
 });
