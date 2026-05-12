@@ -9,7 +9,7 @@ import {
 export interface ComponentsV2TextMessageInput {
   title: string;
   lines?: readonly string[];
-  ephemeral?: boolean;
+  privateResponse?: boolean;
 }
 
 export function createComponentsV2TextMessage(
@@ -35,6 +35,6 @@ export function createComponentsV2TextMessage(
     components,
     flags:
       MessageFlags.IsComponentsV2 |
-      (input.ephemeral ? MessageFlags.Ephemeral : 0)
+      (input.privateResponse ? MessageFlags.Ephemeral : 0)
   };
 }

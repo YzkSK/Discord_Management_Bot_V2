@@ -1,5 +1,6 @@
 import type { ChatInputCommandInteraction } from "discord.js";
 
+import { createComponentsV2TextMessage } from "../discord/components-v2.js";
 import {
   handleSetupCommand,
   setupCommand,
@@ -24,8 +25,11 @@ export async function handleChatInputCommand(
       return;
     default:
       await interaction.reply({
-        content: "Unknown command.",
-        ephemeral: true
+        ...createComponentsV2TextMessage({
+          title: "Command failed",
+          lines: ["Unknown command."],
+          privateResponse: true
+        })
       });
   }
 }
