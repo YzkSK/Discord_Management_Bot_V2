@@ -1,7 +1,10 @@
 import {
   ChannelType,
   type Client,
+  EmbedBuilder,
   type GuildBasedChannel,
+  PermissionFlagsBits,
+  type TextChannel,
   type VoiceBasedChannel
 } from "discord.js";
 
@@ -43,7 +46,11 @@ export function installTempVoiceHandlers(
 }
 
 export function formatTempVoiceChannelName(username: string) {
-  return `🎮 ${username}`;
+  return `\u{1F3AE} ${username}`;
+}
+
+export function formatTempVoiceControlChannelName(username: string) {
+  return `control-${formatTempVoiceChannelName(username)}`;
 }
 
 async function handleTempVoiceTransition(
@@ -142,19 +149,102 @@ async function createGeneratedChannel(
     reason: "Temp VC created from creation channel.",
     type: ChannelType.GuildVoice
   });
+  const controlChannel = await createControlChannel(context, {
+    categoryId: input.categoryId,
+    ownerId: transition.userId,
+    tempVoiceChannelId: channel.id
+  });
 
   try {
     await createTempVoiceChannel(db, {
       guildId: transition.guildId,
       channelId: channel.id,
       ownerId: transition.userId,
-      creationChannelId: input.creationChannelId
+      creationChannelId: input.creationChannelId,
+      controlChannelId: controlChannel.id
     });
     await member.voice.setChannel(channel);
   } catch (error) {
+    await controlChannel
+      .delete("Temp VC creation failed.")
+      .catch(() => undefined);
     await channel.delete("Temp VC creation failed.").catch(() => undefined);
     throw error;
   }
+}
+
+async function createControlChannel(
+  context: VoiceStateTransitionContext,
+  input: {
+    categoryId: string | null;
+    ownerId: string;
+    tempVoiceChannelId: string;
+  }
+) {
+  const member = context.newState.member;
+  const botMember = context.newState.guild.members.me;
+  const permissionOverwrites = [
+    {
+      id: context.newState.guild.roles.everyone.id,
+      deny: [PermissionFlagsBits.ViewChannel]
+    },
+    {
+      id: input.ownerId,
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory
+      ]
+    },
+    ...(botMember
+      ? [
+          {
+            id: botMember.id,
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.ReadMessageHistory,
+              PermissionFlagsBits.ManageChannels
+            ]
+          }
+        ]
+      : [])
+  ];
+
+  const channel = await context.newState.guild.channels.create({
+    name: formatTempVoiceControlChannelName(member?.displayName ?? "temp-vc"),
+    ...(input.categoryId ? { parent: input.categoryId } : {}),
+    permissionOverwrites,
+    reason: "Temp VC control channel created.",
+    type: ChannelType.GuildText
+  });
+
+  await sendControlChannelMessage(channel, {
+    ownerId: input.ownerId,
+    tempVoiceChannelId: input.tempVoiceChannelId
+  });
+
+  return channel;
+}
+
+async function sendControlChannelMessage(
+  channel: TextChannel,
+  input: { ownerId: string; tempVoiceChannelId: string }
+) {
+  const embed = new EmbedBuilder()
+    .setTitle("Temp VC Control")
+    .setDescription("Control buttons will be added in a later issue.")
+    .addFields(
+      { name: "Owner", value: `<@${input.ownerId}>`, inline: true },
+      {
+        name: "Voice Channel",
+        value: `<#${input.tempVoiceChannelId}>`,
+        inline: true
+      }
+    )
+    .setTimestamp(new Date());
+
+  await channel.send({ embeds: [embed] });
 }
 
 async function transferOwnerIfNeeded(db: DbClient, channelId: string) {
@@ -206,7 +296,17 @@ async function deleteIfStillEmpty(db: DbClient, channel: VoiceBasedChannel) {
   }
 
   await freshChannel.delete("Temp VC empty.");
-  await endTempVoiceChannel(db, { channelId: channel.id });
+  const deletedTempVoiceChannel = await endTempVoiceChannel(db, {
+    channelId: channel.id
+  });
+
+  if (deletedTempVoiceChannel?.controlChannelId) {
+    const controlChannel = await channel.guild.channels
+      .fetch(deletedTempVoiceChannel.controlChannelId)
+      .catch(() => null);
+
+    await controlChannel?.delete("Temp VC empty.").catch(() => undefined);
+  }
 }
 
 function isEmptyVoiceChannel(channel: VoiceBasedChannel | null) {
