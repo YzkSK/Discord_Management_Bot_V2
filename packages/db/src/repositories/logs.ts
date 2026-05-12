@@ -1,5 +1,5 @@
 import type { DbClient } from "../client.js";
-import { and, desc, eq, ilike, lte, type SQL } from "drizzle-orm";
+import { and, desc, eq, ilike, lte, or, sql, type SQL } from "drizzle-orm";
 import { logs } from "../schema/index.js";
 
 export interface InsertLogEventInput {
@@ -126,7 +126,12 @@ function buildLogFilters(input: ListLogEventsInput): SQL[] {
   }
 
   if (input.search) {
-    filters.push(ilike(logs.eventName, `%${input.search}%`));
+    filters.push(
+      or(
+        ilike(logs.eventName, `%${input.search}%`),
+        sql`${logs.payload}::text ilike ${`%${input.search}%`}`
+      )!
+    );
   }
 
   if (input.before) {

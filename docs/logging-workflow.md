@@ -114,6 +114,9 @@ requires the Japanese Discord permission `監査ログを表示` / English permi
 - `channelId`
 - `messageId`
 - `search`: event name search.
+  - Also searches the JSON payload text, so Temp VC `callSessionId`,
+    `ownerId`, and channel names can be found even when Discord channel ids are
+    short-lived.
 
 Response shape:
 
