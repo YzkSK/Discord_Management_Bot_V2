@@ -8,18 +8,23 @@ Phase4 adds the first Temp VC foundation.
 - When a non-bot member joins that creation VC, the bot creates a generated
   voice channel named `🎮 {username}`.
 - The member is moved into the generated voice channel.
+- A control text channel named `control-🎮 {username}` is created next to the
+  generated voice channel.
+- The control text channel is visible to the Temp VC owner and hidden from
+  everyone else.
 - Generated Temp VCs are tracked in `temp_voice_channels`.
 - Call state is tracked in `call_sessions` and `call_session_members`.
 - When a member leaves a Temp VC, membership is updated.
 - If the owner leaves, the next active member is recalculated from
   `joined_at` / `join_order`.
 - If the Temp VC becomes empty, it is scheduled for deletion after 5 seconds.
+- When the generated voice channel is deleted, the control text channel is also
+  deleted.
 
 ## Deferred
 
 Not included in Phase4:
 
-- Control text channel creation.
 - Button controls.
 - Rename sync.
 - Lock/unlock, hide/show, user limit, bitrate, and kick controls.
