@@ -32,7 +32,7 @@ describe("createComponentsV2TextMessage", () => {
   it("can mark interaction replies as ephemeral", () => {
     const message = createComponentsV2TextMessage({
       title: "Setup complete",
-      ephemeral: true
+      privateResponse: true
     });
 
     assert.equal(

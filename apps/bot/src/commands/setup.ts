@@ -66,7 +66,7 @@ export async function handleSetupCommand(
       ...createComponentsV2TextMessage({
         title: "Setup failed",
         lines: ["This command can only be used in a guild."],
-        ephemeral: true
+        privateResponse: true
       })
     });
     return;
@@ -77,7 +77,7 @@ export async function handleSetupCommand(
       ...createComponentsV2TextMessage({
         title: "Setup failed",
         lines: ["You need Manage Server permission to run setup."],
-        ephemeral: true
+        privateResponse: true
       })
     });
     return;
@@ -97,7 +97,7 @@ export async function handleSetupCommand(
         ...createComponentsV2TextMessage({
           title: "Setup failed",
           lines: [`Unknown setup target: ${subcommand}`],
-          ephemeral: true
+          privateResponse: true
         })
       });
   }
@@ -119,7 +119,7 @@ async function handleTempVoiceSetup(
       ...createComponentsV2TextMessage({
         title: "Temp VC setup failed",
         lines: ["Creation channel must be a voice channel."],
-        ephemeral: true
+        privateResponse: true
       })
     });
     return;
@@ -130,7 +130,7 @@ async function handleTempVoiceSetup(
       ...createComponentsV2TextMessage({
         title: "Temp VC setup failed",
         lines: ["Category must be a channel category."],
-        ephemeral: true
+        privateResponse: true
       })
     });
     return;
@@ -154,7 +154,7 @@ async function handleTempVoiceSetup(
         `Creation channel: <#${creationChannel.id}>`,
         `Category: ${category ? `<#${category.id}>` : "same category as the creation channel"}`
       ],
-      ephemeral: true
+      privateResponse: true
     })
   });
 }
@@ -171,7 +171,7 @@ async function handleLogsSetup(
       ...createComponentsV2TextMessage({
         title: "Logs setup failed",
         lines: ["Log channel must be a text channel."],
-        ephemeral: true
+        privateResponse: true
       })
     });
     return;
@@ -191,7 +191,7 @@ async function handleLogsSetup(
         `Log channel: <#${channel.id}>`,
         `Marker: ${logChannelTopicMarker}`
       ],
-      ephemeral: true
+      privateResponse: true
     })
   });
 }
