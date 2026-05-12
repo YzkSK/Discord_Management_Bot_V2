@@ -9,6 +9,7 @@ Discord message event
 -> packages/logger ingestion service
 -> PostgreSQL logs table
 -> Redis Stream
+-> configured Discord log channel
 -> Dashboard /api/logs
 -> Dashboard /logs
 ```
@@ -29,6 +30,8 @@ Implemented in Phase2:
 - `apps/bot`
   - Handles `message.create`, `message.update`, and `message.delete`.
   - Writes message logs to PostgreSQL and Redis.
+  - Sends message log summaries to the configured Discord log channel when one
+    is marked.
   - Keeps handler errors isolated from the bot runtime.
 - `apps/dashboard`
   - Exposes `GET /api/logs`.
@@ -65,6 +68,25 @@ Phase3 adds a Socket.io foundation for live log delivery.
 The Dashboard logs page opens the socket only after a guild ID is selected. The socket uses the same browser session cookie as the Dashboard and checks viewer-or-higher access before reading from `rt:logs:<guildId>`.
 
 Realtime delivery reads from the per-guild Redis Stream and does not replace durable ingestion. All events still go through PostgreSQL and the durable `logs:events` stream first. The realtime policy remains the filter for high-frequency events, so `message.create` is still not streamed by default.
+
+## Discord Log Channel
+
+Run this in a guild to mark a Discord text channel as the log delivery channel:
+
+```text
+/setup logs channel:<text channel>
+```
+
+The bot stores this without a database column by appending this marker to the
+channel topic:
+
+```text
+[discord-management-bot:logs]
+```
+
+When message create/update/delete events are detected, the bot still writes the
+event to PostgreSQL and Redis for the Dashboard, then posts a Components V2 log
+summary to the marked channel. Bot-authored messages are skipped.
 
 ## Dashboard Logs API
 

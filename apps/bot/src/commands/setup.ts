@@ -2,6 +2,7 @@ import {
   ChannelType,
   type ChatInputCommandInteraction,
   PermissionFlagsBits,
+  type TextChannel,
   SlashCommandBuilder
 } from "discord.js";
 import type { DbClient } from "@discord-bot/db";
@@ -11,6 +12,7 @@ import {
 } from "@discord-bot/db";
 
 import { createComponentsV2TextMessage } from "../discord/components-v2.js";
+import { logChannelTopicMarker, markLogChannel } from "../discord/log-channel.js";
 
 export const setupCommand = new SlashCommandBuilder()
   .setName("setup")
@@ -34,6 +36,18 @@ export const setupCommand = new SlashCommandBuilder()
           .setDescription("Category for generated Temp VCs and control channels.")
           .addChannelTypes(ChannelType.GuildCategory)
           .setRequired(false)
+      )
+  )
+  .addSubcommand((subcommand) =>
+    subcommand
+      .setName("logs")
+      .setDescription("Configure the guild log delivery channel.")
+      .addChannelOption((option) =>
+        option
+          .setName("channel")
+          .setDescription("Text channel where detected log events are posted.")
+          .addChannelTypes(ChannelType.GuildText)
+          .setRequired(true)
       )
   );
 
@@ -71,18 +85,22 @@ export async function handleSetupCommand(
 
   const subcommand = interaction.options.getSubcommand();
 
-  if (subcommand !== "temp-vc") {
-    await interaction.reply({
-      ...createComponentsV2TextMessage({
-        title: "Setup failed",
-        lines: [`Unknown setup target: ${subcommand}`],
-        ephemeral: true
-      })
-    });
-    return;
+  switch (subcommand) {
+    case "logs":
+      await handleLogsSetup(interaction, context, guildId);
+      return;
+    case "temp-vc":
+      await handleTempVoiceSetup(interaction, context, guildId);
+      return;
+    default:
+      await interaction.reply({
+        ...createComponentsV2TextMessage({
+          title: "Setup failed",
+          lines: [`Unknown setup target: ${subcommand}`],
+          ephemeral: true
+        })
+      });
   }
-
-  await handleTempVoiceSetup(interaction, context, guildId);
 }
 
 async function handleTempVoiceSetup(
@@ -135,6 +153,43 @@ async function handleTempVoiceSetup(
       lines: [
         `Creation channel: <#${creationChannel.id}>`,
         `Category: ${category ? `<#${category.id}>` : "same category as the creation channel"}`
+      ],
+      ephemeral: true
+    })
+  });
+}
+
+async function handleLogsSetup(
+  interaction: ChatInputCommandInteraction,
+  context: SetupCommandContext,
+  guildId: string
+) {
+  const channel = interaction.options.getChannel("channel", true);
+
+  if (channel.type !== ChannelType.GuildText) {
+    await interaction.reply({
+      ...createComponentsV2TextMessage({
+        title: "Logs setup failed",
+        lines: ["Log channel must be a text channel."],
+        ephemeral: true
+      })
+    });
+    return;
+  }
+
+  await ensureGuildSetup(context.db, {
+    guildId,
+    name: interaction.guild?.name ?? null
+  });
+
+  await markLogChannel(channel as TextChannel);
+
+  await interaction.reply({
+    ...createComponentsV2TextMessage({
+      title: "Logs setup complete",
+      lines: [
+        `Log channel: <#${channel.id}>`,
+        `Marker: ${logChannelTopicMarker}`
       ],
       ephemeral: true
     })
