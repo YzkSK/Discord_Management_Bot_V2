@@ -196,7 +196,9 @@ async function createGeneratedChannel(
         ownerId: transition.userId,
         creationChannelId: input.creationChannelId,
         tempVoiceChannelId: channel.id,
+        tempVoiceChannelName: channel.name,
         controlChannelId: controlChannel.id,
+        controlChannelName: controlChannel.name,
         categoryId: input.categoryId
       }
     });
@@ -337,11 +339,13 @@ async function deleteIfStillEmpty(
     channelId: channel.id
   });
 
-  if (deletedTempVoiceChannel?.controlChannelId) {
-    const controlChannel = await channel.guild.channels
+  const controlChannel = deletedTempVoiceChannel?.controlChannelId
+    ? await channel.guild.channels
       .fetch(deletedTempVoiceChannel.controlChannelId)
-      .catch(() => null);
+      .catch(() => null)
+    : null;
 
+  if (controlChannel) {
     await controlChannel?.delete(tempVoiceDeleteReason).catch(() => undefined);
   }
 
@@ -354,7 +358,10 @@ async function deleteIfStillEmpty(
       payload: {
         ownerId: deletedTempVoiceChannel.ownerId,
         tempVoiceChannelId: deletedTempVoiceChannel.channelId,
+        tempVoiceChannelName: freshChannel.name,
         controlChannelId: deletedTempVoiceChannel.controlChannelId,
+        controlChannelName:
+          controlChannel && "name" in controlChannel ? controlChannel.name : null,
         creationChannelId: deletedTempVoiceChannel.creationChannelId
       }
     });

@@ -78,9 +78,31 @@ describe("log event formatting", () => {
     assert.deepEqual(formatLogEventLines(event), [
       "Actor: unknown",
       "Channel: unknown",
-      "Message ID: unknown",
       "Event time: 2026-05-12T00:00:00.000Z",
       'Details: {"role":{"id":"role-1","name":"Admin"}}'
+    ]);
+  });
+
+  it("formats a temp voice event with the channel name", () => {
+    const event: NormalizedEvent = {
+      eventName: "voice.temp.deleted",
+      eventTimestamp: new Date("2026-05-12T00:00:00.000Z"),
+      receivedAt: new Date("2026-05-12T00:00:01.000Z"),
+      guildId: "guild-1",
+      actorId: "user-1",
+      channelId: "deleted-channel-1",
+      messageId: null,
+      payload: {
+        tempVoiceChannelId: "deleted-channel-1",
+        tempVoiceChannelName: "\u{1F3AE} Yuzuki"
+      }
+    };
+
+    assert.deepEqual(formatLogEventLines(event), [
+      "Actor: <@user-1>",
+      "Channel: \u{1F3AE} Yuzuki",
+      "Event time: 2026-05-12T00:00:00.000Z",
+      'Details: {"tempVoiceChannelId":"deleted-channel-1","tempVoiceChannelName":"🎮 Yuzuki"}'
     ]);
   });
 });

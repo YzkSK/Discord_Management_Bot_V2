@@ -82,11 +82,24 @@ export function formatLogEventTitle(eventName: string) {
 export function formatLogEventLines(event: NormalizedEvent) {
   return [
     event.actorId ? `Actor: <@${event.actorId}>` : "Actor: unknown",
-    event.channelId ? `Channel: <#${event.channelId}>` : "Channel: unknown",
-    event.messageId ? `Message ID: ${event.messageId}` : "Message ID: unknown",
+    formatChannelLine(event),
+    event.messageId ? `Message ID: ${event.messageId}` : null,
     `Event time: ${event.eventTimestamp.toISOString()}`,
     formatLogPayload(event.payload)
-  ];
+  ].filter((line): line is string => line !== null);
+}
+
+function formatChannelLine(event: NormalizedEvent) {
+  const tempVoiceChannelName =
+    typeof event.payload.tempVoiceChannelName === "string"
+      ? event.payload.tempVoiceChannelName
+      : null;
+
+  if (event.eventName.startsWith("voice.temp.") && tempVoiceChannelName) {
+    return `Channel: ${tempVoiceChannelName}`;
+  }
+
+  return event.channelId ? `Channel: <#${event.channelId}>` : "Channel: unknown";
 }
 
 function formatLogPayload(payload: NormalizedEvent["payload"]) {
