@@ -4,8 +4,10 @@ import { MessageFlags } from "discord.js";
 
 import {
   appendRecruitmentChannelMarker,
+  createRecruitmentCustomId,
   createRecruitmentPostMessage,
   hasRecruitmentChannelMarker,
+  parseRecruitmentCustomId,
   recruitmentChannelTopicMarker
 } from "./recruitment-channel.js";
 
@@ -31,6 +33,21 @@ describe("recruitment channel marker", () => {
   });
 });
 
+describe("recruitment custom ids", () => {
+  it("parses recruitment component custom ids", () => {
+    const customId = createRecruitmentCustomId("join", "recruitment-1");
+
+    assert.deepEqual(parseRecruitmentCustomId(customId), {
+      action: "join",
+      recruitmentId: "recruitment-1"
+    });
+  });
+
+  it("ignores custom ids from other features", () => {
+    assert.equal(parseRecruitmentCustomId("temp-vc:join:1"), null);
+  });
+});
+
 describe("createRecruitmentPostMessage", () => {
   it("formats a recruitment post as Components V2", () => {
     const message = createRecruitmentPostMessage({
@@ -51,7 +68,7 @@ describe("createRecruitmentPostMessage", () => {
       updatedAt: new Date("2026-05-12T00:00:00.000Z")
     });
 
-    assert.equal(message.components?.length, 1);
+    assert.equal(message.components?.length, 2);
     assert.equal(message.flags, MessageFlags.IsComponentsV2);
   });
 });
