@@ -221,3 +221,74 @@ export const callSessionMembers = pgTable(
     )
   })
 );
+
+export const recruitments = pgTable(
+  "recruitments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    guildId: text("guild_id").notNull(),
+    channelId: text("channel_id").notNull(),
+    messageId: text("message_id"),
+    creatorId: text("creator_id").notNull(),
+    genre: text("genre").notNull(),
+    capacity: integer("capacity").notNull(),
+    content: text("content").notNull(),
+    voiceChannelId: text("voice_channel_id"),
+    autoClose: boolean("auto_close").notNull().default(true),
+    status: text("status").notNull().default("open"),
+    autoClosed: boolean("auto_closed").notNull().default(false),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  (table) => ({
+    recruitmentsGuildIdx: index("recruitments_guild_id_idx").on(
+      table.guildId
+    ),
+    recruitmentsMessageIdx: uniqueIndex("recruitments_message_id_idx").on(
+      table.messageId
+    ),
+    recruitmentsStatusIdx: index("recruitments_status_idx").on(table.status),
+    capacityCheck: check(
+      "recruitments_capacity_check",
+      sql`${table.capacity} > 0`
+    ),
+    statusCheck: check(
+      "recruitments_status_check",
+      sql`${table.status} in ('open', 'full', 'closed')`
+    )
+  })
+);
+
+export const recruitmentParticipants = pgTable(
+  "recruitment_participants",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    recruitmentId: uuid("recruitment_id")
+      .notNull()
+      .references(() => recruitments.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    joinedAt: timestamp("joined_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    leftAt: timestamp("left_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  (table) => ({
+    recruitmentParticipantsRecruitmentUserIdx: uniqueIndex(
+      "recruitment_participants_recruitment_user_idx"
+    ).on(table.recruitmentId, table.userId),
+    recruitmentParticipantsRecruitmentJoinedIdx: index(
+      "recruitment_participants_recruitment_joined_idx"
+    ).on(table.recruitmentId, table.joinedAt)
+  })
+);

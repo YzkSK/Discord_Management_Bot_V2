@@ -19,7 +19,7 @@
     "db:migrate": "drizzle-kit migrate",
     "dev": "tsc -p tsconfig.json --watch",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "node -e \"console.log('db: no tests yet')\"",
+    "test": "tsc -p tsconfig.json && node --test dist/src/repositories/recruitments.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
