@@ -2,6 +2,7 @@ import type { DbClient } from "@discord-bot/db";
 import type { RedisStreamWriter } from "@discord-bot/redis";
 import type { NormalizedEvent } from "@discord-bot/shared";
 import {
+  AuditLogEvent,
   Events,
   type AnyThreadChannel,
   type Client,
@@ -23,6 +24,13 @@ import {
   type VoiceState
 } from "discord.js";
 
+import {
+  applyAuditLog,
+  getChannelGuild,
+  getInviteGuild,
+  lookupAuditLog,
+  writeWithAuditLog
+} from "./audit-log.js";
 import { createDiscordLogWriter } from "./log-writer.js";
 
 export interface InstallGatewayLogHandlersOptions {
@@ -46,12 +54,16 @@ export function installGatewayLogHandlers(
   };
 
   client.on(Events.GuildUpdate, (oldGuild, newGuild) => {
-    write(
+    writeWithAuditLog(
+      write,
       createGuildEvent("guild.update", newGuild, {
         before: guildPayload(oldGuild),
         after: guildPayload(newGuild),
         changes: diffRecord(guildPayload(oldGuild), guildPayload(newGuild))
-      })
+      }),
+      newGuild,
+      AuditLogEvent.GuildUpdate,
+      newGuild.id
     );
   });
 
@@ -64,11 +76,7 @@ export function installGatewayLogHandlers(
   });
 
   client.on(Events.GuildMemberRemove, (member) => {
-    write(
-      createGuildEvent("member.leave", member.guild, {
-        member: memberPayload(member)
-      }, member.id)
-    );
+    void writeMemberRemoveEvent(write, member);
   });
 
   client.on(Events.GuildMemberUpdate, (oldMember, newMember) => {
@@ -76,129 +84,233 @@ export function installGatewayLogHandlers(
     const newTimeout = newMember.communicationDisabledUntilTimestamp ?? null;
     const eventName = oldTimeout !== newTimeout ? "member.timeout" : "member.update";
 
-    write(
+    writeWithAuditLog(
+      write,
       createGuildEvent(eventName, newMember.guild, {
         before: memberPayload(oldMember),
         after: memberPayload(newMember),
         changes: diffRecord(memberPayload(oldMember), memberPayload(newMember))
-      }, newMember.id)
+      }, newMember.id),
+      newMember.guild,
+      AuditLogEvent.MemberUpdate,
+      newMember.id
     );
   });
 
   client.on(Events.GuildBanAdd, (ban) => {
-    write(
+    writeWithAuditLog(
+      write,
       createGuildEvent("member.ban", ban.guild, {
         user: userPayload(ban.user),
         reason: ban.reason
-      }, ban.user.id)
+      }, ban.user.id),
+      ban.guild,
+      AuditLogEvent.MemberBanAdd,
+      ban.user.id
     );
   });
 
   client.on(Events.GuildBanRemove, (ban) => {
-    write(
+    writeWithAuditLog(
+      write,
       createGuildEvent("member.unban", ban.guild, {
         user: userPayload(ban.user),
         reason: ban.reason
-      }, ban.user.id)
+      }, ban.user.id),
+      ban.guild,
+      AuditLogEvent.MemberBanRemove,
+      ban.user.id
     );
   });
 
   client.on(Events.ChannelCreate, (channel) => {
-    write(createChannelEvent("channel.create", channel, { channel: channelPayload(channel) }));
+    writeWithAuditLog(
+      write,
+      createChannelEvent("channel.create", channel, { channel: channelPayload(channel) }),
+      getChannelGuild(channel),
+      AuditLogEvent.ChannelCreate,
+      channel.id
+    );
   });
 
   client.on(Events.ChannelUpdate, (oldChannel, newChannel) => {
-    write(
+    writeWithAuditLog(
+      write,
       createChannelEvent("channel.update", newChannel, {
         before: channelPayload(oldChannel),
         after: channelPayload(newChannel),
         changes: diffRecord(channelPayload(oldChannel), channelPayload(newChannel))
-      })
+      }),
+      getChannelGuild(newChannel),
+      AuditLogEvent.ChannelUpdate,
+      newChannel.id
     );
   });
 
   client.on(Events.ChannelDelete, (channel) => {
-    write(createChannelEvent("channel.delete", channel, { channel: channelPayload(channel) }));
+    writeWithAuditLog(
+      write,
+      createChannelEvent("channel.delete", channel, { channel: channelPayload(channel) }),
+      getChannelGuild(channel),
+      AuditLogEvent.ChannelDelete,
+      channel.id
+    );
   });
 
   client.on(Events.GuildRoleCreate, (role) => {
-    write(createGuildEvent("role.create", role.guild, { role: rolePayload(role) }));
+    writeWithAuditLog(
+      write,
+      createGuildEvent("role.create", role.guild, { role: rolePayload(role) }),
+      role.guild,
+      AuditLogEvent.RoleCreate,
+      role.id
+    );
   });
 
   client.on(Events.GuildRoleUpdate, (oldRole, newRole) => {
-    write(
+    writeWithAuditLog(
+      write,
       createGuildEvent("role.update", newRole.guild, {
         before: rolePayload(oldRole),
         after: rolePayload(newRole),
         changes: diffRecord(rolePayload(oldRole), rolePayload(newRole))
-      })
+      }),
+      newRole.guild,
+      AuditLogEvent.RoleUpdate,
+      newRole.id
     );
   });
 
   client.on(Events.GuildRoleDelete, (role) => {
-    write(createGuildEvent("role.delete", role.guild, { role: rolePayload(role) }));
+    writeWithAuditLog(
+      write,
+      createGuildEvent("role.delete", role.guild, { role: rolePayload(role) }),
+      role.guild,
+      AuditLogEvent.RoleDelete,
+      role.id
+    );
   });
 
   client.on(Events.ThreadCreate, (thread, newlyCreated) => {
-    write(createThreadEvent("thread.create", thread, { thread: threadPayload(thread), newlyCreated }));
+    writeWithAuditLog(
+      write,
+      createThreadEvent("thread.create", thread, { thread: threadPayload(thread), newlyCreated }),
+      thread.guild,
+      AuditLogEvent.ThreadCreate,
+      thread.id
+    );
   });
 
   client.on(Events.ThreadUpdate, (oldThread, newThread) => {
-    write(
+    writeWithAuditLog(
+      write,
       createThreadEvent("thread.update", newThread, {
         before: threadPayload(oldThread),
         after: threadPayload(newThread),
         changes: diffRecord(threadPayload(oldThread), threadPayload(newThread))
-      })
+      }),
+      newThread.guild,
+      AuditLogEvent.ThreadUpdate,
+      newThread.id
     );
   });
 
   client.on(Events.ThreadDelete, (thread) => {
-    write(createThreadEvent("thread.delete", thread, { thread: threadPayload(thread) }));
+    writeWithAuditLog(
+      write,
+      createThreadEvent("thread.delete", thread, { thread: threadPayload(thread) }),
+      thread.guild,
+      AuditLogEvent.ThreadDelete,
+      thread.id
+    );
   });
 
   client.on(Events.InviteCreate, (invite) => {
-    write(createInviteEvent("invite.create", invite));
+    writeWithAuditLog(
+      write,
+      createInviteEvent("invite.create", invite),
+      getInviteGuild(invite),
+      AuditLogEvent.InviteCreate,
+      invite.code
+    );
   });
 
   client.on(Events.InviteDelete, (invite) => {
-    write(createInviteEvent("invite.delete", invite));
+    writeWithAuditLog(
+      write,
+      createInviteEvent("invite.delete", invite),
+      getInviteGuild(invite),
+      AuditLogEvent.InviteDelete,
+      invite.code
+    );
   });
 
   client.on(Events.GuildEmojiCreate, (emoji) => {
-    write(createGuildEvent("emoji.create", emoji.guild, { emoji: emojiPayload(emoji) }));
+    writeWithAuditLog(
+      write,
+      createGuildEvent("emoji.create", emoji.guild, { emoji: emojiPayload(emoji) }),
+      emoji.guild,
+      AuditLogEvent.EmojiCreate,
+      emoji.id
+    );
   });
 
   client.on(Events.GuildEmojiUpdate, (oldEmoji, newEmoji) => {
-    write(
+    writeWithAuditLog(
+      write,
       createGuildEvent("emoji.update", newEmoji.guild, {
         before: emojiPayload(oldEmoji),
         after: emojiPayload(newEmoji),
         changes: diffRecord(emojiPayload(oldEmoji), emojiPayload(newEmoji))
-      })
+      }),
+      newEmoji.guild,
+      AuditLogEvent.EmojiUpdate,
+      newEmoji.id
     );
   });
 
   client.on(Events.GuildEmojiDelete, (emoji) => {
-    write(createGuildEvent("emoji.delete", emoji.guild, { emoji: emojiPayload(emoji) }));
+    writeWithAuditLog(
+      write,
+      createGuildEvent("emoji.delete", emoji.guild, { emoji: emojiPayload(emoji) }),
+      emoji.guild,
+      AuditLogEvent.EmojiDelete,
+      emoji.id
+    );
   });
 
   client.on(Events.GuildStickerCreate, (sticker) => {
-    write(createGuildEvent("sticker.create", sticker.guild, { sticker: stickerPayload(sticker) }));
+    writeWithAuditLog(
+      write,
+      createGuildEvent("sticker.create", sticker.guild, { sticker: stickerPayload(sticker) }),
+      sticker.guild,
+      AuditLogEvent.StickerCreate,
+      sticker.id
+    );
   });
 
   client.on(Events.GuildStickerUpdate, (oldSticker, newSticker) => {
-    write(
+    writeWithAuditLog(
+      write,
       createGuildEvent("sticker.update", newSticker.guild, {
         before: stickerPayload(oldSticker),
         after: stickerPayload(newSticker),
         changes: diffRecord(stickerPayload(oldSticker), stickerPayload(newSticker))
-      })
+      }),
+      newSticker.guild,
+      AuditLogEvent.StickerUpdate,
+      newSticker.id
     );
   });
 
   client.on(Events.GuildStickerDelete, (sticker) => {
-    write(createGuildEvent("sticker.delete", sticker.guild, { sticker: stickerPayload(sticker) }));
+    writeWithAuditLog(
+      write,
+      createGuildEvent("sticker.delete", sticker.guild, { sticker: stickerPayload(sticker) }),
+      sticker.guild,
+      AuditLogEvent.StickerDelete,
+      sticker.id
+    );
   });
 
   client.on(Events.MessageReactionAdd, (reaction, user) => {
@@ -232,12 +344,16 @@ export function installGatewayLogHandlers(
   });
 
   client.on(Events.MessageBulkDelete, (messages, channel) => {
-    write(
+    writeWithAuditLog(
+      write,
       createChannelEvent("message.bulk_delete", channel, {
         channel: channelPayload(channel),
         messageIds: [...messages.keys()],
         count: messages.size
-      })
+      }),
+      getChannelGuild(channel),
+      AuditLogEvent.MessageBulkDelete,
+      channel.id
     );
   });
 
@@ -246,7 +362,13 @@ export function installGatewayLogHandlers(
   });
 
   client.on(Events.WebhooksUpdate, (channel) => {
-    write(createChannelEvent("webhook.update", channel, { channel: channelPayload(channel) }));
+    writeWithAuditLog(
+      write,
+      createChannelEvent("webhook.update", channel, { channel: channelPayload(channel) }),
+      getChannelGuild(channel),
+      AuditLogEvent.WebhookUpdate,
+      channel.id
+    );
   });
 }
 
@@ -390,6 +512,23 @@ function createEvent(
     messageId: input.messageId,
     payload: input.payload
   };
+}
+
+async function writeMemberRemoveEvent(
+  write: (event: NormalizedEvent) => void,
+  member: GuildMember | PartialGuildMember
+) {
+  const auditLog = await lookupAuditLog(
+    member.guild,
+    AuditLogEvent.MemberKick,
+    member.id
+  );
+  const eventName = auditLog.status === "matched" ? "member.kick" : "member.leave";
+  const event = createGuildEvent(eventName, member.guild, {
+    member: memberPayload(member)
+  }, auditLog.actorId ?? member.id);
+
+  write(applyAuditLog(event, auditLog));
 }
 
 function guildPayload(guild: Guild) {

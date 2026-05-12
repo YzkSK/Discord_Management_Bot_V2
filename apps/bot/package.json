@@ -9,7 +9,7 @@
     "dev": "tsx src/index.ts",
     "lint": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/index.js",
-    "test": "tsc -p tsconfig.json && node --test dist/discord/components-v2.test.js dist/discord/gateway-logs.test.js dist/discord/log-channel.test.js dist/discord/message-logs.test.js dist/discord/recruitment-channel.test.js dist/discord/temp-voice.test.js dist/discord/voice-state.test.js",
+    "test": "tsc -p tsconfig.json && node --test dist/discord/audit-log.test.js dist/discord/components-v2.test.js dist/discord/gateway-logs.test.js dist/discord/log-channel.test.js dist/discord/message-logs.test.js dist/discord/recruitment-channel.test.js dist/discord/temp-voice.test.js dist/discord/voice-state.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

@@ -3,7 +3,7 @@
 Phase2 adds the first end-to-end logging foundation:
 
 ```text
-Discord message event
+Discord gateway event
 -> packages/discord-core normalized event adapter
 -> event dispatcher
 -> packages/logger ingestion service
@@ -29,6 +29,14 @@ Implemented in Phase2:
   - Appends realtime guild events to `rt:logs:<guildId>`.
 - `apps/bot`
   - Handles `message.create`, `message.update`, and `message.delete`.
+  - Handles guild update, member join/leave/kick/ban/unban/update/timeout,
+    channel create/update/delete, role create/update/delete, thread
+    create/update/delete, invite create/delete, emoji create/update/delete,
+    sticker create/update/delete, reaction add/remove, message bulk delete,
+    voice join/leave/move/state update, and webhook update events.
+  - Uses Discord Audit Log lookup for moderation and server-management events
+    when the bot has `View Audit Log`, filling `actorId` and
+    `payload.auditLog`.
   - Writes message logs to PostgreSQL and Redis.
   - Sends message log summaries to the configured Discord log channel when one
     is marked.
@@ -84,9 +92,15 @@ channel topic:
 [discord-management-bot:logs]
 ```
 
-When message create/update/delete events are detected, the bot still writes the
-event to PostgreSQL and Redis for the Dashboard, then posts a Components V2 log
-summary to the marked channel. Bot-authored messages are skipped.
+When Discord events are detected, the bot writes the event to PostgreSQL and
+Redis for the Dashboard, then posts a Components V2 log summary to the marked
+channel. Bot-authored message events are skipped.
+
+For actions where Discord Gateway does not include the executor, the bot checks
+the guild Audit Log and attaches the matching entry to `payload.auditLog`. This
+requires the Japanese Discord permission `監査ログを表示` / English permission
+`View Audit Log`. Without that permission, the event is still logged and
+`payload.auditLog.status` becomes `missing_permission`.
 
 ## Dashboard Logs API
 

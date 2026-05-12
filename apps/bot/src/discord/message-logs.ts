@@ -7,12 +7,14 @@ import {
 import type { DbClient } from "@discord-bot/db";
 import type { RedisStreamWriter } from "@discord-bot/redis";
 import {
+  AuditLogEvent,
   Events,
   type Client,
   type Message,
   type PartialMessage
 } from "discord.js";
 
+import { writeWithAuditLog } from "./audit-log.js";
 import { createDiscordLogWriter } from "./log-writer.js";
 
 export interface InstallMessageLogHandlersOptions {
@@ -60,7 +62,13 @@ export function installMessageLogHandlers(
       return;
     }
 
-    dispatcher.dispatch(normalizeMessageDelete(message));
+    writeWithAuditLog(
+      (event) => dispatcher.dispatch(event),
+      normalizeMessageDelete(message),
+      message.guild,
+      AuditLogEvent.MessageDelete,
+      message.author?.id ?? null
+    );
   });
 }
 
