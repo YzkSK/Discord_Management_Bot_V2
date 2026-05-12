@@ -72,8 +72,8 @@ Discord Developer Portal setup required for local Dashboard auth:
   check.
 
 The `/setup` command is not required for the server owner to access the
-Dashboard. `/setup` still creates the `guilds` and `guild_configs` rows used by
-the Phase3 settings page.
+Dashboard. Feature setup commands, such as `/setup temp-vc`, create or update
+the `guilds` and `guild_configs` rows when that feature is linked.
 
 ## Guild Settings
 
