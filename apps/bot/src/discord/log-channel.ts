@@ -92,11 +92,17 @@ export function formatLogEventLines(event: NormalizedEvent) {
 function formatLogPayload(payload: NormalizedEvent["payload"]) {
   const content = typeof payload.content === "string" ? payload.content : null;
 
-  if (!content) {
-    return "Content: none";
+  if (content) {
+    return `Content: ${truncateForDiscord(content, 800)}`;
   }
 
-  return `Content: ${truncateForDiscord(content, 800)}`;
+  const payloadSummary = JSON.stringify(payload);
+
+  if (!payloadSummary || payloadSummary === "{}") {
+    return "Details: none";
+  }
+
+  return `Details: ${truncateForDiscord(payloadSummary, 800)}`;
 }
 
 function truncateForDiscord(value: string, maxLength: number) {

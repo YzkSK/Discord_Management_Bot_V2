@@ -5,16 +5,7 @@ import {
   normalizeMessageUpdate
 } from "@discord-bot/discord-core";
 import type { DbClient } from "@discord-bot/db";
-import {
-  createLogIngestionService,
-  resolveRealtimeEnabled
-} from "@discord-bot/logger";
-import {
-  appendLogEventToStream,
-  appendRealtimeLogEventToStream,
-  type RedisStreamWriter
-} from "@discord-bot/redis";
-import type { NormalizedEvent } from "@discord-bot/shared";
+import type { RedisStreamWriter } from "@discord-bot/redis";
 import {
   Events,
   type Client,
@@ -22,7 +13,7 @@ import {
   type PartialMessage
 } from "discord.js";
 
-import { sendEventToConfiguredLogChannel } from "./log-channel.js";
+import { createDiscordLogWriter } from "./log-writer.js";
 
 export interface InstallMessageLogHandlersOptions {
   db: DbClient;
@@ -33,23 +24,18 @@ export function installMessageLogHandlers(
   client: Client,
   options: InstallMessageLogHandlersOptions
 ) {
-  const logIngestion = createLogIngestionService(options.db);
+  const logWriter = createDiscordLogWriter(client, options);
   const dispatcher = createEventDispatcher({
     handlers: [
       {
         name: "message-log-writer",
         handle(event) {
-          return writeMessageLogEvent(
-            event,
-            options.redis,
-            logIngestion,
-            client
-          );
+          return logWriter.write(event);
         }
       }
     ],
     async onHandlerError(error) {
-      await logIngestion.recordHandlerError(error);
+      await logWriter.recordHandlerError(error);
     }
   });
 
@@ -80,23 +66,4 @@ export function installMessageLogHandlers(
 
 export function shouldSkipMessageLog(message: Message | PartialMessage) {
   return message.author?.bot === true;
-}
-
-async function writeMessageLogEvent(
-  event: NormalizedEvent,
-  redis: RedisStreamWriter,
-  logIngestion: ReturnType<typeof createLogIngestionService>,
-  client: Client
-) {
-  const realtimeEnabled = resolveRealtimeEnabled(event.eventName);
-
-  await logIngestion.ingest(event, { realtimeEnabled });
-  await appendLogEventToStream(redis, event, { realtimeEnabled });
-  await sendEventToConfiguredLogChannel(client, event).catch((error: unknown) => {
-    console.warn("failed to send log event to configured channel", error);
-  });
-
-  if (realtimeEnabled) {
-    await appendRealtimeLogEventToStream(redis, event, { realtimeEnabled });
-  }
 }

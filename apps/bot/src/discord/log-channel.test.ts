@@ -57,4 +57,30 @@ describe("log event formatting", () => {
       "Content: hello"
     ]);
   });
+
+  it("formats a non-message payload for Discord delivery", () => {
+    const event: NormalizedEvent = {
+      eventName: "role.create",
+      eventTimestamp: new Date("2026-05-12T00:00:00.000Z"),
+      receivedAt: new Date("2026-05-12T00:00:01.000Z"),
+      guildId: "guild-1",
+      actorId: null,
+      channelId: null,
+      messageId: null,
+      payload: {
+        role: {
+          id: "role-1",
+          name: "Admin"
+        }
+      }
+    };
+
+    assert.deepEqual(formatLogEventLines(event), [
+      "Actor: unknown",
+      "Channel: unknown",
+      "Message ID: unknown",
+      "Event time: 2026-05-12T00:00:00.000Z",
+      'Details: {"role":{"id":"role-1","name":"Admin"}}'
+    ]);
+  });
 });

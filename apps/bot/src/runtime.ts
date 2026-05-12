@@ -11,6 +11,7 @@ import {
   createDiscordClient,
   installDiscordLifecycleLogging
 } from "./discord/client.js";
+import { installGatewayLogHandlers } from "./discord/gateway-logs.js";
 import { installInteractionRouter } from "./discord/interactions.js";
 import { installMessageLogHandlers } from "./discord/message-logs.js";
 import { installTempVoiceHandlers } from "./discord/temp-voice.js";
@@ -49,6 +50,10 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
       installDiscordLifecycleLogging(discordClient);
       installInteractionRouter(discordClient, { db: dbConnection.db });
       installMessageLogHandlers(discordClient, {
+        db: dbConnection.db,
+        redis: redisConnection.client
+      });
+      installGatewayLogHandlers(discordClient, {
         db: dbConnection.db,
         redis: redisConnection.client
       });
