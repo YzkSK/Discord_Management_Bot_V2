@@ -34,6 +34,7 @@ import {
   type DiscordLogWriter
 } from "./log-writer.js";
 import {
+  suppressTempVoiceChannelLog,
   tempVoiceControlCreateReason,
   tempVoiceCreateReason,
   tempVoiceDeleteReason
@@ -172,6 +173,7 @@ async function createGeneratedChannel(
     reason: tempVoiceCreateReason,
     type: ChannelType.GuildVoice
   });
+  suppressTempVoiceChannelLog(channel.id);
   const controlChannel = await createControlChannel(context, {
     categoryId: input.categoryId,
     ownerId: transition.userId,
@@ -257,6 +259,7 @@ async function createControlChannel(
     reason: tempVoiceControlCreateReason,
     type: ChannelType.GuildText
   });
+  suppressTempVoiceChannelLog(channel.id);
 
   await sendControlChannelMessage(channel, {
     ownerId: input.ownerId,
@@ -335,6 +338,7 @@ async function deleteIfStillEmpty(
     return;
   }
 
+  suppressTempVoiceChannelLog(freshChannel.id);
   await freshChannel.delete(tempVoiceDeleteReason);
   const deletedTempVoiceChannel = await endTempVoiceChannel(db, {
     channelId: channel.id
@@ -347,6 +351,7 @@ async function deleteIfStillEmpty(
     : null;
 
   if (controlChannel) {
+    suppressTempVoiceChannelLog(controlChannel.id);
     await controlChannel?.delete(tempVoiceDeleteReason).catch(() => undefined);
   }
 
