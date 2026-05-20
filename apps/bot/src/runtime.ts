@@ -11,6 +11,7 @@ import {
   createDiscordClient,
   installDiscordLifecycleLogging
 } from "./discord/client.js";
+import { installGatewayLogHandlers } from "./discord/gateway-logs.js";
 import { installInteractionRouter } from "./discord/interactions.js";
 import { installMessageLogHandlers } from "./discord/message-logs.js";
 import { installTempVoiceHandlers } from "./discord/temp-voice.js";
@@ -47,12 +48,22 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
       redisConnection = await createRedis(env.REDIS_URL);
       discordClient = createDiscord();
       installDiscordLifecycleLogging(discordClient);
-      installInteractionRouter(discordClient, { db: dbConnection.db });
+      installInteractionRouter(discordClient, {
+        db: dbConnection.db,
+        redis: redisConnection.client
+      });
       installMessageLogHandlers(discordClient, {
         db: dbConnection.db,
         redis: redisConnection.client
       });
-      installTempVoiceHandlers(discordClient, { db: dbConnection.db });
+      installGatewayLogHandlers(discordClient, {
+        db: dbConnection.db,
+        redis: redisConnection.client
+      });
+      installTempVoiceHandlers(discordClient, {
+        db: dbConnection.db,
+        redis: redisConnection.client
+      });
       await discordClient.login(env.DISCORD_BOT_TOKEN);
       await recordStartupLog(dbConnection, env).catch((error: unknown) => {
         console.error("failed to record bot startup log", error);

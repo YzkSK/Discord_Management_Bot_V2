@@ -8,6 +8,8 @@ import {
 } from "discord.js";
 
 import type { DbClient } from "@discord-bot/db";
+import type { RedisStreamWriter } from "@discord-bot/redis";
+import type { NormalizedEvent } from "@discord-bot/shared";
 import {
   clearTempVoiceChannelDeleteSchedule,
   createTempVoiceChannel,
@@ -27,20 +29,38 @@ import {
   type VoiceStateTransitionContext
 } from "./voice-state.js";
 import { createComponentsV2TextMessage } from "./components-v2.js";
+import {
+  createDiscordLogWriter,
+  type DiscordLogWriter
+} from "./log-writer.js";
+import {
+  suppressTempVoiceChannelLog,
+  tempVoiceControlCreateReason,
+  tempVoiceCreateReason,
+  tempVoiceDeleteReason
+} from "./temp-voice-log-suppression.js";
 
 const emptyDeleteDelayMs = 5000;
 
 export interface InstallTempVoiceHandlersOptions {
   db: DbClient;
+  redis: RedisStreamWriter;
 }
 
 export function installTempVoiceHandlers(
   client: Client,
   options: InstallTempVoiceHandlersOptions
 ) {
+  const logWriter = createDiscordLogWriter(client, options);
+
   installVoiceStateHandlers(client, {
     onTransition(transition, context) {
-      return handleTempVoiceTransition(options.db, transition, context);
+      return handleTempVoiceTransition(
+        options.db,
+        logWriter,
+        transition,
+        context
+      );
     }
   });
 }
@@ -55,15 +75,17 @@ export function formatTempVoiceControlChannelName(username: string) {
 
 async function handleTempVoiceTransition(
   db: DbClient,
+  logWriter: DiscordLogWriter,
   transition: VoiceStateTransition,
   context: VoiceStateTransitionContext
 ) {
-  await handleJoinedChannel(db, transition, context);
-  await handleLeftChannel(db, transition, context);
+  await handleJoinedChannel(db, logWriter, transition, context);
+  await handleLeftChannel(db, logWriter, transition, context);
 }
 
 async function handleJoinedChannel(
   db: DbClient,
+  logWriter: DiscordLogWriter,
   transition: VoiceStateTransition,
   context: VoiceStateTransitionContext
 ) {
@@ -74,7 +96,7 @@ async function handleJoinedChannel(
   const config = await getGuildConfigByGuildId(db, transition.guildId);
 
   if (transition.newChannelId === config?.tempVoiceCreateChannelId) {
-    await createGeneratedChannel(db, transition, context, {
+    await createGeneratedChannel(db, logWriter, transition, context, {
       creationChannelId: config.tempVoiceCreateChannelId,
       categoryId:
         config.tempVoiceCategoryId ?? context.newState.channel?.parentId ?? null
@@ -100,6 +122,7 @@ async function handleJoinedChannel(
 
 async function handleLeftChannel(
   db: DbClient,
+  logWriter: DiscordLogWriter,
   transition: VoiceStateTransition,
   context: VoiceStateTransitionContext
 ) {
@@ -127,12 +150,13 @@ async function handleLeftChannel(
       channelId: transition.oldChannelId,
       deleteScheduledAt: new Date(Date.now() + emptyDeleteDelayMs)
     });
-    scheduleDiscordChannelDelete(db, context.oldState.channel);
+    scheduleDiscordChannelDelete(db, logWriter, context.oldState.channel);
   }
 }
 
 async function createGeneratedChannel(
   db: DbClient,
+  logWriter: DiscordLogWriter,
   transition: VoiceStateTransition,
   context: VoiceStateTransitionContext,
   input: { creationChannelId: string; categoryId: string | null }
@@ -146,9 +170,10 @@ async function createGeneratedChannel(
   const channel = await context.newState.guild.channels.create({
     name: formatTempVoiceChannelName(member.displayName),
     ...(input.categoryId ? { parent: input.categoryId } : {}),
-    reason: "Temp VC created from creation channel.",
+    reason: tempVoiceCreateReason,
     type: ChannelType.GuildVoice
   });
+  suppressTempVoiceChannelLog(channel.id);
   const controlChannel = await createControlChannel(context, {
     categoryId: input.categoryId,
     ownerId: transition.userId,
@@ -156,7 +181,7 @@ async function createGeneratedChannel(
   });
 
   try {
-    await createTempVoiceChannel(db, {
+    const createdTempVoice = await createTempVoiceChannel(db, {
       guildId: transition.guildId,
       channelId: channel.id,
       ownerId: transition.userId,
@@ -164,6 +189,22 @@ async function createGeneratedChannel(
       controlChannelId: controlChannel.id
     });
     await member.voice.setChannel(channel);
+    await writeTempVoiceLog(logWriter, {
+      eventName: "voice.temp.created",
+      guildId: transition.guildId,
+      actorId: transition.userId,
+      channelId: channel.id,
+      payload: {
+        ownerId: transition.userId,
+        callSessionId: createdTempVoice.callSession.id,
+        creationChannelId: input.creationChannelId,
+        tempVoiceChannelId: channel.id,
+        tempVoiceChannelName: channel.name,
+        controlChannelId: controlChannel.id,
+        controlChannelName: controlChannel.name,
+        categoryId: input.categoryId
+      }
+    });
   } catch (error) {
     await controlChannel
       .delete("Temp VC creation failed.")
@@ -215,9 +256,10 @@ async function createControlChannel(
     name: formatTempVoiceControlChannelName(member?.displayName ?? "temp-vc"),
     ...(input.categoryId ? { parent: input.categoryId } : {}),
     permissionOverwrites,
-    reason: "Temp VC control channel created.",
+    reason: tempVoiceControlCreateReason,
     type: ChannelType.GuildText
   });
+  suppressTempVoiceChannelLog(channel.id);
 
   await sendControlChannelMessage(channel, {
     ownerId: input.ownerId,
@@ -271,6 +313,7 @@ async function transferOwnerIfNeeded(db: DbClient, channelId: string) {
 
 function scheduleDiscordChannelDelete(
   db: DbClient,
+  logWriter: DiscordLogWriter,
   channel: VoiceBasedChannel | null
 ) {
   if (!channel) {
@@ -278,11 +321,15 @@ function scheduleDiscordChannelDelete(
   }
 
   setTimeout(() => {
-    void deleteIfStillEmpty(db, channel);
+    void deleteIfStillEmpty(db, logWriter, channel);
   }, emptyDeleteDelayMs);
 }
 
-async function deleteIfStillEmpty(db: DbClient, channel: VoiceBasedChannel) {
+async function deleteIfStillEmpty(
+  db: DbClient,
+  logWriter: DiscordLogWriter,
+  channel: VoiceBasedChannel
+) {
   const freshChannel = await channel.guild.channels
     .fetch(channel.id)
     .catch(() => null);
@@ -291,18 +338,70 @@ async function deleteIfStillEmpty(db: DbClient, channel: VoiceBasedChannel) {
     return;
   }
 
-  await freshChannel.delete("Temp VC empty.");
+  suppressTempVoiceChannelLog(freshChannel.id);
+  await freshChannel.delete(tempVoiceDeleteReason);
   const deletedTempVoiceChannel = await endTempVoiceChannel(db, {
     channelId: channel.id
   });
 
-  if (deletedTempVoiceChannel?.controlChannelId) {
-    const controlChannel = await channel.guild.channels
+  const controlChannel = deletedTempVoiceChannel?.controlChannelId
+    ? await channel.guild.channels
       .fetch(deletedTempVoiceChannel.controlChannelId)
-      .catch(() => null);
+      .catch(() => null)
+    : null;
 
-    await controlChannel?.delete("Temp VC empty.").catch(() => undefined);
+  if (controlChannel) {
+    suppressTempVoiceChannelLog(controlChannel.id);
+    await controlChannel?.delete(tempVoiceDeleteReason).catch(() => undefined);
   }
+
+  if (deletedTempVoiceChannel) {
+    await writeTempVoiceLog(logWriter, {
+      eventName: "voice.temp.deleted",
+      guildId: deletedTempVoiceChannel.guildId,
+      actorId: deletedTempVoiceChannel.ownerId,
+      channelId: deletedTempVoiceChannel.channelId,
+      payload: {
+        ownerId: deletedTempVoiceChannel.ownerId,
+        callSessionId: deletedTempVoiceChannel.callSessionId,
+        tempVoiceChannelId: deletedTempVoiceChannel.channelId,
+        tempVoiceChannelName: freshChannel.name,
+        controlChannelId: deletedTempVoiceChannel.controlChannelId,
+        controlChannelName:
+          controlChannel && "name" in controlChannel ? controlChannel.name : null,
+        creationChannelId: deletedTempVoiceChannel.creationChannelId
+      }
+    });
+  }
+}
+
+async function writeTempVoiceLog(
+  logWriter: DiscordLogWriter,
+  input: Pick<
+    NormalizedEvent,
+    "eventName" | "guildId" | "actorId" | "channelId" | "payload"
+  >
+) {
+  const now = new Date();
+
+  await logWriter
+    .write({
+      eventName: input.eventName,
+      guildId: input.guildId,
+      actorId: input.actorId,
+      channelId: input.channelId,
+      messageId: null,
+      payload: input.payload,
+      eventTimestamp: now,
+      receivedAt: now
+    })
+    .catch((error: unknown) => {
+      console.warn("failed to write temp voice log event", {
+        eventName: input.eventName,
+        guildId: input.guildId,
+        error
+      });
+    });
 }
 
 function isEmptyVoiceChannel(channel: VoiceBasedChannel | null) {
