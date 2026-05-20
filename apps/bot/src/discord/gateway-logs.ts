@@ -36,7 +36,10 @@ import {
   writeWithAuditLog
 } from "./audit-log.js";
 import { createDiscordLogWriter } from "./log-writer.js";
-import { isTempVoiceAuditReason } from "./temp-voice-log-suppression.js";
+import {
+  isTempVoiceAuditReason,
+  shouldSuppressTempVoiceChannelLog
+} from "./temp-voice-log-suppression.js";
 
 export interface InstallGatewayLogHandlersOptions {
   db: DbClient;
@@ -381,6 +384,10 @@ function writeChannelLifecycleEvent(
   channel: DMChannel | GuildTextBasedChannel | NonThreadGuildBasedChannel,
   action: AuditLogEvent.ChannelCreate | AuditLogEvent.ChannelDelete
 ) {
+  if (shouldSuppressTempVoiceChannelLog(channel.id)) {
+    return;
+  }
+
   const event = createChannelEvent(eventName, channel, {
     channel: channelPayload(channel)
   });

@@ -7,6 +7,8 @@ import {
 } from "./temp-voice.js";
 import {
   isTempVoiceAuditReason,
+  shouldSuppressTempVoiceChannelLog,
+  suppressTempVoiceChannelLog,
   tempVoiceControlCreateReason,
   tempVoiceCreateReason,
   tempVoiceDeleteReason
@@ -29,5 +31,18 @@ describe("formatTempVoiceChannelName", () => {
     assert.equal(isTempVoiceAuditReason(tempVoiceDeleteReason), true);
     assert.equal(isTempVoiceAuditReason("regular channel change"), false);
     assert.equal(isTempVoiceAuditReason(null), false);
+  });
+
+  it("suppresses a temp voice channel log once", () => {
+    suppressTempVoiceChannelLog("channel-1");
+
+    assert.equal(shouldSuppressTempVoiceChannelLog("channel-1"), true);
+    assert.equal(shouldSuppressTempVoiceChannelLog("channel-1"), false);
+  });
+
+  it("expires temp voice channel log suppression", () => {
+    suppressTempVoiceChannelLog("channel-2", -1);
+
+    assert.equal(shouldSuppressTempVoiceChannelLog("channel-2"), false);
   });
 });
