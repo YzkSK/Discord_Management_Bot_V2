@@ -8,6 +8,7 @@ import {
   realtimeLogsEventName,
   realtimeLogsSubscribeEventName
 } from "../../realtime-events";
+import { countActiveFilters, normalizeGuildId } from "../dashboard-ui";
 
 interface LogItem {
   id: string;
@@ -100,12 +101,12 @@ export function LogsExplorer() {
   }, [appliedFilters.guildId]);
 
   const activeFilterCount = useMemo(
-    () => Object.values(appliedFilters).filter(Boolean).length,
+    () => countActiveFilters(appliedFilters),
     [appliedFilters]
   );
 
   async function loadLogs(nextFilters: LogFilters) {
-    if (!nextFilters.guildId.trim()) {
+    if (!normalizeGuildId(nextFilters.guildId)) {
       setLogs([]);
       setNextCursor(null);
       setError("Enter a guild ID to load logs.");
@@ -159,26 +160,17 @@ export function LogsExplorer() {
   }
 
   return (
-    <main className="min-h-screen bg-[#101418] px-5 py-6 text-slate-100">
-      <section className="mx-auto flex max-w-7xl flex-col gap-5">
-        <header className="flex flex-col gap-3 border-b border-slate-700 pb-5 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase text-teal-300">
-              Phase2 Logs
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-normal">
-              Logs
-            </h1>
-          </div>
-          <div className="text-sm text-slate-300">
-            {logs.length} shown
-            {activeFilterCount > 0 ? ` / ${activeFilterCount} filters` : ""}
-            {appliedFilters.guildId ? ` / realtime ${realtimeStatus}` : ""}
-          </div>
-        </header>
-
+    <section className="flex max-w-7xl flex-col gap-5">
+      <div className="grid gap-3 md:grid-cols-3">
+        <StatusCard label="Shown" value={String(logs.length)} />
+        <StatusCard label="Filters" value={String(activeFilterCount)} />
+        <StatusCard
+          label="Realtime"
+          value={appliedFilters.guildId ? realtimeStatus : "needs guild"}
+        />
+      </div>
         <form
-          className="grid gap-3 border-b border-slate-800 pb-5 lg:grid-cols-[1.2fr_1fr_1fr_1fr_auto_auto]"
+          className="grid gap-3 rounded border border-slate-800 bg-slate-950/60 p-4 lg:grid-cols-[1.2fr_1fr_1fr_1fr_auto_auto]"
           onSubmit={submitFilters}
         >
           <FilterInput
@@ -206,13 +198,13 @@ export function LogsExplorer() {
             value={filters.actorId}
           />
           <button
-            className="h-11 border border-teal-500 bg-teal-500 px-4 text-sm font-semibold text-slate-950 hover:bg-teal-400"
+            className="h-11 rounded border border-teal-500 bg-teal-500 px-4 text-sm font-semibold text-slate-950 hover:bg-teal-400"
             type="submit"
           >
             Search
           </button>
           <button
-            className="h-11 border border-slate-600 px-4 text-sm font-semibold text-slate-100 hover:border-slate-400"
+            className="h-11 rounded border border-slate-600 px-4 text-sm font-semibold text-slate-100 hover:border-slate-400"
             onClick={resetFilters}
             type="button"
           >
@@ -221,12 +213,12 @@ export function LogsExplorer() {
         </form>
 
         {error ? (
-          <div className="border border-red-500 bg-red-950/40 px-4 py-3 text-sm text-red-100">
+          <div className="rounded border border-red-500 bg-red-950/40 px-4 py-3 text-sm text-red-100">
             {error}
           </div>
         ) : null}
 
-        <div className="overflow-x-auto border border-slate-800">
+        <div className="overflow-x-auto rounded border border-slate-800 bg-slate-950/40">
           <table className="min-w-full border-collapse text-left text-sm">
             <thead className="bg-slate-900 text-xs uppercase text-slate-400">
               <tr>
@@ -260,7 +252,7 @@ export function LogsExplorer() {
 
         <div className="flex justify-end">
           <button
-            className="h-11 border border-slate-600 px-4 text-sm font-semibold text-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-11 rounded border border-slate-600 px-4 text-sm font-semibold text-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!nextCursor || loadingMore}
             onClick={loadMore}
             type="button"
@@ -269,7 +261,6 @@ export function LogsExplorer() {
           </button>
         </div>
       </section>
-    </main>
   );
 }
 
@@ -288,12 +279,21 @@ function FilterInput({
     <label className="flex flex-col gap-1 text-xs font-semibold uppercase text-slate-400">
       {label}
       <input
-        className="h-11 border border-slate-700 bg-slate-950 px-3 text-sm normal-case text-slate-100 outline-none placeholder:text-slate-600 focus:border-teal-400"
+        className="h-11 rounded border border-slate-700 bg-slate-950 px-3 text-sm normal-case text-slate-100 outline-none placeholder:text-slate-600 focus:border-teal-400"
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         value={value}
       />
     </label>
+  );
+}
+
+function StatusCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded border border-slate-800 bg-slate-950/60 p-4">
+      <p className="text-xs font-semibold uppercase text-slate-500">{label}</p>
+      <p className="mt-2 text-lg font-semibold text-slate-100">{value}</p>
+    </div>
   );
 }
 
@@ -333,7 +333,7 @@ function LogRow({
         </td>
         <td className="px-3 py-3">
           <button
-            className="border border-slate-600 px-3 py-1 text-xs font-semibold hover:border-slate-400"
+            className="rounded border border-slate-600 px-3 py-1 text-xs font-semibold hover:border-slate-400"
             onClick={onToggle}
             type="button"
           >
