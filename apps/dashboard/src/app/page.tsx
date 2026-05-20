@@ -1,6 +1,16 @@
 import { redirect } from "next/navigation";
+import { Activity, ClipboardCheck, ListFilter, Settings } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { getDashboardSession } from "../auth";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
 
 import { DashboardShell } from "./dashboard-shell";
 
@@ -22,11 +32,17 @@ export default async function HomePage() {
       title="Operations Overview"
     >
       <div className="grid gap-4 xl:grid-cols-[1.1fr_.9fr]">
-        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-950">
-            Verification Flow
-          </h2>
-          <div className="mt-4 grid gap-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardCheck className="h-5 w-5 text-teal-700" />
+              Verification Flow
+            </CardTitle>
+            <CardDescription>
+              Follow this order when checking bot behavior in Docker.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3">
             <OverviewStep
               body="Run /setup logs, /setup temp-vc, and /setup recruitment from Discord when you need fresh test targets."
               index="1"
@@ -42,24 +58,34 @@ export default async function HomePage() {
               index="3"
               title="Confirm Settings"
             />
-          </div>
-        </section>
+          </CardContent>
+        </Card>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-950">Quick Actions</h2>
-          <div className="mt-4 grid gap-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-teal-700" />
+              Quick Actions
+            </CardTitle>
+            <CardDescription>
+              Jump to the views used most during local verification.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3">
             <QuickAction
               body="Search events, switch presets, and inspect readable payload summaries."
               href="/logs"
+              icon={<ListFilter className="h-4 w-4" />}
               title="Open Logs"
             />
             <QuickAction
               body="Check guild access and log mode for the selected server."
               href="/settings"
+              icon={<Settings className="h-4 w-4" />}
               title="Open Settings"
             />
-          </div>
-        </section>
+          </CardContent>
+        </Card>
       </div>
     </DashboardShell>
   );
@@ -76,9 +102,9 @@ function OverviewStep({
 }) {
   return (
     <div className="grid grid-cols-[36px_1fr] gap-3 rounded-md border border-slate-200 bg-slate-50 p-4">
-      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-teal-700 text-sm font-bold text-white">
+      <Badge className="flex h-9 w-9 items-center justify-center rounded-md p-0">
         {index}
-      </div>
+      </Badge>
       <div>
         <h3 className="font-semibold text-slate-900">{title}</h3>
         <p className="mt-1 text-sm leading-6 text-slate-600">{body}</p>
@@ -90,10 +116,12 @@ function OverviewStep({
 function QuickAction({
   body,
   href,
+  icon,
   title
 }: {
   body: string;
   href: string;
+  icon: ReactNode;
   title: string;
 }) {
   return (
@@ -101,7 +129,10 @@ function QuickAction({
       className="block rounded-md border border-slate-200 bg-slate-50 p-4 hover:border-teal-400 hover:bg-teal-50"
       href={href}
     >
-      <h3 className="font-semibold text-teal-900">{title}</h3>
+      <h3 className="flex items-center gap-2 font-semibold text-teal-900">
+        {icon}
+        {title}
+      </h3>
       <p className="mt-1 text-sm leading-6 text-slate-600">{body}</p>
     </a>
   );

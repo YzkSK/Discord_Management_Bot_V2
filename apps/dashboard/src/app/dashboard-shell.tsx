@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import type { Session } from "next-auth";
+import { Activity, ListFilter, Settings } from "lucide-react";
 
+import { Badge } from "../components/ui/badge";
 import { AuthStatus } from "./auth-status";
 import { getDashboardNavItems } from "./dashboard-ui";
 
@@ -24,17 +26,23 @@ export function DashboardShell({
   title
 }: DashboardShellProps) {
   const navItems = getDashboardNavItems();
+  const icons: Record<string, ReactNode> = {
+    "/": <Activity className="h-4 w-4" />,
+    "/logs": <ListFilter className="h-4 w-4" />,
+    "/settings": <Settings className="h-4 w-4" />
+  };
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-950">
       <div className="mx-auto grid min-h-screen max-w-[1600px] lg:grid-cols-[260px_1fr]">
         <aside className="border-b border-slate-200 bg-white px-5 py-5 lg:border-b-0 lg:border-r">
           <a className="block" href="/">
-            <p className="text-xs font-semibold uppercase text-teal-700">
-              Discord Bot
-            </p>
-            <p className="mt-2 text-lg font-semibold text-slate-950">
+            <Badge variant="success">Discord Bot</Badge>
+            <p className="mt-3 text-lg font-semibold text-slate-950">
               Operations
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Local verification console
             </p>
           </a>
 
@@ -53,7 +61,10 @@ export function DashboardShell({
                   href={item.href}
                   key={item.href}
                 >
-                  <span>{item.label}</span>
+                  <span className="flex items-center gap-2">
+                    {icons[item.href]}
+                    {item.label}
+                  </span>
                   <span className="mt-1 block text-xs font-normal text-slate-500">
                     {item.description}
                   </span>
