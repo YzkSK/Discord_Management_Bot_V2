@@ -9,6 +9,9 @@ Phase6 starts the Dashboard UI/UX foundation. The goal is not a marketing-style 
 - Logs explorer layout improvements.
 - Settings panel layout improvements.
 - Tested dashboard UI helper logic.
+- Shared guild ID storage between Logs and Settings.
+- Logs event presets for message, voice, Temp VC, recruitment, and audit checks.
+- Readable log row summaries before raw payload inspection.
 
 ## Verification Focus
 

@@ -17,7 +17,7 @@ export default async function SettingsPage() {
   return (
     <DashboardShell
       currentPath="/settings"
-      description="GuildごとのDashboardアクセス状態とログ設定を確認します。"
+      description="Review dashboard access state and logging mode for a guild."
       eyebrow="Guild Configuration"
       session={session}
       title="Settings"

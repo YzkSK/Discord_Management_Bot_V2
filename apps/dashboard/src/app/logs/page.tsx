@@ -17,7 +17,7 @@ export default async function LogsPage() {
   return (
     <DashboardShell
       currentPath="/logs"
-      description="Guild IDを指定して、Discord Gateway、Audit Log、TempVC、Recruitmentのイベントを検索します。"
+      description="Search Discord Gateway, Audit Log, Temp VC, and Recruitment events for the selected guild."
       eyebrow="Operational Logs"
       session={session}
       title="Logs Explorer"
