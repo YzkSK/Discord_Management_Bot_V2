@@ -13,6 +13,8 @@ import {
   createRecruitmentPostMessage,
   findMarkedRecruitmentChannel
 } from "../discord/recruitment-channel.js";
+import type { DiscordLogWriter } from "../discord/log-writer.js";
+import { writeRecruitmentLifecycleLog } from "../discord/recruitment-logs.js";
 
 export const recruitmentCommand = new SlashCommandBuilder()
   .setName("recruitment")
@@ -61,6 +63,7 @@ export const recruitmentCommand = new SlashCommandBuilder()
 
 export interface RecruitmentCommandContext {
   db: DbClient;
+  logWriter?: DiscordLogWriter;
 }
 
 export async function handleRecruitmentCommand(
@@ -134,10 +137,20 @@ async function handleRecruitmentCreate(
     createRecruitmentPostMessage(recruitment)
   );
 
-  await setRecruitmentMessageId(context.db, {
+  const recruitmentWithMessage =
+    (await setRecruitmentMessageId(context.db, {
     recruitmentId: recruitment.id,
     messageId: message.id
-  });
+    })) ?? recruitment;
+
+  if (context.logWriter) {
+    writeRecruitmentLifecycleLog(context.logWriter, "recruitment.created", {
+      recruitment: recruitmentWithMessage,
+      actorId: interaction.user.id,
+      participantCount: 0,
+      reason: "created"
+    });
+  }
 
   await interaction.reply({
     ...createComponentsV2TextMessage({

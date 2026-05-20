@@ -17,9 +17,12 @@ import {
   createRecruitmentPostMessage,
   parseRecruitmentCustomId
 } from "./recruitment-channel.js";
+import type { DiscordLogWriter } from "./log-writer.js";
+import { writeRecruitmentLifecycleLog } from "./recruitment-logs.js";
 
 export interface RecruitmentInteractionContext {
   db: DbClient;
+  logWriter?: DiscordLogWriter;
 }
 
 export async function handleRecruitmentButtonInteraction(
@@ -105,6 +108,20 @@ async function handleJoin(
   await interaction.message.edit(
     createRecruitmentPostMessage(updatedRecruitment ?? recruitment, nextCount)
   );
+  const loggedRecruitment = updatedRecruitment ?? recruitment;
+  if (context.logWriter && nextStatus !== "open") {
+    writeRecruitmentLifecycleLog(
+      context.logWriter,
+      nextStatus === "closed" ? "recruitment.closed" : "recruitment.full",
+      {
+        recruitment: loggedRecruitment,
+        actorId: interaction.user.id,
+        participantCount: nextCount,
+        reason: nextStatus === "closed" ? "auto_close" : "capacity_reached"
+      }
+    );
+  }
+
   await interaction.reply({
     ...createComponentsV2TextMessage({
       title: "Joined recruitment",
@@ -188,6 +205,15 @@ async function handleClose(
   await interaction.message.edit(
     createRecruitmentPostMessage(updatedRecruitment, activeCount)
   );
+  if (context.logWriter) {
+    writeRecruitmentLifecycleLog(context.logWriter, "recruitment.closed", {
+      recruitment: updatedRecruitment,
+      actorId: interaction.user.id,
+      participantCount: activeCount,
+      reason: "manual_close"
+    });
+  }
+
   await interaction.reply({
     ...createComponentsV2TextMessage({
       title: "Recruitment closed",

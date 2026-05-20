@@ -13,6 +13,8 @@ Phase5 adds the first Recruitment foundation.
 - Status values are `open`, `full`, and `closed`.
 - When auto-close is enabled, reaching capacity closes the recruitment.
 - When an auto-closed recruitment drops below capacity, it can reopen.
+- Recruitment lifecycle events are logged as `recruitment.created`,
+  `recruitment.full`, and `recruitment.closed`.
 
 ## Database
 

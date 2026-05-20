@@ -1,6 +1,9 @@
 import type { ChatInputCommandInteraction } from "discord.js";
+import type { DbClient } from "@discord-bot/db";
+import type { RedisStreamWriter } from "@discord-bot/redis";
 
 import { createComponentsV2TextMessage } from "../discord/components-v2.js";
+import type { DiscordLogWriter } from "../discord/log-writer.js";
 import {
   handleRecruitmentCommand,
   recruitmentCommand,
@@ -12,7 +15,12 @@ import {
   type SetupCommandContext
 } from "./setup.js";
 
-export type CommandContext = RecruitmentCommandContext & SetupCommandContext;
+export type CommandContext = RecruitmentCommandContext &
+  SetupCommandContext & {
+    db: DbClient;
+    redis: RedisStreamWriter;
+    logWriter?: DiscordLogWriter;
+  };
 
 export const slashCommands = [setupCommand, recruitmentCommand] as const;
 

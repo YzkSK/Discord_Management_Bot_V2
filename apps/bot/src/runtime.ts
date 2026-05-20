@@ -48,7 +48,10 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
       redisConnection = await createRedis(env.REDIS_URL);
       discordClient = createDiscord();
       installDiscordLifecycleLogging(discordClient);
-      installInteractionRouter(discordClient, { db: dbConnection.db });
+      installInteractionRouter(discordClient, {
+        db: dbConnection.db,
+        redis: redisConnection.client
+      });
       installMessageLogHandlers(discordClient, {
         db: dbConnection.db,
         redis: redisConnection.client
