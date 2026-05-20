@@ -1,15 +1,18 @@
 "use client";
 
 import { signIn } from "next-auth/react";
+import { LogIn } from "lucide-react";
+
+import { Button } from "../../components/ui/button";
 
 export function LoginActions() {
   return (
-    <button
-      className="inline-flex h-11 w-fit items-center rounded-md bg-teal-700 px-4 text-sm font-semibold text-white hover:bg-teal-800"
+    <Button
       onClick={() => void signIn("discord", { callbackUrl: "/" })}
       type="button"
     >
+      <LogIn className="h-4 w-4" />
       Sign in with Discord
-    </button>
+    </Button>
   );
 }

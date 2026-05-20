@@ -1,8 +1,21 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Search } from "lucide-react";
 import { io } from "socket.io-client";
 
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
+import { Input } from "../../components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "../../components/ui/table";
 import {
   realtimeErrorEventName,
   realtimeLogsEventName,
@@ -206,73 +219,76 @@ export function LogsExplorer() {
 
   return (
     <section className="flex max-w-7xl flex-col gap-4">
-      <form
-        className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
-        onSubmit={submitFilters}
-      >
-        <div className="grid gap-3 lg:grid-cols-[1.2fr_1fr_1fr_1fr_auto_auto]">
-          <FilterInput
-            label="Search"
-            onChange={(value) => setFilters({ ...filters, search: value })}
-            placeholder="channel name, session key, payload text"
-            value={filters.search}
-          />
-          <FilterInput
-            label="Guild"
-            onChange={(value) => setFilters({ ...filters, guildId: value })}
-            placeholder="required guild id"
-            value={filters.guildId}
-          />
-          <FilterInput
-            label="Event"
-            onChange={(value) => setFilters({ ...filters, eventName: value })}
-            placeholder="event prefix"
-            value={filters.eventName}
-          />
-          <FilterInput
-            label="Actor"
-            onChange={(value) => setFilters({ ...filters, actorId: value })}
-            placeholder="actor id"
-            value={filters.actorId}
-          />
-          <button className="h-11 rounded-md bg-teal-700 px-4 text-sm font-semibold text-white hover:bg-teal-800">
-            Search
-          </button>
-          <button
-            className="h-11 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            onClick={resetFilters}
-            type="button"
-          >
-            Reset
-          </button>
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {eventPresets.map((preset) => {
-            const active = filters.eventName === preset.eventName;
-
-            return (
-              <button
-                className={
-                  active
-                    ? "rounded-full bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white"
-                    : "rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-400 hover:text-teal-800"
-                }
-                key={preset.label}
-                onClick={() => applyPreset(preset.eventName)}
-                title={preset.description}
+      <Card>
+        <CardContent className="p-4">
+          <form onSubmit={submitFilters}>
+            <div className="grid gap-3 lg:grid-cols-[1.2fr_1fr_1fr_1fr_auto_auto]">
+              <FilterInput
+                label="Search"
+                onChange={(value) => setFilters({ ...filters, search: value })}
+                placeholder="channel name, session key, payload text"
+                value={filters.search}
+              />
+              <FilterInput
+                label="Guild"
+                onChange={(value) => setFilters({ ...filters, guildId: value })}
+                placeholder="required guild id"
+                value={filters.guildId}
+              />
+              <FilterInput
+                label="Event"
+                onChange={(value) => setFilters({ ...filters, eventName: value })}
+                placeholder="event prefix"
+                value={filters.eventName}
+              />
+              <FilterInput
+                label="Actor"
+                onChange={(value) => setFilters({ ...filters, actorId: value })}
+                placeholder="actor id"
+                value={filters.actorId}
+              />
+              <Button className="h-10 self-end" type="submit">
+                <Search className="h-4 w-4" />
+                Search
+              </Button>
+              <Button
+                className="h-10 self-end"
+                onClick={resetFilters}
                 type="button"
+                variant="outline"
               >
-                {preset.label}
-              </button>
-            );
-          })}
-          <span className="ml-auto text-xs text-slate-500">
-            {logs.length} shown / {activeFilterCount} filters / realtime{" "}
-            {realtimeStatus}
-          </span>
-        </div>
-      </form>
+                Reset
+              </Button>
+            </div>
+          </form>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {eventPresets.map((preset) => {
+              const active = filters.eventName === preset.eventName;
+
+              return (
+                <Button
+                  key={preset.label}
+                  onClick={() => applyPreset(preset.eventName)}
+                  size="sm"
+                  title={preset.description}
+                  type="button"
+                  variant={active ? "secondary" : "outline"}
+                >
+                  {preset.label}
+                </Button>
+              );
+            })}
+            <div className="ml-auto flex flex-wrap gap-2">
+              <Badge variant="outline">{logs.length} shown</Badge>
+              <Badge variant="outline">{activeFilterCount} filters</Badge>
+              <Badge variant={realtimeStatus === "live" ? "success" : "outline"}>
+                realtime {realtimeStatus}
+              </Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {error ? (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -280,19 +296,19 @@ export function LogsExplorer() {
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full border-collapse text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
-              <tr>
-                <th className="w-44 px-4 py-3 font-semibold">Received</th>
-                <th className="w-56 px-4 py-3 font-semibold">Event</th>
-                <th className="w-44 px-4 py-3 font-semibold">Actor</th>
-                <th className="px-4 py-3 font-semibold">Summary</th>
-                <th className="w-24 px-4 py-3 font-semibold">Raw</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-44">Received</TableHead>
+                <TableHead className="w-56">Event</TableHead>
+                <TableHead className="w-44">Actor</TableHead>
+                <TableHead>Summary</TableHead>
+                <TableHead className="w-24">Raw</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading ? <LoadingRows /> : null}
               {!loading && logs.length === 0 ? <EmptyRow /> : null}
               {!loading
@@ -307,20 +323,20 @@ export function LogsExplorer() {
                     />
                   ))
                 : null}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
-      </div>
+      </Card>
 
       <div className="flex justify-end">
-        <button
-          className="h-11 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+        <Button
           disabled={!nextCursor || loadingMore}
           onClick={loadMore}
           type="button"
+          variant="outline"
         >
           {loadingMore ? "Loading" : "Load More"}
-        </button>
+        </Button>
       </div>
     </section>
   );
@@ -340,8 +356,8 @@ function FilterInput({
   return (
     <label className="flex flex-col gap-1 text-xs font-semibold uppercase text-slate-500">
       {label}
-      <input
-        className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm normal-case text-slate-950 outline-none placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+      <Input
+        className="normal-case"
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         value={value}
@@ -361,35 +377,36 @@ function LogRow({
 }) {
   return (
     <>
-      <tr className="border-b border-slate-100 hover:bg-slate-50">
-        <td className="px-4 py-3 text-slate-600">{formatDate(log.receivedAt)}</td>
-        <td className="px-4 py-3 font-mono text-sm font-semibold text-teal-800">
+      <TableRow className="hover:bg-slate-50">
+        <TableCell className="text-slate-600">{formatDate(log.receivedAt)}</TableCell>
+        <TableCell className="font-mono text-sm font-semibold text-teal-800">
           {log.eventName}
-        </td>
-        <td className="px-4 py-3 font-mono text-slate-600">
+        </TableCell>
+        <TableCell className="font-mono text-slate-600">
           {log.actorId ?? "-"}
-        </td>
-        <td className="px-4 py-3 text-slate-700">
+        </TableCell>
+        <TableCell className="text-slate-700">
           {formatPayloadSummary(log)}
-        </td>
-        <td className="px-4 py-3">
-          <button
-            className="rounded-md border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+        </TableCell>
+        <TableCell>
+          <Button
             onClick={onToggle}
+            size="sm"
             type="button"
+            variant="outline"
           >
             {expanded ? "Hide" : "View"}
-          </button>
-        </td>
-      </tr>
+          </Button>
+        </TableCell>
+      </TableRow>
       {expanded ? (
-        <tr className="border-b border-slate-100 bg-slate-50">
-          <td className="px-4 py-3" colSpan={5}>
+        <TableRow className="bg-slate-50">
+          <TableCell colSpan={5}>
             <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-md border border-slate-200 bg-white p-3 text-xs leading-5 text-slate-700">
               {JSON.stringify(log.payload, null, 2)}
             </pre>
-          </td>
-        </tr>
+          </TableCell>
+        </TableRow>
       ) : null}
     </>
   );
@@ -397,21 +414,21 @@ function LogRow({
 
 function LoadingRows() {
   return Array.from({ length: 5 }, (_, index) => (
-    <tr className="border-b border-slate-100" key={index}>
-      <td className="px-4 py-4 text-slate-500" colSpan={5}>
+    <TableRow key={index}>
+      <TableCell className="text-slate-500" colSpan={5}>
         Loading logs
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   ));
 }
 
 function EmptyRow() {
   return (
-    <tr className="border-b border-slate-100">
-      <td className="px-4 py-10 text-center text-slate-500" colSpan={5}>
+    <TableRow>
+      <TableCell className="py-10 text-center text-slate-500" colSpan={5}>
         Enter a guild ID and search logs.
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 

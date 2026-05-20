@@ -12,6 +12,8 @@ Phase6 starts the Dashboard UI/UX foundation. The goal is not a marketing-style 
 - Shared guild ID storage between Logs and Settings.
 - Logs event presets for message, voice, Temp VC, recruitment, and audit checks.
 - Readable log row summaries before raw payload inspection.
+- shadcn/ui-style local components for Button, Input, Select, Card, Badge, and Table.
+- lucide-react icons for navigation and primary actions.
 
 ## Verification Focus
 

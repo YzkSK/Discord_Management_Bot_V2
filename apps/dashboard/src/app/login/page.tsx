@@ -1,6 +1,14 @@
 import { redirect } from "next/navigation";
+import { ShieldCheck } from "lucide-react";
 
 import { getDashboardSession } from "../../auth";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "../../components/ui/card";
 
 import { LoginActions } from "./login-actions";
 
@@ -15,21 +23,20 @@ export default async function LoginPage() {
 
   return (
     <main className="min-h-screen bg-slate-100 px-6 py-8 text-slate-950">
-      <section className="mx-auto flex max-w-3xl flex-col gap-6">
-        <header className="border-b border-slate-200 pb-5">
-          <p className="text-sm font-semibold uppercase tracking-wide text-teal-700">
-            Dashboard Auth
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold">
+      <Card className="mx-auto max-w-3xl">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-teal-700" />
             Sign in to the dashboard
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+          </CardTitle>
+          <CardDescription>
             Use your Discord account to start a dashboard session.
-          </p>
-        </header>
-
-        <LoginActions />
-      </section>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <LoginActions />
+        </CardContent>
+      </Card>
     </main>
   );
 }
