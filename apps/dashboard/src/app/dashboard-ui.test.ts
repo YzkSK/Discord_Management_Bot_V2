@@ -3,6 +3,8 @@ import { describe, it } from "node:test";
 
 import {
   countActiveFilters,
+  dashboardGuildStorageKey,
+  getDashboardEventPresets,
   getDashboardNavItems,
   normalizeGuildId,
   toGuildQueryValue
@@ -41,5 +43,26 @@ describe("dashboard ui helpers", () => {
   it("omits an empty guild query value", () => {
     assert.equal(toGuildQueryValue("  "), null);
     assert.equal(toGuildQueryValue(" 987 "), "987");
+  });
+
+  it("uses a stable storage key for selected guild", () => {
+    assert.equal(dashboardGuildStorageKey, "discord-bot-dashboard:guild-id");
+  });
+
+  it("returns event presets for log verification workflows", () => {
+    assert.deepEqual(
+      getDashboardEventPresets().map((preset) => [
+        preset.label,
+        preset.eventName
+      ]),
+      [
+        ["All", ""],
+        ["Messages", "message"],
+        ["Voice", "voice"],
+        ["Temp VC", "temp_vc"],
+        ["Recruitment", "recruitment"],
+        ["Audit", "audit"]
+      ]
+    );
   });
 });
