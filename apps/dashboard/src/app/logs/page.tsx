@@ -18,7 +18,8 @@ export default async function LogsPage() {
     <DashboardShell
       currentPath="/logs"
       description="Search Discord Gateway, Audit Log, Temp VC, and Recruitment events for the selected guild."
-      eyebrow="Operational Logs"
+      guildId=""
+      guildName={null}
       session={session}
       title="Logs Explorer"
     >

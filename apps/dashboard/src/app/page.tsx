@@ -27,7 +27,8 @@ export default async function HomePage() {
     <DashboardShell
       currentPath="/"
       description="Start from the guild you are testing, then move between logs and settings without losing context."
-      eyebrow="Phase6 UI/UX"
+      guildId=""
+      guildName={null}
       session={session}
       title="Operations Overview"
     >
@@ -35,7 +36,7 @@ export default async function HomePage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <ClipboardCheck className="h-5 w-5 text-teal-700" />
+              <ClipboardCheck className="h-5 w-5 text-slate-700" />
               Verification Flow
             </CardTitle>
             <CardDescription>
@@ -64,7 +65,7 @@ export default async function HomePage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-teal-700" />
+              <Activity className="h-5 w-5 text-slate-700" />
               Quick Actions
             </CardTitle>
             <CardDescription>
@@ -101,7 +102,7 @@ function OverviewStep({
   title: string;
 }) {
   return (
-    <div className="grid grid-cols-[36px_1fr] gap-3 rounded-md border border-slate-200 bg-slate-50 p-4">
+    <div className="grid grid-cols-[36px_1fr] gap-3 rounded-md border border-slate-200 bg-zinc-50 p-4">
       <Badge className="flex h-9 w-9 items-center justify-center rounded-md p-0">
         {index}
       </Badge>
@@ -126,10 +127,10 @@ function QuickAction({
 }) {
   return (
     <a
-      className="block rounded-md border border-slate-200 bg-slate-50 p-4 hover:border-teal-400 hover:bg-teal-50"
+      className="block rounded-md border border-slate-200 bg-zinc-50 p-4 hover:border-slate-400 hover:bg-white"
       href={href}
     >
-      <h3 className="flex items-center gap-2 font-semibold text-teal-900">
+      <h3 className="flex items-center gap-2 font-semibold text-slate-900">
         {icon}
         {title}
       </h3>

@@ -18,7 +18,8 @@ export default async function SettingsPage() {
     <DashboardShell
       currentPath="/settings"
       description="Review dashboard access state and logging mode for a guild."
-      eyebrow="Guild Configuration"
+      guildId=""
+      guildName={null}
       session={session}
       title="Settings"
     >
