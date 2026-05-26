@@ -19,6 +19,13 @@ export interface ShouldReadTtsMessageInput {
   readableChannelIds: string[];
 }
 
+export interface ResolveReadableTtsChannelIdsInput {
+  channelId: string;
+  guildId: string;
+  loadPersistentTextChannelId: (guildId: string) => Promise<string | null>;
+  temporaryChannelIds: string[];
+}
+
 export function installTtsMessageReader(
   client: Client,
   options: InstallTtsMessageReaderOptions
@@ -48,6 +55,25 @@ export function shouldReadTtsMessage(input: ShouldReadTtsMessageInput) {
   );
 }
 
+export async function resolveReadableTtsChannelIds(
+  input: ResolveReadableTtsChannelIdsInput
+) {
+  if (input.temporaryChannelIds.includes(input.channelId)) {
+    return input.temporaryChannelIds;
+  }
+
+  const persistentTextChannelId = await input.loadPersistentTextChannelId(
+    input.guildId
+  );
+
+  return Array.from(
+    new Set([
+      ...input.temporaryChannelIds,
+      ...(persistentTextChannelId ? [persistentTextChannelId] : [])
+    ])
+  );
+}
+
 async function handleTtsMessage(
   message: Message,
   options: InstallTtsMessageReaderOptions
@@ -60,11 +86,18 @@ async function handleTtsMessage(
     return;
   }
 
-  const config = await getGuildConfigByGuildId(options.db, message.guildId);
-  const readableChannelIds = options.ttsSessionManager.getReadableChannelIds(
-    message.guildId,
-    config?.ttsTextChannelId ?? null
+  const temporaryChannelIds = options.ttsSessionManager.getReadableChannelIds(
+    message.guildId
   );
+  const readableChannelIds = await resolveReadableTtsChannelIds({
+    channelId: message.channelId,
+    guildId: message.guildId,
+    loadPersistentTextChannelId: async (guildId) => {
+      const config = await getGuildConfigByGuildId(options.db, guildId);
+      return config?.ttsTextChannelId ?? null;
+    },
+    temporaryChannelIds
+  });
 
   if (
     !shouldReadTtsMessage({
