@@ -8,7 +8,7 @@ import { Server, type Socket } from "socket.io";
 
 import { resolveDashboardAccess } from "./authorization.js";
 import {
-  fetchCurrentUserGuild,
+  fetchCurrentUserGuildById,
   fetchGuildMemberRoleIds
 } from "./discord-api.js";
 import {
@@ -67,7 +67,7 @@ async function authorizeSocket(socket: Socket, guildId: string) {
     return false;
   }
 
-  const discordGuild = await fetchCurrentUserGuild(
+  const discordGuild = await fetchCurrentUserGuildById(
     token.discordAccessToken,
     guildId
   );

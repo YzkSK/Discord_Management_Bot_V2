@@ -7,7 +7,7 @@ import type { NextRequest } from "next/server";
 import { resolveDashboardAccess } from "./authorization";
 import { authOptions, getDashboardSession } from "./auth";
 import {
-  fetchCurrentUserGuild,
+  fetchCurrentUserGuildById,
   fetchGuildMemberRoleIds
 } from "./discord-api";
 
@@ -53,7 +53,7 @@ export async function authorizeDashboardApi(
     } as const;
   }
 
-  const discordGuild = await fetchCurrentUserGuild(
+  const discordGuild = await fetchCurrentUserGuildById(
     token.discordAccessToken,
     input.guildId
   );
