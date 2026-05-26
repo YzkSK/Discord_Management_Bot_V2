@@ -74,7 +74,7 @@ docker compose --profile app down
 - Phase3: Dashboard Discord auth, owner/admin/viewer access checks, realtime logs Socket.io foundation, and guild settings foundation.
 - Phase4: Temp VC database, `/setup temp-vc`, Components V2 control channel message, generated voice channel lifecycle, and verification docs.
 - Phase5: Recruitment database, `/setup recruitment`, `/recruitment create`, join/leave/close interactions, and verification docs.
-- Phase6: Dashboard UI/UX foundation for a more usable operations console.
+- Phase6: TTS foundation with VOICEVOX, `/join`, `/force-join`, `/leave`, and `/setup tts`.
 
 ## Phase0 Completion Criteria
 
@@ -119,3 +119,7 @@ Phase5 Recruitment setup and verification notes are documented in:
 Phase6 Dashboard UI/UX notes are documented in:
 
 - `docs/dashboard-uiux.md`
+
+Phase6 TTS setup and verification notes are documented in:
+
+- `docs/tts.md`
