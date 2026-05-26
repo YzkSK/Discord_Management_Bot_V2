@@ -17,6 +17,7 @@ import { installMessageLogHandlers } from "./discord/message-logs.js";
 import { installTempVoiceHandlers } from "./discord/temp-voice.js";
 import { createDiscordLogWriter } from "./discord/log-writer.js";
 import { installTtsMessageReader } from "./discord/tts-message-reader.js";
+import { installTtsAutoLeaveHandler } from "./discord/tts-auto-leave.js";
 import { TtsSessionManager } from "./discord/tts-session.js";
 import { createVoicevoxClient } from "./discord/voicevox.js";
 
@@ -69,6 +70,9 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
       installTempVoiceHandlers(discordClient, {
         db: dbConnection.db,
         redis: redisConnection.client
+      });
+      installTtsAutoLeaveHandler(discordClient, {
+        ttsSessionManager
       });
       installTtsMessageReader(discordClient, {
         db: dbConnection.db,
