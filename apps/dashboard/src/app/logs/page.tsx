@@ -1,27 +1,32 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 
-import { requireDashboardPageSession } from "../../dashboard-auth";
+import { getDashboardSession } from "../../auth";
 import { DashboardShell } from "../dashboard-shell";
-
 import { LogsExplorer } from "./logs-explorer";
 
 export const dynamic = "force-dynamic";
 
 export default async function LogsPage() {
-  const session = await requireDashboardPageSession();
+  const session = await getDashboardSession();
+  if (!session?.user) redirect("/login");
 
-  if (!session) {
-    redirect("/login");
-  }
+  const cookieStore = await cookies();
+  const guildId = cookieStore.get("dashboard-guild-id")?.value;
+  const guildName = cookieStore.get("dashboard-guild-name")?.value
+    ? decodeURIComponent(cookieStore.get("dashboard-guild-name")!.value)
+    : null;
+
+  if (!guildId) redirect("/guild");
 
   return (
     <DashboardShell
       currentPath="/logs"
-      description="Search Discord Gateway, Audit Log, Temp VC, and Recruitment events for the selected guild."
-      guildId=""
-      guildName={null}
+      description="Search and filter bot events in real time"
+      guildId={guildId}
+      guildName={guildName}
       session={session}
-      title="Logs Explorer"
+      title="Logs"
     >
       <LogsExplorer />
     </DashboardShell>
