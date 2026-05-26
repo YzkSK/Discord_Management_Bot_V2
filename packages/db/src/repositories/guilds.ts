@@ -174,7 +174,7 @@ export async function getGuildsWithManagementRoles(
     .where(
       and(
         inArray(guilds.guildId, guildIds),
-        sql`array_length(${guildConfigs.dashboardManagementRoleIds}, 1) > 0`
+        sql`cardinality(${guildConfigs.dashboardManagementRoleIds}) > 0`
       )
     );
   return rows.map((r) => r.guildId);
@@ -197,15 +197,16 @@ export async function updateGuildManagementRoleIds(
   db: DbClient,
   guildId: string,
   roleIds: string[]
-): Promise<void> {
+): Promise<boolean> {
   const [guild] = await db
     .select({ id: guilds.id })
     .from(guilds)
     .where(eq(guilds.guildId, guildId))
     .limit(1);
-  if (!guild) return;
+  if (!guild) return false;
   await db
     .update(guildConfigs)
     .set({ dashboardManagementRoleIds: roleIds, updatedAt: sql`now()` })
     .where(eq(guildConfigs.guildRefId, guild.id));
+  return true;
 }
