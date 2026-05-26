@@ -16,9 +16,23 @@ export interface DiscordRole {
 
 const discordApiBaseUrl = "https://discord.com/api/v10";
 
+interface GuildCacheEntry {
+  guilds: DiscordOAuthGuild[];
+  expiresAt: number;
+}
+
+// Avoid hammering Discord's /users/@me/guilds endpoint on every API request
+const guildListCache = new Map<string, GuildCacheEntry>();
+const GUILD_CACHE_TTL_MS = 60_000;
+
 export async function fetchCurrentUserGuilds(
   accessToken: string
 ): Promise<DiscordOAuthGuild[]> {
+  const cached = guildListCache.get(accessToken);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.guilds;
+  }
+
   const response = await fetch(`${discordApiBaseUrl}/users/@me/guilds`, {
     headers: { Authorization: `Bearer ${accessToken}` },
     cache: "no-store"
@@ -26,7 +40,9 @@ export async function fetchCurrentUserGuilds(
   if (!response.ok) {
     throw new Error(`Failed to load Discord guilds (${response.status}).`);
   }
-  return (await response.json()) as DiscordOAuthGuild[];
+  const guilds = (await response.json()) as DiscordOAuthGuild[];
+  guildListCache.set(accessToken, { guilds, expiresAt: Date.now() + GUILD_CACHE_TTL_MS });
+  return guilds;
 }
 
 export async function fetchCurrentUserGuildById(
