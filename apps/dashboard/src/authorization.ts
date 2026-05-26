@@ -1,4 +1,5 @@
 import {
+  getGuildManagementRoleIds,
   listDashboardAccessGrants,
   type DbClient
 } from "@discord-bot/db";
@@ -45,12 +46,23 @@ async function resolveDashboardAccessRole(input: ResolveDashboardAccessInput) {
     return "owner";
   }
 
-  const grantInput = {
-    guildId: input.guildId,
-    userId: input.userId,
-    ...(input.roleIds ? { roleIds: input.roleIds } : {})
-  };
-  const grants = await listDashboardAccessGrants(input.db, grantInput);
+  const roleIds = input.roleIds ?? [];
 
-  return maxDashboardAccessRole(grants.map((grant) => grant.role));
+  const [managementRoleIds, grants] = await Promise.all([
+    getGuildManagementRoleIds(input.db, input.guildId),
+    listDashboardAccessGrants(input.db, {
+      guildId: input.guildId,
+      userId: input.userId,
+      ...(roleIds.length > 0 ? { roleIds } : {})
+    })
+  ]);
+
+  const hasManagementRole =
+    managementRoleIds.length > 0 &&
+    roleIds.some((id) => managementRoleIds.includes(id));
+
+  return maxDashboardAccessRole([
+    hasManagementRole ? "admin" : null,
+    ...grants.map((g) => g.role)
+  ]);
 }
