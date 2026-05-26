@@ -15,6 +15,10 @@ import { installGatewayLogHandlers } from "./discord/gateway-logs.js";
 import { installInteractionRouter } from "./discord/interactions.js";
 import { installMessageLogHandlers } from "./discord/message-logs.js";
 import { installTempVoiceHandlers } from "./discord/temp-voice.js";
+import { createDiscordLogWriter } from "./discord/log-writer.js";
+import { installTtsMessageReader } from "./discord/tts-message-reader.js";
+import { TtsSessionManager } from "./discord/tts-session.js";
+import { createVoicevoxClient } from "./discord/voicevox.js";
 
 export interface BotRuntime {
   start: () => Promise<void>;
@@ -47,10 +51,12 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
       dbConnection = createDb(env.DATABASE_URL);
       redisConnection = await createRedis(env.REDIS_URL);
       discordClient = createDiscord();
+      const ttsSessionManager = new TtsSessionManager();
       installDiscordLifecycleLogging(discordClient);
       installInteractionRouter(discordClient, {
         db: dbConnection.db,
-        redis: redisConnection.client
+        redis: redisConnection.client,
+        ttsSessionManager
       });
       installMessageLogHandlers(discordClient, {
         db: dbConnection.db,
@@ -63,6 +69,15 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
       installTempVoiceHandlers(discordClient, {
         db: dbConnection.db,
         redis: redisConnection.client
+      });
+      installTtsMessageReader(discordClient, {
+        db: dbConnection.db,
+        logWriter: createDiscordLogWriter(discordClient, {
+          db: dbConnection.db,
+          redis: redisConnection.client
+        }),
+        ttsSessionManager,
+        voicevox: createVoicevoxClient({ baseUrl: env.VOICEVOX_URL })
       });
       await discordClient.login(env.DISCORD_BOT_TOKEN);
       await recordStartupLog(dbConnection, env).catch((error: unknown) => {

@@ -8,6 +8,7 @@ import {
 import type { DbClient } from "@discord-bot/db";
 import {
   ensureGuildSetup,
+  updateGuildTtsConfigByGuildId,
   updateGuildTempVoiceConfigByGuildId
 } from "@discord-bot/db";
 
@@ -65,6 +66,18 @@ export const setupCommand = new SlashCommandBuilder()
           .addChannelTypes(ChannelType.GuildText)
           .setRequired(true)
       )
+  )
+  .addSubcommand((subcommand) =>
+    subcommand
+      .setName("tts")
+      .setDescription("Configure the persistent TTS text channel.")
+      .addChannelOption((option) =>
+        option
+          .setName("channel")
+          .setDescription("Text channel whose messages are read while TTS is connected.")
+          .addChannelTypes(ChannelType.GuildText)
+          .setRequired(true)
+      )
   );
 
 export interface SetupCommandContext {
@@ -110,6 +123,9 @@ export async function handleSetupCommand(
       return;
     case "temp-vc":
       await handleTempVoiceSetup(interaction, context, guildId);
+      return;
+    case "tts":
+      await handleTtsSetup(interaction, context, guildId);
       return;
     default:
       await interaction.reply({
@@ -246,6 +262,46 @@ async function handleRecruitmentSetup(
       lines: [
         `Recruitment channel: <#${channel.id}>`,
         `Marker: ${recruitmentChannelTopicMarker}`
+      ],
+      privateResponse: true
+    })
+  });
+}
+
+async function handleTtsSetup(
+  interaction: ChatInputCommandInteraction,
+  context: SetupCommandContext,
+  guildId: string
+) {
+  const channel = interaction.options.getChannel("channel", true);
+
+  if (channel.type !== ChannelType.GuildText) {
+    await interaction.reply({
+      ...createComponentsV2TextMessage({
+        title: "TTS setup failed",
+        lines: ["TTS channel must be a text channel."],
+        privateResponse: true
+      })
+    });
+    return;
+  }
+
+  await ensureGuildSetup(context.db, {
+    guildId,
+    name: interaction.guild?.name ?? null
+  });
+
+  await updateGuildTtsConfigByGuildId(context.db, {
+    guildId,
+    ttsTextChannelId: channel.id
+  });
+
+  await interaction.reply({
+    ...createComponentsV2TextMessage({
+      title: "TTS setup complete",
+      lines: [
+        `TTS text channel: <#${channel.id}>`,
+        "Messages in this channel will be read while the bot is connected to voice."
       ],
       privateResponse: true
     })
