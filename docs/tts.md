@@ -52,6 +52,25 @@ Skipped messages:
 - slash-command-like messages starting with `/`,
 - text beyond the current 120 character limit.
 
+## Latency Tuning
+
+`VOICEVOX_SPEAKER_ID` controls the VOICEVOX speaker used by TTS.
+
+The default is `2` because it was faster than the previous default in local CPU Docker checks.
+
+```env
+VOICEVOX_SPEAKER_ID=2
+```
+
+Most startup delay comes from VOICEVOX CPU synthesis. In local checks, `audio_query` was usually under 100ms, while `synthesis` was around 1.7-2.1 seconds for a short phrase.
+
+For lower latency:
+
+- keep messages short,
+- prefer a faster speaker ID,
+- allocate more CPU to Docker Desktop if possible,
+- use a GPU-capable VOICEVOX setup when available.
+
 ## Docker Verification
 
 Start the app stack:

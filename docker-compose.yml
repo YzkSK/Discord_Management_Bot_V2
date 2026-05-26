@@ -48,6 +48,7 @@ services:
       DATABASE_URL: postgres://discord_bot:discord_bot@postgres:5432/discord_bot
       REDIS_URL: redis://redis:6379
       VOICEVOX_URL: http://voicevox:50021
+      VOICEVOX_SPEAKER_ID: ${VOICEVOX_SPEAKER_ID:-2}
       PUBLIC_DASHBOARD_URL: http://localhost:3000
       NEXTAUTH_URL: http://localhost:3000
     depends_on:
@@ -70,6 +71,7 @@ services:
       DATABASE_URL: postgres://discord_bot:discord_bot@postgres:5432/discord_bot
       REDIS_URL: redis://redis:6379
       VOICEVOX_URL: http://voicevox:50021
+      VOICEVOX_SPEAKER_ID: ${VOICEVOX_SPEAKER_ID:-2}
       PUBLIC_DASHBOARD_URL: http://localhost:3000
       NEXTAUTH_URL: http://localhost:3000
     ports:

@@ -77,7 +77,10 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
           redis: redisConnection.client
         }),
         ttsSessionManager,
-        voicevox: createVoicevoxClient({ baseUrl: env.VOICEVOX_URL })
+        voicevox: createVoicevoxClient({
+          baseUrl: env.VOICEVOX_URL,
+          speaker: env.VOICEVOX_SPEAKER_ID
+        })
       });
       await discordClient.login(env.DISCORD_BOT_TOKEN);
       await recordStartupLog(dbConnection, env).catch((error: unknown) => {
