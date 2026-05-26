@@ -60,9 +60,15 @@ The default is `2` because it was faster than the previous default in local CPU 
 
 ```env
 VOICEVOX_SPEAKER_ID=2
+VOICEVOX_CPU_NUM_THREADS=6
+VOICEVOX_CPU_LIMIT=6
+VOICEVOX_MEMORY_LIMIT=3g
 ```
 
 Most startup delay comes from VOICEVOX CPU synthesis. In local checks, `audio_query` was usually under 100ms, while `synthesis` was around 1.7-2.1 seconds for a short phrase.
+
+The Docker Compose default gives the VOICEVOX container 6 CPUs and sets `VV_CPU_NUM_THREADS` to 6.
+If the host is weaker, lower both `VOICEVOX_CPU_NUM_THREADS` and `VOICEVOX_CPU_LIMIT` together.
 
 For lower latency:
 
