@@ -65,6 +65,7 @@ export async function getGuildConfigByGuildId(db: DbClient, guildId: string) {
       guildName: guilds.name,
       isActive: guilds.isActive,
       logMode: guildConfigs.logMode,
+      language: guildConfigs.language,
       tempVoiceCreateChannelId: guildConfigs.tempVoiceCreateChannelId,
       tempVoiceCategoryId: guildConfigs.tempVoiceCategoryId,
       ttsTextChannelId: guildConfigs.ttsTextChannelId,
@@ -80,7 +81,7 @@ export async function getGuildConfigByGuildId(db: DbClient, guildId: string) {
 
 export async function updateGuildConfigByGuildId(
   db: DbClient,
-  input: { guildId: string; logMode: GuildLogMode }
+  input: { guildId: string; logMode?: GuildLogMode; language?: string }
 ) {
   const [guild] = await db
     .select({ id: guilds.id })
@@ -96,12 +97,14 @@ export async function updateGuildConfigByGuildId(
     .insert(guildConfigs)
     .values({
       guildRefId: guild.id,
-      logMode: input.logMode
+      ...(input.logMode !== undefined ? { logMode: input.logMode } : {}),
+      ...(input.language !== undefined ? { language: input.language } : {})
     })
     .onConflictDoUpdate({
       target: guildConfigs.guildRefId,
       set: {
-        logMode: input.logMode,
+        ...(input.logMode !== undefined ? { logMode: input.logMode } : {}),
+        ...(input.language !== undefined ? { language: input.language } : {}),
         updatedAt: sql`now()`
       }
     })
