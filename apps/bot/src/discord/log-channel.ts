@@ -61,7 +61,10 @@ export async function sendEventToConfiguredLogChannel(
     return;
   }
 
-  const config = await getGuildConfigByGuildId(db, event.guildId).catch(() => null);
+  const config = await getGuildConfigByGuildId(db, event.guildId).catch((error: unknown) => {
+    console.warn("failed to fetch guild config for log channel locale", error);
+    return null;
+  });
   const lang: GuildLanguage =
     config?.language && isGuildLanguage(config.language)
       ? config.language

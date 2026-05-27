@@ -126,4 +126,24 @@ describe("log event formatting (ja)", () => {
       "内容: hello"
     ]);
   });
+
+  it("formats a non-message payload in Japanese", () => {
+    const event: NormalizedEvent = {
+      eventName: "role.create",
+      eventTimestamp: new Date("2026-05-12T00:00:00.000Z"),
+      receivedAt: new Date("2026-05-12T00:00:01.000Z"),
+      guildId: "guild-1",
+      actorId: null,
+      channelId: null,
+      messageId: null,
+      payload: { role: { id: "role-1", name: "Admin" } }
+    };
+
+    assert.deepEqual(formatLogEventLines(event, jaLoc), [
+      "アクター: 不明",
+      "チャンネル: 不明",
+      "イベント時刻: 2026-05-12T00:00:00.000Z",
+      '詳細: {"role":{"id":"role-1","name":"Admin"}}'
+    ]);
+  });
 });
