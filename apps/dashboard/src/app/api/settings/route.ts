@@ -4,6 +4,7 @@ import {
   isGuildLogMode,
   updateGuildConfigByGuildId
 } from "@discord-bot/db";
+import { isGuildLanguage } from "@discord-bot/shared";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { authorizeDashboardApi } from "../../../dashboard-auth";
@@ -45,6 +46,7 @@ export async function GET(request: NextRequest) {
       guildName: config.guildName,
       isActive: config.isActive,
       logMode: config.logMode,
+      language: config.language,
       updatedAt: config.updatedAt.toISOString(),
       accessRole: authorization.role
     });
@@ -63,6 +65,10 @@ export async function PATCH(request: NextRequest) {
     typeof body === "object" && body && "logMode" in body
       ? String(body.logMode).trim()
       : "";
+  const languageRaw =
+    typeof body === "object" && body && "language" in body
+      ? String(body.language).trim()
+      : null;
 
   const authorization = await authorizeDashboardApi({
     request,
@@ -81,12 +87,17 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Invalid logMode." }, { status: 400 });
   }
 
+  if (languageRaw !== null && !isGuildLanguage(languageRaw)) {
+    return NextResponse.json({ error: "Invalid language." }, { status: 400 });
+  }
+
   const dbConnection = createDbConnection();
 
   try {
     const config = await updateGuildConfigByGuildId(dbConnection.db, {
       guildId: authorization.guild.id,
-      logMode
+      logMode,
+      ...(languageRaw !== null ? { language: languageRaw } : {})
     });
 
     if (!config) {
@@ -99,6 +110,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({
       guildId: authorization.guild.id,
       logMode: config.logMode,
+      language: config.language,
       updatedAt: config.updatedAt.toISOString(),
       accessRole: authorization.role
     });
