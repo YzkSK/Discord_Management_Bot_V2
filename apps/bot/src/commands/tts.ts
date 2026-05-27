@@ -1,4 +1,5 @@
-import { listDashboardAccessGrants, type DbClient } from "@discord-bot/db";
+import { getGuildConfigByGuildId, listDashboardAccessGrants, type DbClient } from "@discord-bot/db";
+import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/shared";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -25,18 +26,23 @@ import {
 } from "../discord/tts-logs.js";
 import type { TtsSessionManager } from "../discord/tts-session.js";
 
+type Loc = ReturnType<typeof getLocale>;
+
 export const joinCommand = new SlashCommandBuilder()
   .setName("join")
-  .setDescription("Join your voice channel and read this text channel.");
+  .setDescription("Join your voice channel and read this text channel.")
+  .setDescriptionLocalization("ja", "ボイスチャンネルに参加してこのテキストチャンネルを読み上げます。");
 
 export const forceJoinCommand = new SlashCommandBuilder()
   .setName("force-join")
   .setDescription("Move TTS to your voice channel after confirmation.")
+  .setDescriptionLocalization("ja", "確認後、TTSをあなたのボイスチャンネルに移動します。")
   .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages);
 
 export const leaveCommand = new SlashCommandBuilder()
   .setName("leave")
-  .setDescription("Stop TTS and leave the current voice channel.");
+  .setDescription("Stop TTS and leave the current voice channel.")
+  .setDescriptionLocalization("ja", "TTSを停止し、現在のボイスチャンネルから退出します。");
 
 export interface TtsCommandContext {
   db: DbClient;
@@ -112,28 +118,30 @@ export async function handleJoinCommand(
   interaction: ChatInputCommandInteraction,
   context: TtsCommandContext
 ) {
+  const loc = interaction.guildId
+    ? await resolveGuildLocale(context.db, interaction.guildId)
+    : getLocale("en");
+
   const target = await getTtsJoinTarget(interaction);
 
   if (!target) {
-    await replyPrivate(interaction, "TTS join failed", [
-      "Join a voice channel first."
-    ]);
+    await replyPrivate(interaction, loc.ttsJoinFailed, [loc.ttsJoinVoiceFirst]);
     return;
   }
 
   const result = await context.ttsSessionManager.join(target);
 
   if (result.status === "blocked") {
-    await replyPrivate(interaction, "TTS already connected", [
-      "The bot is already connected to another voice channel.",
-      "Ask a Dashboard admin or owner to use `/force-join`."
+    await replyPrivate(interaction, loc.ttsAlreadyConnected, [
+      loc.ttsAlreadyConnectedMessage,
+      loc.ttsForceJoinSuggestion
     ]);
     return;
   }
 
-  await replyPrivate(interaction, "TTS connected", [
-    `Voice channel: <#${target.voiceChannelId}>`,
-    `Reading text channel: <#${target.textChannelId}>`
+  await replyPrivate(interaction, loc.ttsConnected, [
+    loc.ttsVoiceChannel({ id: target.voiceChannelId }),
+    loc.ttsReadingChannel({ id: target.textChannelId })
   ]);
 
   if (result.status === "joined") {
@@ -154,19 +162,19 @@ export async function handleForceJoinCommand(
   interaction: ChatInputCommandInteraction,
   context: TtsCommandContext
 ) {
+  const loc = interaction.guildId
+    ? await resolveGuildLocale(context.db, interaction.guildId)
+    : getLocale("en");
+
   const target = await getTtsJoinTarget(interaction);
 
   if (!target) {
-    await replyPrivate(interaction, "TTS force join failed", [
-      "Join a voice channel first."
-    ]);
+    await replyPrivate(interaction, loc.ttsForceJoinFailed, [loc.ttsJoinVoiceFirst]);
     return;
   }
 
   if (!(await canUseForceJoin(interaction, context))) {
-    await replyPrivate(interaction, "TTS force join failed", [
-      "Dashboard admin or owner access is required."
-    ]);
+    await replyPrivate(interaction, loc.ttsForceJoinFailed, [loc.ttsForceJoinAdminRequired]);
     return;
   }
 
@@ -176,19 +184,16 @@ export async function handleForceJoinCommand(
 
   if (currentVoiceChannelId && currentVoiceChannelId !== target.voiceChannelId) {
     await interaction.reply(
-      createForceJoinConfirmation({
-        ...target,
-        userId: interaction.user.id
-      })
+      createForceJoinConfirmation({ ...target, userId: interaction.user.id }, loc)
     );
     return;
   }
 
   const result = await context.ttsSessionManager.forceJoin(target);
-  await replyPrivate(interaction, "TTS connected", [
-    result.status === "moved" ? "Moved TTS to your voice channel." : "TTS is ready.",
-    `Voice channel: <#${target.voiceChannelId}>`,
-    `Reading text channel: <#${target.textChannelId}>`
+  await replyPrivate(interaction, loc.ttsConnected, [
+    result.status === "moved" ? loc.ttsMoved : loc.ttsReady,
+    loc.ttsVoiceChannel({ id: target.voiceChannelId }),
+    loc.ttsReadingChannel({ id: target.textChannelId })
   ]);
 
   if (result.status !== "already-connected") {
@@ -212,18 +217,16 @@ export async function handleLeaveCommand(
   const guildId = interaction.guildId;
 
   if (!guildId) {
-    await replyPrivate(interaction, "TTS leave failed", [
-      "This command can only be used in a guild."
-    ]);
+    const loc = getLocale("en");
+    await replyPrivate(interaction, loc.ttsLeaveFailed, [loc.ttsLeaveNotInGuild]);
     return;
   }
 
+  const loc = await resolveGuildLocale(context.db, guildId);
   const voiceChannelId = context.ttsSessionManager.getVoiceChannelId(guildId);
   const wasConnected = context.ttsSessionManager.isConnected(guildId);
   context.ttsSessionManager.leave(guildId);
-  await replyPrivate(interaction, "TTS disconnected", [
-    "Temporary TTS text channels were cleared."
-  ]);
+  await replyPrivate(interaction, loc.ttsDisconnected, [loc.ttsChannelsCleared]);
 
   if (wasConnected) {
     await writeTtsLog(
@@ -242,13 +245,15 @@ export async function handleForceJoinButtonInteraction(
   interaction: ButtonInteraction,
   context: TtsCommandContext
 ) {
+  const loc = interaction.guildId
+    ? await resolveGuildLocale(context.db, interaction.guildId)
+    : getLocale("en");
+
   const cancel = parseForceJoinCancelCustomId(interaction.customId);
 
   if (cancel) {
     await interaction.update(
-      createUpdateMessage("TTS move cancelled", [
-        "No voice channel move was performed."
-      ])
+      createUpdateMessage(loc.ttsMoveCancelledTitle, [loc.ttsMoveCancelledMessage])
     );
     return true;
   }
@@ -262,8 +267,8 @@ export async function handleForceJoinButtonInteraction(
   if (interaction.user.id !== target.userId) {
     await interaction.reply({
       ...createComponentsV2TextMessage({
-        title: "TTS force join failed",
-        lines: ["Only the user who ran `/force-join` can confirm this move."],
+        title: loc.ttsForceJoinFailed,
+        lines: [loc.ttsForceJoinWrongUser],
         privateResponse: true
       })
     });
@@ -273,8 +278,8 @@ export async function handleForceJoinButtonInteraction(
   if (!interaction.guild) {
     await interaction.reply({
       ...createComponentsV2TextMessage({
-        title: "TTS force join failed",
-        lines: ["This confirmation can only be used in a guild."],
+        title: loc.ttsForceJoinFailed,
+        lines: [loc.ttsForceJoinNotInGuild],
         privateResponse: true
       })
     });
@@ -288,9 +293,9 @@ export async function handleForceJoinButtonInteraction(
     voiceChannelId: target.voiceChannelId
   });
   await interaction.update(
-    createUpdateMessage("TTS moved", [
-      `Voice channel: <#${target.voiceChannelId}>`,
-      `Reading text channel: <#${target.textChannelId}>`
+    createUpdateMessage(loc.ttsMovedTitle, [
+      loc.ttsVoiceChannel({ id: target.voiceChannelId }),
+      loc.ttsReadingChannel({ id: target.textChannelId })
     ])
   );
 
@@ -357,15 +362,16 @@ function getMemberRoleIds(member: GuildMember) {
 }
 
 function createForceJoinConfirmation(
-  input: ForceJoinCustomIdInput
+  input: ForceJoinCustomIdInput,
+  loc: Loc
 ): InteractionReplyOptions {
   const confirm = new ButtonBuilder()
     .setCustomId(toForceJoinCustomId(input))
-    .setLabel("Move")
+    .setLabel(loc.ttsButtonMove)
     .setStyle(ButtonStyle.Danger);
   const cancel = new ButtonBuilder()
     .setCustomId(toForceJoinCancelCustomId(input))
-    .setLabel("Cancel")
+    .setLabel(loc.ttsButtonCancel)
     .setStyle(ButtonStyle.Secondary);
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     confirm,
@@ -373,10 +379,10 @@ function createForceJoinConfirmation(
   );
 
   const message = createComponentsV2TextMessage({
-    title: "Confirm TTS move",
+    title: loc.ttsForceJoinConfirmTitle,
     lines: [
-      "The bot is already connected to another voice channel.",
-      `Move TTS to <#${input.voiceChannelId}>?`
+      loc.ttsForceJoinAlreadyConnected,
+      loc.ttsForceJoinMoveTo({ id: input.voiceChannelId })
     ],
     privateResponse: true
   });
@@ -414,6 +420,18 @@ async function replyPrivate(
       privateResponse: true
     })
   });
+}
+
+async function resolveGuildLocale(db: DbClient, guildId: string) {
+  const config = await getGuildConfigByGuildId(db, guildId).catch((error: unknown) => {
+    console.warn("failed to fetch guild config for tts locale", error);
+    return null;
+  });
+  const lang: GuildLanguage =
+    config?.language && isGuildLanguage(config.language)
+      ? config.language
+      : "en";
+  return getLocale(lang);
 }
 
 async function writeTtsLog(
