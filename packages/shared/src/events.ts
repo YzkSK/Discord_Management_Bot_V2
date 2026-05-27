@@ -56,6 +56,8 @@ export const realtimeDefaultDisabledEvents = [
   "message.create",
   "message.reaction.add",
   "message.reaction.remove",
+  "tts.message.skipped",
+  "tts.message.spoken",
   "voice.state.update",
   "voice.session.join",
   "voice.session.leave",

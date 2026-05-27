@@ -18,6 +18,11 @@ import {
   hasDashboardAdminCommandAccess,
   resolveDashboardCommandAccessRole
 } from "../discord/dashboard-access.js";
+import type { DiscordLogWriter } from "../discord/log-writer.js";
+import {
+  createTtsSessionStartedEvent,
+  createTtsSessionStoppedEvent
+} from "../discord/tts-logs.js";
 import type { TtsSessionManager } from "../discord/tts-session.js";
 
 export const joinCommand = new SlashCommandBuilder()
@@ -35,6 +40,7 @@ export const leaveCommand = new SlashCommandBuilder()
 
 export interface TtsCommandContext {
   db: DbClient;
+  logWriter?: DiscordLogWriter;
   ttsSessionManager: TtsSessionManager;
 }
 
@@ -129,6 +135,19 @@ export async function handleJoinCommand(
     `Voice channel: <#${target.voiceChannelId}>`,
     `Reading text channel: <#${target.textChannelId}>`
   ]);
+
+  if (result.status === "joined") {
+    await writeTtsLog(
+      context,
+      createTtsSessionStartedEvent({
+        actorId: interaction.user.id,
+        guildId: target.guildId,
+        reason: "join-command",
+        textChannelId: target.textChannelId,
+        voiceChannelId: target.voiceChannelId
+      })
+    );
+  }
 }
 
 export async function handleForceJoinCommand(
@@ -171,6 +190,19 @@ export async function handleForceJoinCommand(
     `Voice channel: <#${target.voiceChannelId}>`,
     `Reading text channel: <#${target.textChannelId}>`
   ]);
+
+  if (result.status !== "already-connected") {
+    await writeTtsLog(
+      context,
+      createTtsSessionStartedEvent({
+        actorId: interaction.user.id,
+        guildId: target.guildId,
+        reason: "force-join-command",
+        textChannelId: target.textChannelId,
+        voiceChannelId: target.voiceChannelId
+      })
+    );
+  }
 }
 
 export async function handleLeaveCommand(
@@ -186,10 +218,24 @@ export async function handleLeaveCommand(
     return;
   }
 
+  const voiceChannelId = context.ttsSessionManager.getVoiceChannelId(guildId);
+  const wasConnected = context.ttsSessionManager.isConnected(guildId);
   context.ttsSessionManager.leave(guildId);
   await replyPrivate(interaction, "TTS disconnected", [
     "Temporary TTS text channels were cleared."
   ]);
+
+  if (wasConnected) {
+    await writeTtsLog(
+      context,
+      createTtsSessionStoppedEvent({
+        actorId: interaction.user.id,
+        guildId,
+        reason: "leave-command",
+        voiceChannelId
+      })
+    );
+  }
 }
 
 export async function handleForceJoinButtonInteraction(
@@ -235,7 +281,7 @@ export async function handleForceJoinButtonInteraction(
     return true;
   }
 
-  await context.ttsSessionManager.forceJoin({
+  const result = await context.ttsSessionManager.forceJoin({
     adapterCreator: interaction.guild.voiceAdapterCreator,
     guildId: target.guildId,
     textChannelId: target.textChannelId,
@@ -247,6 +293,19 @@ export async function handleForceJoinButtonInteraction(
       `Reading text channel: <#${target.textChannelId}>`
     ])
   );
+
+  if (result.status !== "already-connected") {
+    await writeTtsLog(
+      context,
+      createTtsSessionStartedEvent({
+        actorId: interaction.user.id,
+        guildId: target.guildId,
+        reason: "force-join-confirmed",
+        textChannelId: target.textChannelId,
+        voiceChannelId: target.voiceChannelId
+      })
+    );
+  }
   return true;
 }
 
@@ -354,5 +413,22 @@ async function replyPrivate(
       lines,
       privateResponse: true
     })
+  });
+}
+
+async function writeTtsLog(
+  context: TtsCommandContext,
+  event: Parameters<DiscordLogWriter["write"]>[0]
+) {
+  if (!context.logWriter) {
+    return;
+  }
+
+  await context.logWriter.write(event).catch((error: unknown) => {
+    console.warn("failed to write tts command log event", {
+      eventName: event.eventName,
+      guildId: event.guildId,
+      error
+    });
   });
 }

@@ -53,9 +53,14 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
       redisConnection = await createRedis(env.REDIS_URL);
       discordClient = createDiscord();
       const ttsSessionManager = new TtsSessionManager();
+      const logWriter = createDiscordLogWriter(discordClient, {
+        db: dbConnection.db,
+        redis: redisConnection.client
+      });
       installDiscordLifecycleLogging(discordClient);
       installInteractionRouter(discordClient, {
         db: dbConnection.db,
+        logWriter,
         redis: redisConnection.client,
         ttsSessionManager
       });
@@ -72,14 +77,13 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
         redis: redisConnection.client
       });
       installTtsAutoLeaveHandler(discordClient, {
+        logWriter,
         ttsSessionManager
       });
       installTtsMessageReader(discordClient, {
         db: dbConnection.db,
-        logWriter: createDiscordLogWriter(discordClient, {
-          db: dbConnection.db,
-          redis: redisConnection.client
-        }),
+        logWriter,
+        speakerId: env.VOICEVOX_SPEAKER_ID,
         ttsSessionManager,
         voicevox: createVoicevoxClient({
           baseUrl: env.VOICEVOX_URL,

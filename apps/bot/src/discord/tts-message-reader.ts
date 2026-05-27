@@ -2,12 +2,17 @@ import { getGuildConfigByGuildId, type DbClient } from "@discord-bot/db";
 import { Events, type Client, type Message } from "discord.js";
 
 import type { DiscordLogWriter } from "./log-writer.js";
+import {
+  createTtsMessageSkippedEvent,
+  createTtsMessageSpokenEvent
+} from "./tts-logs.js";
 import type { TtsSessionManager } from "./tts-session.js";
 import { normalizeTtsText, type VoicevoxClient } from "./voicevox.js";
 
 export interface InstallTtsMessageReaderOptions {
   db: DbClient;
   logWriter: DiscordLogWriter;
+  speakerId: number;
   ttsSessionManager: TtsSessionManager;
   voicevox: VoicevoxClient;
 }
@@ -25,6 +30,13 @@ export interface ResolveReadableTtsChannelIdsInput {
   loadPersistentTextChannelId: (guildId: string) => Promise<string | null>;
   temporaryChannelIds: string[];
 }
+
+export interface ResolveTtsMessageSourceTypeInput {
+  channelId: string;
+  temporaryChannelIds: string[];
+}
+
+export type TtsMessageSkipReason = "command-like" | "empty" | "too-long";
 
 export function installTtsMessageReader(
   client: Client,
@@ -74,6 +86,39 @@ export async function resolveReadableTtsChannelIds(
   );
 }
 
+export function resolveTtsMessageSourceType(
+  input: ResolveTtsMessageSourceTypeInput
+) {
+  return input.temporaryChannelIds.includes(input.channelId)
+    ? "temporary"
+    : "configured";
+}
+
+export function resolveTtsMessageSkipReason(input: {
+  authorIsBot: boolean;
+  content: string;
+}): TtsMessageSkipReason | null {
+  if (input.authorIsBot) {
+    return null;
+  }
+
+  const text = input.content.trim();
+
+  if (!text) {
+    return "empty";
+  }
+
+  if (text.startsWith("/")) {
+    return "command-like";
+  }
+
+  if (text.length > 120) {
+    return "too-long";
+  }
+
+  return null;
+}
+
 async function handleTtsMessage(
   message: Message,
   options: InstallTtsMessageReaderOptions
@@ -89,6 +134,9 @@ async function handleTtsMessage(
   const temporaryChannelIds = options.ttsSessionManager.getReadableChannelIds(
     message.guildId
   );
+  const voiceChannelId = options.ttsSessionManager.getVoiceChannelId(
+    message.guildId
+  );
   const readableChannelIds = await resolveReadableTtsChannelIds({
     channelId: message.channelId,
     guildId: message.guildId,
@@ -99,14 +147,27 @@ async function handleTtsMessage(
     temporaryChannelIds
   });
 
-  if (
-    !shouldReadTtsMessage({
-      authorIsBot: message.author.bot,
-      channelId: message.channelId,
-      content: message.content,
-      readableChannelIds
-    })
-  ) {
+  if (!readableChannelIds.includes(message.channelId)) {
+    return;
+  }
+
+  const skipReason = resolveTtsMessageSkipReason({
+    authorIsBot: message.author.bot,
+    content: message.content
+  });
+
+  if (skipReason) {
+    await options.logWriter.write(
+      createTtsMessageSkippedEvent({
+        actorId: message.author.id,
+        guildId: message.guildId,
+        reason: skipReason,
+        sourceChannelId: message.channelId,
+        sourceMessageId: message.id,
+        textLength: message.content.trim().length,
+        voiceChannelId
+      })
+    );
     return;
   }
 
@@ -122,6 +183,21 @@ async function handleTtsMessage(
   try {
     const audio = await options.voicevox.synthesize(text);
     await options.ttsSessionManager.play(message.guildId, audio);
+    await options.logWriter.write(
+      createTtsMessageSpokenEvent({
+        actorId: message.author.id,
+        guildId: message.guildId,
+        sourceChannelId: message.channelId,
+        sourceMessageId: message.id,
+        sourceType: resolveTtsMessageSourceType({
+          channelId: message.channelId,
+          temporaryChannelIds
+        }),
+        speakerId: options.speakerId,
+        textLength: text.length,
+        voiceChannelId
+      })
+    );
   } catch (error) {
     await options.logWriter.write({
       actorId: message.author.id,
@@ -131,7 +207,12 @@ async function handleTtsMessage(
       guildId: message.guildId,
       messageId: message.id,
       payload: {
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
+        sourceChannelId: message.channelId,
+        sourceMessageId: message.id,
+        speakerId: options.speakerId,
+        textLength: text.length,
+        voiceChannelId
       },
       receivedAt: new Date()
     });
