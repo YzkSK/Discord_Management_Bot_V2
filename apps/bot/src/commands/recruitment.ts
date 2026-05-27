@@ -25,17 +25,20 @@ type Loc = ReturnType<typeof getLocale>;
 
 export const recruitmentCommand = new SlashCommandBuilder()
   .setName("recruitment")
+  .setNameLocalization("ja", "募集")
   .setDescription("Create and manage recruitment posts.")
   .setDescriptionLocalization("ja", "募集投稿を作成・管理します。")
   .setDMPermission(false)
   .addSubcommand((subcommand) =>
     subcommand
       .setName("create")
+      .setNameLocalization("ja", "作成")
       .setDescription("Create a recruitment post.")
       .setDescriptionLocalization("ja", "募集投稿を作成します。")
       .addStringOption((option) =>
         option
           .setName("genre")
+          .setNameLocalization("ja", "ジャンル")
           .setDescription("Recruitment genre.")
           .setDescriptionLocalization("ja", "募集のジャンル。")
           .setRequired(true)
@@ -44,6 +47,7 @@ export const recruitmentCommand = new SlashCommandBuilder()
       .addIntegerOption((option) =>
         option
           .setName("capacity")
+          .setNameLocalization("ja", "定員")
           .setDescription("Maximum participant count.")
           .setDescriptionLocalization("ja", "最大参加人数。")
           .setRequired(true)
@@ -53,6 +57,7 @@ export const recruitmentCommand = new SlashCommandBuilder()
       .addStringOption((option) =>
         option
           .setName("content")
+          .setNameLocalization("ja", "内容")
           .setDescription("Recruitment details.")
           .setDescriptionLocalization("ja", "募集の詳細。")
           .setRequired(true)
@@ -61,6 +66,7 @@ export const recruitmentCommand = new SlashCommandBuilder()
       .addChannelOption((option) =>
         option
           .setName("vc")
+          .setNameLocalization("ja", "vc")
           .setDescription("Optional voice channel.")
           .setDescriptionLocalization("ja", "任意のボイスチャンネル。")
           .addChannelTypes(ChannelType.GuildVoice)
@@ -69,6 +75,7 @@ export const recruitmentCommand = new SlashCommandBuilder()
       .addBooleanOption((option) =>
         option
           .setName("auto-close")
+          .setNameLocalization("ja", "自動締め切り")
           .setDescription("Close automatically when capacity is reached.")
           .setDescriptionLocalization("ja", "定員に達したら自動的に締め切ります。")
           .setRequired(false)

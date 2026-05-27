@@ -25,6 +25,7 @@ type Loc = ReturnType<typeof getLocale>;
 
 export const setupCommand = new SlashCommandBuilder()
   .setName("setup")
+  .setNameLocalization("ja", "setup")
   .setDescription("Configure bot features for this guild.")
   .setDescriptionLocalization("ja", "このサーバーのBot機能を設定します。")
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
@@ -32,11 +33,13 @@ export const setupCommand = new SlashCommandBuilder()
   .addSubcommand((subcommand) =>
     subcommand
       .setName("temp-vc")
+      .setNameLocalization("ja", "一時vc")
       .setDescription("Configure Temp VC creation settings.")
       .setDescriptionLocalization("ja", "一時VCの作成設定を構成します。")
       .addChannelOption((option) =>
         option
           .setName("creation-channel")
+          .setNameLocalization("ja", "作成チャンネル")
           .setDescription("Voice channel users join to create a Temp VC.")
           .setDescriptionLocalization("ja", "一時VCを作成するために参加するボイスチャンネル。")
           .addChannelTypes(ChannelType.GuildVoice)
@@ -45,6 +48,7 @@ export const setupCommand = new SlashCommandBuilder()
       .addChannelOption((option) =>
         option
           .setName("category")
+          .setNameLocalization("ja", "カテゴリ")
           .setDescription("Category for generated Temp VCs and control channels.")
           .setDescriptionLocalization("ja", "生成された一時VCとコントロールチャンネルのカテゴリ。")
           .addChannelTypes(ChannelType.GuildCategory)
@@ -54,11 +58,13 @@ export const setupCommand = new SlashCommandBuilder()
   .addSubcommand((subcommand) =>
     subcommand
       .setName("logs")
+      .setNameLocalization("ja", "ログ")
       .setDescription("Configure the guild log delivery channel.")
       .setDescriptionLocalization("ja", "ログ配信チャンネルを設定します。")
       .addChannelOption((option) =>
         option
           .setName("channel")
+          .setNameLocalization("ja", "チャンネル")
           .setDescription("Text channel where detected log events are posted.")
           .setDescriptionLocalization("ja", "ログイベントを投稿するテキストチャンネル。")
           .addChannelTypes(ChannelType.GuildText)
@@ -68,11 +74,13 @@ export const setupCommand = new SlashCommandBuilder()
   .addSubcommand((subcommand) =>
     subcommand
       .setName("recruitment")
+      .setNameLocalization("ja", "募集")
       .setDescription("Configure the recruitment posting channel.")
       .setDescriptionLocalization("ja", "募集投稿チャンネルを設定します。")
       .addChannelOption((option) =>
         option
           .setName("channel")
+          .setNameLocalization("ja", "チャンネル")
           .setDescription("Text channel where recruitment posts are sent.")
           .setDescriptionLocalization("ja", "募集投稿を送信するテキストチャンネル。")
           .addChannelTypes(ChannelType.GuildText)
@@ -82,11 +90,13 @@ export const setupCommand = new SlashCommandBuilder()
   .addSubcommand((subcommand) =>
     subcommand
       .setName("tts")
+      .setNameLocalization("ja", "tts")
       .setDescription("Configure the persistent TTS text channel.")
       .setDescriptionLocalization("ja", "TTSテキストチャンネルを設定します。")
       .addChannelOption((option) =>
         option
           .setName("channel")
+          .setNameLocalization("ja", "チャンネル")
           .setDescription("Text channel whose messages are read while TTS is connected.")
           .setDescriptionLocalization("ja", "TTS接続中にメッセージが読み上げられるテキストチャンネル。")
           .addChannelTypes(ChannelType.GuildText)
