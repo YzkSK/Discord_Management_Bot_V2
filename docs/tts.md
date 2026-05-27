@@ -50,6 +50,7 @@ Skipped messages:
 - bot-authored messages,
 - empty messages,
 - slash-command-like messages starting with `/`,
+- user-muted messages starting with `//`,
 - text beyond the current 120 character limit.
 
 ## Logs
@@ -60,7 +61,7 @@ Message content is not duplicated in TTS logs; message events are linked by IDs.
 - `tts.session.started`: the bot joined or moved into a voice channel for TTS.
 - `tts.session.stopped`: the bot left voice by `/leave` or automatic empty-channel disconnect.
 - `tts.message.spoken`: a message was read successfully.
-- `tts.message.skipped`: a readable-channel message was skipped because it was empty, command-like, or too long.
+- `tts.message.skipped`: a readable-channel message was skipped because it was empty, command-like, user-muted, or too long.
 - `system.voicevox.error`: VOICEVOX synthesis or playback failed.
 
 ## Latency Tuning

@@ -119,6 +119,16 @@ describe("resolveTtsMessageSkipReason", () => {
     );
   });
 
+  it("classifies double-slash messages as user-muted", () => {
+    assert.equal(
+      resolveTtsMessageSkipReason({
+        authorIsBot: false,
+        content: "//これは読み上げない"
+      }),
+      "user-muted"
+    );
+  });
+
   it("classifies messages beyond the TTS length limit", () => {
     assert.equal(
       resolveTtsMessageSkipReason({

@@ -80,7 +80,7 @@ describe("tts log events", () => {
     const event = createTtsMessageSkippedEvent({
       actorId: "user-1",
       guildId: "guild-1",
-      reason: "command-like",
+      reason: "user-muted",
       sourceChannelId: "text-1",
       sourceMessageId: "message-1",
       textLength: 5,
@@ -90,7 +90,7 @@ describe("tts log events", () => {
 
     assert.equal(event.eventName, "tts.message.skipped");
     assert.deepEqual(event.payload, {
-      reason: "command-like",
+      reason: "user-muted",
       sourceChannelId: "text-1",
       sourceMessageId: "message-1",
       textLength: 5,

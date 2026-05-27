@@ -9,7 +9,11 @@ type TtsSessionStopReason = "auto-empty-channel" | "leave-command";
 
 type TtsMessageSourceType = "configured" | "temporary";
 
-type TtsMessageSkipReason = "command-like" | "empty" | "too-long";
+type TtsMessageSkipReason =
+  | "command-like"
+  | "empty"
+  | "too-long"
+  | "user-muted";
 
 interface BaseTtsEventInput {
   actorId: string | null;
