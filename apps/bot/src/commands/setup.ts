@@ -21,6 +21,8 @@ import {
   recruitmentChannelTopicMarker
 } from "../discord/recruitment-channel.js";
 
+type Loc = ReturnType<typeof getLocale>;
+
 export const setupCommand = new SlashCommandBuilder()
   .setName("setup")
   .setDescription("Configure bot features for this guild.")
@@ -97,7 +99,10 @@ export interface SetupCommandContext {
 }
 
 async function resolveGuildLocale(db: DbClient, guildId: string) {
-  const config = await getGuildConfigByGuildId(db, guildId).catch(() => null);
+  const config = await getGuildConfigByGuildId(db, guildId).catch((error: unknown) => {
+    console.warn("failed to fetch guild config for setup locale", error);
+    return null;
+  });
   const lang: GuildLanguage =
     config?.language && isGuildLanguage(config.language)
       ? config.language
@@ -161,8 +166,6 @@ export async function handleSetupCommand(
       });
   }
 }
-
-type Loc = ReturnType<typeof getLocale>;
 
 async function handleTempVoiceSetup(
   interaction: ChatInputCommandInteraction,
