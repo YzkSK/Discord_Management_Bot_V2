@@ -8,9 +8,11 @@ import {
 import type { DbClient } from "@discord-bot/db";
 import {
   ensureGuildSetup,
+  getGuildConfigByGuildId,
   updateGuildTtsConfigByGuildId,
   updateGuildTempVoiceConfigByGuildId
 } from "@discord-bot/db";
+import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/shared";
 
 import { createComponentsV2TextMessage } from "../discord/components-v2.js";
 import { logChannelTopicMarker, markLogChannel } from "../discord/log-channel.js";
@@ -22,16 +24,19 @@ import {
 export const setupCommand = new SlashCommandBuilder()
   .setName("setup")
   .setDescription("Configure bot features for this guild.")
+  .setDescriptionLocalization("ja", "このサーバーのBot機能を設定します。")
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
   .setDMPermission(false)
   .addSubcommand((subcommand) =>
     subcommand
       .setName("temp-vc")
       .setDescription("Configure Temp VC creation settings.")
+      .setDescriptionLocalization("ja", "一時VCの作成設定を構成します。")
       .addChannelOption((option) =>
         option
           .setName("creation-channel")
           .setDescription("Voice channel users join to create a Temp VC.")
+          .setDescriptionLocalization("ja", "一時VCを作成するために参加するボイスチャンネル。")
           .addChannelTypes(ChannelType.GuildVoice)
           .setRequired(true)
       )
@@ -39,6 +44,7 @@ export const setupCommand = new SlashCommandBuilder()
         option
           .setName("category")
           .setDescription("Category for generated Temp VCs and control channels.")
+          .setDescriptionLocalization("ja", "生成された一時VCとコントロールチャンネルのカテゴリ。")
           .addChannelTypes(ChannelType.GuildCategory)
           .setRequired(false)
       )
@@ -47,10 +53,12 @@ export const setupCommand = new SlashCommandBuilder()
     subcommand
       .setName("logs")
       .setDescription("Configure the guild log delivery channel.")
+      .setDescriptionLocalization("ja", "ログ配信チャンネルを設定します。")
       .addChannelOption((option) =>
         option
           .setName("channel")
           .setDescription("Text channel where detected log events are posted.")
+          .setDescriptionLocalization("ja", "ログイベントを投稿するテキストチャンネル。")
           .addChannelTypes(ChannelType.GuildText)
           .setRequired(true)
       )
@@ -59,10 +67,12 @@ export const setupCommand = new SlashCommandBuilder()
     subcommand
       .setName("recruitment")
       .setDescription("Configure the recruitment posting channel.")
+      .setDescriptionLocalization("ja", "募集投稿チャンネルを設定します。")
       .addChannelOption((option) =>
         option
           .setName("channel")
           .setDescription("Text channel where recruitment posts are sent.")
+          .setDescriptionLocalization("ja", "募集投稿を送信するテキストチャンネル。")
           .addChannelTypes(ChannelType.GuildText)
           .setRequired(true)
       )
@@ -71,10 +81,12 @@ export const setupCommand = new SlashCommandBuilder()
     subcommand
       .setName("tts")
       .setDescription("Configure the persistent TTS text channel.")
+      .setDescriptionLocalization("ja", "TTSテキストチャンネルを設定します。")
       .addChannelOption((option) =>
         option
           .setName("channel")
           .setDescription("Text channel whose messages are read while TTS is connected.")
+          .setDescriptionLocalization("ja", "TTS接続中にメッセージが読み上げられるテキストチャンネル。")
           .addChannelTypes(ChannelType.GuildText)
           .setRequired(true)
       )
@@ -84,6 +96,15 @@ export interface SetupCommandContext {
   db: DbClient;
 }
 
+async function resolveGuildLocale(db: DbClient, guildId: string) {
+  const config = await getGuildConfigByGuildId(db, guildId).catch(() => null);
+  const lang: GuildLanguage =
+    config?.language && isGuildLanguage(config.language)
+      ? config.language
+      : "en";
+  return getLocale(lang);
+}
+
 export async function handleSetupCommand(
   interaction: ChatInputCommandInteraction,
   context: SetupCommandContext
@@ -91,21 +112,24 @@ export async function handleSetupCommand(
   const guildId = interaction.guildId;
 
   if (!guildId) {
+    const loc = getLocale("en");
     await interaction.reply({
       ...createComponentsV2TextMessage({
-        title: "Setup failed",
-        lines: ["This command can only be used in a guild."],
+        title: loc.setupFailed,
+        lines: [loc.notInGuild],
         privateResponse: true
       })
     });
     return;
   }
 
+  const loc = await resolveGuildLocale(context.db, guildId);
+
   if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
     await interaction.reply({
       ...createComponentsV2TextMessage({
-        title: "Setup failed",
-        lines: ["You need Manage Server permission to run setup."],
+        title: loc.setupFailed,
+        lines: [loc.noManagePermission],
         privateResponse: true
       })
     });
@@ -116,44 +140,44 @@ export async function handleSetupCommand(
 
   switch (subcommand) {
     case "logs":
-      await handleLogsSetup(interaction, context, guildId);
+      await handleLogsSetup(interaction, context, guildId, loc);
       return;
     case "recruitment":
-      await handleRecruitmentSetup(interaction, context, guildId);
+      await handleRecruitmentSetup(interaction, context, guildId, loc);
       return;
     case "temp-vc":
-      await handleTempVoiceSetup(interaction, context, guildId);
+      await handleTempVoiceSetup(interaction, context, guildId, loc);
       return;
     case "tts":
-      await handleTtsSetup(interaction, context, guildId);
+      await handleTtsSetup(interaction, context, guildId, loc);
       return;
     default:
       await interaction.reply({
         ...createComponentsV2TextMessage({
-          title: "Setup failed",
-          lines: [`Unknown setup target: ${subcommand}`],
+          title: loc.setupFailed,
+          lines: [loc.unknownSetupTarget({ target: subcommand })],
           privateResponse: true
         })
       });
   }
 }
 
+type Loc = ReturnType<typeof getLocale>;
+
 async function handleTempVoiceSetup(
   interaction: ChatInputCommandInteraction,
   context: SetupCommandContext,
-  guildId: string
+  guildId: string,
+  loc: Loc
 ) {
-  const creationChannel = interaction.options.getChannel(
-    "creation-channel",
-    true
-  );
+  const creationChannel = interaction.options.getChannel("creation-channel", true);
   const category = interaction.options.getChannel("category");
 
   if (creationChannel.type !== ChannelType.GuildVoice) {
     await interaction.reply({
       ...createComponentsV2TextMessage({
-        title: "Temp VC setup failed",
-        lines: ["Creation channel must be a voice channel."],
+        title: loc.tempVcSetupFailed,
+        lines: [loc.tempVcCreationChannelMustBeVoice],
         privateResponse: true
       })
     });
@@ -163,8 +187,8 @@ async function handleTempVoiceSetup(
   if (category && category.type !== ChannelType.GuildCategory) {
     await interaction.reply({
       ...createComponentsV2TextMessage({
-        title: "Temp VC setup failed",
-        lines: ["Category must be a channel category."],
+        title: loc.tempVcSetupFailed,
+        lines: [loc.tempVcCategoryMustBeCategory],
         privateResponse: true
       })
     });
@@ -184,10 +208,12 @@ async function handleTempVoiceSetup(
 
   await interaction.reply({
     ...createComponentsV2TextMessage({
-      title: "Temp VC setup complete",
+      title: loc.tempVcSetupComplete,
       lines: [
-        `Creation channel: <#${creationChannel.id}>`,
-        `Category: ${category ? `<#${category.id}>` : "same category as the creation channel"}`
+        loc.tempVcCreationChannel({ id: creationChannel.id }),
+        category
+          ? loc.tempVcCategory({ id: category.id })
+          : loc.tempVcCategorySame
       ],
       privateResponse: true
     })
@@ -197,15 +223,16 @@ async function handleTempVoiceSetup(
 async function handleLogsSetup(
   interaction: ChatInputCommandInteraction,
   context: SetupCommandContext,
-  guildId: string
+  guildId: string,
+  loc: Loc
 ) {
   const channel = interaction.options.getChannel("channel", true);
 
   if (channel.type !== ChannelType.GuildText) {
     await interaction.reply({
       ...createComponentsV2TextMessage({
-        title: "Logs setup failed",
-        lines: ["Log channel must be a text channel."],
+        title: loc.logsSetupFailed,
+        lines: [loc.logsChannelMustBeText],
         privateResponse: true
       })
     });
@@ -221,10 +248,10 @@ async function handleLogsSetup(
 
   await interaction.reply({
     ...createComponentsV2TextMessage({
-      title: "Logs setup complete",
+      title: loc.logsSetupComplete,
       lines: [
-        `Log channel: <#${channel.id}>`,
-        `Marker: ${logChannelTopicMarker}`
+        loc.logsChannel({ id: channel.id }),
+        loc.logsMarker({ marker: logChannelTopicMarker })
       ],
       privateResponse: true
     })
@@ -234,15 +261,16 @@ async function handleLogsSetup(
 async function handleRecruitmentSetup(
   interaction: ChatInputCommandInteraction,
   context: SetupCommandContext,
-  guildId: string
+  guildId: string,
+  loc: Loc
 ) {
   const channel = interaction.options.getChannel("channel", true);
 
   if (channel.type !== ChannelType.GuildText) {
     await interaction.reply({
       ...createComponentsV2TextMessage({
-        title: "Recruitment setup failed",
-        lines: ["Recruitment channel must be a text channel."],
+        title: loc.recruitmentSetupFailed,
+        lines: [loc.recruitmentChannelMustBeText],
         privateResponse: true
       })
     });
@@ -258,10 +286,10 @@ async function handleRecruitmentSetup(
 
   await interaction.reply({
     ...createComponentsV2TextMessage({
-      title: "Recruitment setup complete",
+      title: loc.recruitmentSetupComplete,
       lines: [
-        `Recruitment channel: <#${channel.id}>`,
-        `Marker: ${recruitmentChannelTopicMarker}`
+        loc.recruitmentChannel({ id: channel.id }),
+        loc.recruitmentMarker({ marker: recruitmentChannelTopicMarker })
       ],
       privateResponse: true
     })
@@ -271,15 +299,16 @@ async function handleRecruitmentSetup(
 async function handleTtsSetup(
   interaction: ChatInputCommandInteraction,
   context: SetupCommandContext,
-  guildId: string
+  guildId: string,
+  loc: Loc
 ) {
   const channel = interaction.options.getChannel("channel", true);
 
   if (channel.type !== ChannelType.GuildText) {
     await interaction.reply({
       ...createComponentsV2TextMessage({
-        title: "TTS setup failed",
-        lines: ["TTS channel must be a text channel."],
+        title: loc.ttsSetupFailed,
+        lines: [loc.ttsChannelMustBeText],
         privateResponse: true
       })
     });
@@ -298,10 +327,10 @@ async function handleTtsSetup(
 
   await interaction.reply({
     ...createComponentsV2TextMessage({
-      title: "TTS setup complete",
+      title: loc.ttsSetupComplete,
       lines: [
-        `TTS text channel: <#${channel.id}>`,
-        "Messages in this channel will be read while the bot is connected to voice."
+        loc.ttsTtsChannel({ id: channel.id }),
+        loc.ttsChannelDescription
       ],
       privateResponse: true
     })
