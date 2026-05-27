@@ -8,7 +8,7 @@
     "dev": "next dev",
     "lint": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/server.js",
-    "test": "tsc -p tsconfig.test.json && node --test dist-test/app/dashboard-ui.test.js dist-test/lib/utils.test.js",
+    "test": "tsc -p tsconfig.test.json && node --test dist-test/app/dashboard-ui.test.js dist-test/app/api/health/health.test.js dist-test/lib/utils.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

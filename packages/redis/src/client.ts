@@ -4,6 +4,7 @@ import { createClient } from "redis";
 export interface RedisClient {
   connect: () => Promise<unknown>;
   quit: () => Promise<unknown>;
+  ping: () => Promise<string>;
   xAdd: (
     key: string,
     id: "*",
