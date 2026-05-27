@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { resolveVoiceStateLogEventName } from "./gateway-logs.js";
+import {
+  resolveVoiceStateLogEventName,
+  shouldSkipVoiceStateLog
+} from "./gateway-logs.js";
 
 describe("resolveVoiceStateLogEventName", () => {
   it("detects voice joins", () => {
@@ -41,6 +44,48 @@ describe("resolveVoiceStateLogEventName", () => {
         { channelId: "voice-1" } as never
       ),
       "voice.state.update"
+    );
+  });
+});
+
+describe("shouldSkipVoiceStateLog", () => {
+  it("skips bot voice joins", () => {
+    assert.equal(
+      shouldSkipVoiceStateLog({
+        eventName: "voice.session.join",
+        memberIsBot: true
+      }),
+      true
+    );
+  });
+
+  it("skips bot voice leaves", () => {
+    assert.equal(
+      shouldSkipVoiceStateLog({
+        eventName: "voice.session.leave",
+        memberIsBot: true
+      }),
+      true
+    );
+  });
+
+  it("keeps human voice joins", () => {
+    assert.equal(
+      shouldSkipVoiceStateLog({
+        eventName: "voice.session.join",
+        memberIsBot: false
+      }),
+      false
+    );
+  });
+
+  it("keeps bot voice moves for now", () => {
+    assert.equal(
+      shouldSkipVoiceStateLog({
+        eventName: "voice.session.move",
+        memberIsBot: true
+      }),
+      false
     );
   });
 });

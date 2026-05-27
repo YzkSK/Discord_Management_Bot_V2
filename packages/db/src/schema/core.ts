@@ -41,6 +41,7 @@ export const guildConfigs = pgTable(
     logMode: text("log_mode").notNull().default("full"),
     tempVoiceCreateChannelId: text("temp_voice_create_channel_id"),
     tempVoiceCategoryId: text("temp_voice_category_id"),
+    ttsTextChannelId: text("tts_text_channel_id"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -14,15 +14,31 @@ import {
   setupCommand,
   type SetupCommandContext
 } from "./setup.js";
+import {
+  forceJoinCommand,
+  handleForceJoinCommand,
+  handleJoinCommand,
+  handleLeaveCommand,
+  joinCommand,
+  leaveCommand,
+  type TtsCommandContext
+} from "./tts.js";
 
 export type CommandContext = RecruitmentCommandContext &
-  SetupCommandContext & {
+  SetupCommandContext &
+  TtsCommandContext & {
     db: DbClient;
     redis: RedisStreamWriter;
     logWriter?: DiscordLogWriter;
   };
 
-export const slashCommands = [setupCommand, recruitmentCommand] as const;
+export const slashCommands = [
+  setupCommand,
+  recruitmentCommand,
+  joinCommand,
+  forceJoinCommand,
+  leaveCommand
+] as const;
 
 export function slashCommandPayloads() {
   return slashCommands.map((command) => command.toJSON());
@@ -38,6 +54,15 @@ export async function handleChatInputCommand(
       return;
     case recruitmentCommand.name:
       await handleRecruitmentCommand(interaction, context);
+      return;
+    case joinCommand.name:
+      await handleJoinCommand(interaction, context);
+      return;
+    case forceJoinCommand.name:
+      await handleForceJoinCommand(interaction, context);
+      return;
+    case leaveCommand.name:
+      await handleLeaveCommand(interaction, context);
       return;
     default:
       await interaction.reply({

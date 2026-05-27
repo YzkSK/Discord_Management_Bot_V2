@@ -6,24 +6,29 @@ import {
 } from "../commands/index.js";
 import { createDiscordLogWriter } from "./log-writer.js";
 import { handleRecruitmentButtonInteraction } from "./recruitment-interactions.js";
+import { handleForceJoinButtonInteraction } from "../commands/tts.js";
 
 export function installInteractionRouter(client: Client, context: CommandContext) {
   const commandContext: CommandContext = {
     ...context,
-    logWriter: createDiscordLogWriter(client, context)
+    logWriter: context.logWriter ?? createDiscordLogWriter(client, context)
   };
 
   client.on(Events.InteractionCreate, (interaction) => {
     if (interaction.isButton()) {
-      void handleRecruitmentButtonInteraction(interaction, commandContext).catch(
-        (error: unknown) => {
+      void handleForceJoinButtonInteraction(interaction, commandContext)
+        .then((handled) =>
+          handled
+            ? undefined
+            : handleRecruitmentButtonInteraction(interaction, commandContext)
+        )
+        .catch((error: unknown) => {
           console.error("button interaction handler failed", {
             customId: interaction.customId,
             guildId: interaction.guildId,
             error
           });
-        }
-      );
+        });
       return;
     }
 

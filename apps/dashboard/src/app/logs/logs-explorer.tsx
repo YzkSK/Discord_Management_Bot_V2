@@ -1,13 +1,32 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Search } from "lucide-react";
 import { io } from "socket.io-client";
 
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
+import { Input } from "../../components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "../../components/ui/table";
 import {
   realtimeErrorEventName,
   realtimeLogsEventName,
   realtimeLogsSubscribeEventName
 } from "../../realtime-events";
+import {
+  countActiveFilters,
+  dashboardGuildStorageKey,
+  getDashboardEventPresets,
+  normalizeGuildId
+} from "../dashboard-ui";
 
 interface LogItem {
   id: string;
@@ -35,32 +54,49 @@ interface LogFilters {
 }
 
 const initialFilters: LogFilters = {
-  search: "",
-  guildId: "",
+  actorId: "",
   eventName: "",
-  actorId: ""
+  guildId: "",
+  search: ""
 };
+
+const eventPresets = getDashboardEventPresets();
 
 export function LogsExplorer() {
   const [filters, setFilters] = useState(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState(initialFilters);
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [realtimeStatus, setRealtimeStatus] = useState("offline");
+  const [realtimeStatus, setRealtimeStatus] = useState("idle");
 
   useEffect(() => {
-    void loadLogs(appliedFilters);
+    const storedGuildId = window.localStorage.getItem(dashboardGuildStorageKey);
+
+    if (storedGuildId) {
+      const nextFilters = {
+        ...initialFilters,
+        guildId: storedGuildId
+      };
+      setFilters(nextFilters);
+      setAppliedFilters(nextFilters);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (normalizeGuildId(appliedFilters.guildId)) {
+      void loadLogs(appliedFilters);
+    }
   }, [appliedFilters]);
 
   useEffect(() => {
-    const guildId = appliedFilters.guildId.trim();
+    const guildId = normalizeGuildId(appliedFilters.guildId);
 
     if (!guildId) {
-      setRealtimeStatus("offline");
+      setRealtimeStatus("idle");
       return;
     }
 
@@ -100,12 +136,12 @@ export function LogsExplorer() {
   }, [appliedFilters.guildId]);
 
   const activeFilterCount = useMemo(
-    () => Object.values(appliedFilters).filter(Boolean).length,
+    () => countActiveFilters(appliedFilters),
     [appliedFilters]
   );
 
   async function loadLogs(nextFilters: LogFilters) {
-    if (!nextFilters.guildId.trim()) {
+    if (!normalizeGuildId(nextFilters.guildId)) {
       setLogs([]);
       setNextCursor(null);
       setError("Enter a guild ID to load logs.");
@@ -117,6 +153,10 @@ export function LogsExplorer() {
     setLoading(true);
     setError(null);
     setExpandedId(null);
+    window.localStorage.setItem(
+      dashboardGuildStorageKey,
+      normalizeGuildId(nextFilters.guildId)
+    );
 
     try {
       const data = await fetchLogs(nextFilters);
@@ -150,96 +190,125 @@ export function LogsExplorer() {
 
   function submitFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setAppliedFilters(filters);
+    setAppliedFilters({
+      ...filters,
+      guildId: normalizeGuildId(filters.guildId)
+    });
   }
 
   function resetFilters() {
-    setFilters(initialFilters);
-    setAppliedFilters(initialFilters);
+    const nextFilters = {
+      ...initialFilters,
+      guildId: filters.guildId
+    };
+    setFilters(nextFilters);
+    setAppliedFilters(nextFilters);
+  }
+
+  function applyPreset(eventName: string) {
+    const nextFilters = {
+      ...filters,
+      eventName
+    };
+    setFilters(nextFilters);
+    setAppliedFilters({
+      ...nextFilters,
+      guildId: normalizeGuildId(nextFilters.guildId)
+    });
   }
 
   return (
-    <main className="min-h-screen bg-[#101418] px-5 py-6 text-slate-100">
-      <section className="mx-auto flex max-w-7xl flex-col gap-5">
-        <header className="flex flex-col gap-3 border-b border-slate-700 pb-5 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase text-teal-300">
-              Phase2 Logs
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-normal">
-              Logs
-            </h1>
-          </div>
-          <div className="text-sm text-slate-300">
-            {logs.length} shown
-            {activeFilterCount > 0 ? ` / ${activeFilterCount} filters` : ""}
-            {appliedFilters.guildId ? ` / realtime ${realtimeStatus}` : ""}
-          </div>
-        </header>
+    <section className="flex max-w-7xl flex-col gap-4">
+      <Card>
+        <CardContent className="p-4">
+          <form onSubmit={submitFilters}>
+            <div className="grid gap-3 lg:grid-cols-[1.2fr_1fr_1fr_1fr_auto_auto]">
+              <FilterInput
+                label="Search"
+                onChange={(value) => setFilters({ ...filters, search: value })}
+                placeholder="channel name, session key, payload text"
+                value={filters.search}
+              />
+              <FilterInput
+                label="Guild"
+                onChange={(value) => setFilters({ ...filters, guildId: value })}
+                placeholder="required guild id"
+                value={filters.guildId}
+              />
+              <FilterInput
+                label="Event"
+                onChange={(value) => setFilters({ ...filters, eventName: value })}
+                placeholder="event prefix"
+                value={filters.eventName}
+              />
+              <FilterInput
+                label="Actor"
+                onChange={(value) => setFilters({ ...filters, actorId: value })}
+                placeholder="actor id"
+                value={filters.actorId}
+              />
+              <Button className="h-10 self-end" type="submit">
+                <Search className="h-4 w-4" />
+                Search
+              </Button>
+              <Button
+                className="h-10 self-end"
+                onClick={resetFilters}
+                type="button"
+                variant="outline"
+              >
+                Reset
+              </Button>
+            </div>
+          </form>
 
-        <form
-          className="grid gap-3 border-b border-slate-800 pb-5 lg:grid-cols-[1.2fr_1fr_1fr_1fr_auto_auto]"
-          onSubmit={submitFilters}
-        >
-          <FilterInput
-            label="Search"
-            onChange={(value) => setFilters({ ...filters, search: value })}
-            placeholder="message.update"
-            value={filters.search}
-          />
-          <FilterInput
-            label="Guild"
-            onChange={(value) => setFilters({ ...filters, guildId: value })}
-            placeholder="required guild id"
-            value={filters.guildId}
-          />
-          <FilterInput
-            label="Event"
-            onChange={(value) => setFilters({ ...filters, eventName: value })}
-            placeholder="event name"
-            value={filters.eventName}
-          />
-          <FilterInput
-            label="Actor"
-            onChange={(value) => setFilters({ ...filters, actorId: value })}
-            placeholder="actor id"
-            value={filters.actorId}
-          />
-          <button
-            className="h-11 border border-teal-500 bg-teal-500 px-4 text-sm font-semibold text-slate-950 hover:bg-teal-400"
-            type="submit"
-          >
-            Search
-          </button>
-          <button
-            className="h-11 border border-slate-600 px-4 text-sm font-semibold text-slate-100 hover:border-slate-400"
-            onClick={resetFilters}
-            type="button"
-          >
-            Reset
-          </button>
-        </form>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {eventPresets.map((preset) => {
+              const active = filters.eventName === preset.eventName;
 
-        {error ? (
-          <div className="border border-red-500 bg-red-950/40 px-4 py-3 text-sm text-red-100">
-            {error}
+              return (
+                <Button
+                  key={preset.label}
+                  onClick={() => applyPreset(preset.eventName)}
+                  size="sm"
+                  title={preset.description}
+                  type="button"
+                  variant={active ? "secondary" : "outline"}
+                >
+                  {preset.label}
+                </Button>
+              );
+            })}
+            <div className="ml-auto flex flex-wrap gap-2">
+              <Badge variant="outline">{logs.length} shown</Badge>
+              <Badge variant="outline">{activeFilterCount} filters</Badge>
+              <Badge variant={realtimeStatus === "live" ? "success" : "outline"}>
+                realtime {realtimeStatus}
+              </Badge>
+            </div>
           </div>
-        ) : null}
+        </CardContent>
+      </Card>
 
-        <div className="overflow-x-auto border border-slate-800">
-          <table className="min-w-full border-collapse text-left text-sm">
-            <thead className="bg-slate-900 text-xs uppercase text-slate-400">
-              <tr>
-                <th className="w-48 px-3 py-3 font-semibold">Received</th>
-                <th className="w-56 px-3 py-3 font-semibold">Event</th>
-                <th className="w-44 px-3 py-3 font-semibold">Guild</th>
-                <th className="w-44 px-3 py-3 font-semibold">Actor</th>
-                <th className="px-3 py-3 font-semibold">Target</th>
-                <th className="w-28 px-3 py-3 font-semibold">Realtime</th>
-                <th className="w-24 px-3 py-3 font-semibold">Raw</th>
-              </tr>
-            </thead>
-            <tbody>
+      {error ? (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {error}
+        </div>
+      ) : null}
+
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-44">Received</TableHead>
+                <TableHead className="w-56">Event</TableHead>
+                <TableHead className="w-44">Actor</TableHead>
+                <TableHead>Summary</TableHead>
+                <TableHead className="w-24">Raw</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading ? <LoadingRows /> : null}
               {!loading && logs.length === 0 ? <EmptyRow /> : null}
               {!loading
@@ -254,22 +323,22 @@ export function LogsExplorer() {
                     />
                   ))
                 : null}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
+      </Card>
 
-        <div className="flex justify-end">
-          <button
-            className="h-11 border border-slate-600 px-4 text-sm font-semibold text-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={!nextCursor || loadingMore}
-            onClick={loadMore}
-            type="button"
-          >
-            {loadingMore ? "Loading" : "Load More"}
-          </button>
-        </div>
-      </section>
-    </main>
+      <div className="flex justify-end">
+        <Button
+          disabled={!nextCursor || loadingMore}
+          onClick={loadMore}
+          type="button"
+          variant="outline"
+        >
+          {loadingMore ? "Loading" : "Load More"}
+        </Button>
+      </div>
+    </section>
   );
 }
 
@@ -285,10 +354,10 @@ function FilterInput({
   value: string;
 }) {
   return (
-    <label className="flex flex-col gap-1 text-xs font-semibold uppercase text-slate-400">
+    <label className="flex flex-col gap-1 text-xs font-semibold uppercase text-slate-500">
       {label}
-      <input
-        className="h-11 border border-slate-700 bg-slate-950 px-3 text-sm normal-case text-slate-100 outline-none placeholder:text-slate-600 focus:border-teal-400"
+      <Input
+        className="normal-case"
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         value={value}
@@ -308,47 +377,36 @@ function LogRow({
 }) {
   return (
     <>
-      <tr className="border-t border-slate-800 hover:bg-slate-900/70">
-        <td className="px-3 py-3 text-slate-300">{formatDate(log.receivedAt)}</td>
-        <td className="px-3 py-3 font-mono text-teal-200">{log.eventName}</td>
-        <td className="px-3 py-3 font-mono text-slate-300">
-          {log.guildId ?? "-"}
-        </td>
-        <td className="px-3 py-3 font-mono text-slate-300">
+      <TableRow className="hover:bg-slate-50">
+        <TableCell className="text-slate-600">{formatDate(log.receivedAt)}</TableCell>
+        <TableCell className="font-mono text-sm font-semibold text-teal-800">
+          {log.eventName}
+        </TableCell>
+        <TableCell className="font-mono text-slate-600">
           {log.actorId ?? "-"}
-        </td>
-        <td className="px-3 py-3 font-mono text-slate-300">
-          {log.messageId ?? log.channelId ?? "-"}
-        </td>
-        <td className="px-3 py-3">
-          <span
-            className={
-              log.realtimeEnabled
-                ? "text-teal-300"
-                : "text-slate-500"
-            }
-          >
-            {log.realtimeEnabled ? "on" : "off"}
-          </span>
-        </td>
-        <td className="px-3 py-3">
-          <button
-            className="border border-slate-600 px-3 py-1 text-xs font-semibold hover:border-slate-400"
+        </TableCell>
+        <TableCell className="text-slate-700">
+          {formatPayloadSummary(log)}
+        </TableCell>
+        <TableCell>
+          <Button
             onClick={onToggle}
+            size="sm"
             type="button"
+            variant="outline"
           >
             {expanded ? "Hide" : "View"}
-          </button>
-        </td>
-      </tr>
+          </Button>
+        </TableCell>
+      </TableRow>
       {expanded ? (
-        <tr className="border-t border-slate-800 bg-slate-950">
-          <td className="px-3 py-3" colSpan={7}>
-            <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words text-xs leading-5 text-slate-300">
+        <TableRow className="bg-slate-50">
+          <TableCell colSpan={5}>
+            <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-md border border-slate-200 bg-white p-3 text-xs leading-5 text-slate-700">
               {JSON.stringify(log.payload, null, 2)}
             </pre>
-          </td>
-        </tr>
+          </TableCell>
+        </TableRow>
       ) : null}
     </>
   );
@@ -356,21 +414,21 @@ function LogRow({
 
 function LoadingRows() {
   return Array.from({ length: 5 }, (_, index) => (
-    <tr className="border-t border-slate-800" key={index}>
-      <td className="px-3 py-4 text-slate-500" colSpan={7}>
+    <TableRow key={index}>
+      <TableCell className="text-slate-500" colSpan={5}>
         Loading logs
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   ));
 }
 
 function EmptyRow() {
   return (
-    <tr className="border-t border-slate-800">
-      <td className="px-3 py-8 text-center text-slate-400" colSpan={7}>
-        No logs found
-      </td>
-    </tr>
+    <TableRow>
+      <TableCell className="py-10 text-center text-slate-500" colSpan={5}>
+        Enter a guild ID and search logs.
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -400,6 +458,31 @@ function setQueryParam(query: URLSearchParams, key: string, value: string) {
   if (normalizedValue) {
     query.set(key, normalizedValue);
   }
+}
+
+function formatPayloadSummary(log: LogItem) {
+  const payload = isRecord(log.payload) ? log.payload : {};
+  const parts = [
+    pickString(payload, "summary"),
+    pickString(payload, "content"),
+    pickString(payload, "channelName"),
+    pickString(payload, "tempVoiceChannelName"),
+    pickString(payload, "stableChannelKey"),
+    pickString(payload, "sessionKey"),
+    log.messageId ? `message ${log.messageId}` : null,
+    log.channelId ? `channel ${log.channelId}` : null
+  ].filter(Boolean);
+
+  return parts.slice(0, 3).join(" / ") || "-";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function pickString(source: Record<string, unknown>, key: string) {
+  const value = source[key];
+  return typeof value === "string" && value.length > 0 ? value : null;
 }
 
 function formatDate(value: string) {

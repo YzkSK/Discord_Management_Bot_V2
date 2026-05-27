@@ -12,6 +12,7 @@ export const appEnvSchema = z.object({
   DATABASE_URL: z.string().url(),
   REDIS_URL: z.string().url(),
   VOICEVOX_URL: z.string().url(),
+  VOICEVOX_SPEAKER_ID: z.coerce.number().int().nonnegative().default(2),
   NEXTAUTH_SECRET: z.string().min(1),
   SESSION_ENCRYPTION_KEY: z.string().min(1),
   PUBLIC_DASHBOARD_URL: z.string().url(),

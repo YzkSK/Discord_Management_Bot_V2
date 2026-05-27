@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "noEmit": false,
+    "outDir": "dist-test",
+    "rootDir": "src"
+  },
+  "include": [
+    "src/app/dashboard-ui.ts",
+    "src/app/dashboard-ui.test.ts",
+    "src/lib/utils.ts",
+    "src/lib/utils.test.ts"
+  ]
+}

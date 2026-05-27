@@ -1,6 +1,19 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { Save, Search } from "lucide-react";
+
+import { Button } from "../../components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "../../components/ui/card";
+import { Input } from "../../components/ui/input";
+import { Select } from "../../components/ui/select";
+import { dashboardGuildStorageKey, normalizeGuildId } from "../dashboard-ui";
 
 interface SettingsResponse {
   guildId: string;
@@ -26,10 +39,20 @@ export function SettingsPanel() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const storedGuildId = window.localStorage.getItem(dashboardGuildStorageKey);
+
+    if (storedGuildId) {
+      setGuildId(storedGuildId);
+    }
+  }, []);
+
   async function loadSettings(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!guildId.trim()) {
+    const normalizedGuildId = normalizeGuildId(guildId);
+
+    if (!normalizedGuildId) {
       setError("Enter a guild ID.");
       return;
     }
@@ -37,9 +60,11 @@ export function SettingsPanel() {
     setLoading(true);
     setError(null);
     setMessage(null);
+    window.localStorage.setItem(dashboardGuildStorageKey, normalizedGuildId);
 
     try {
-      const data = await fetchSettings(guildId);
+      const data = await fetchSettings(normalizedGuildId);
+      setGuildId(normalizedGuildId);
       setSettings(data);
       setLogMode(data.logMode);
     } catch (caughtError) {
@@ -71,61 +96,56 @@ export function SettingsPanel() {
   }
 
   return (
-    <main className="min-h-screen bg-[#101418] px-5 py-6 text-slate-100">
-      <section className="mx-auto flex max-w-5xl flex-col gap-5">
-        <header className="flex flex-col gap-3 border-b border-slate-700 pb-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase text-teal-300">
-              Phase3 Settings
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-normal">
-              Guild Settings
-            </h1>
-          </div>
-          <a
-            className="text-sm font-semibold text-teal-200 hover:text-teal-100"
-            href="/logs"
-          >
-            Open Logs
-          </a>
-        </header>
+    <section className="grid max-w-6xl gap-4 xl:grid-cols-[.9fr_1.1fr]">
+      <Card>
+        <CardHeader>
+          <CardTitle>Load Guild</CardTitle>
+          <CardDescription>
+            This guild ID is shared with Logs in this browser.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={loadSettings}>
+            <label className="flex flex-col gap-1 text-xs font-semibold uppercase text-slate-500">
+              Guild ID
+              <Input
+                className="normal-case"
+                onChange={(event) => setGuildId(event.target.value)}
+                placeholder="required guild id"
+                value={guildId}
+              />
+            </label>
 
-        <form
-          className="grid gap-3 border-b border-slate-800 pb-5 sm:grid-cols-[1fr_auto]"
-          onSubmit={loadSettings}
-        >
-          <label className="flex flex-col gap-1 text-xs font-semibold uppercase text-slate-400">
-            Guild
-            <input
-              className="h-11 border border-slate-700 bg-slate-950 px-3 text-sm normal-case text-slate-100 outline-none placeholder:text-slate-600 focus:border-teal-400"
-              onChange={(event) => setGuildId(event.target.value)}
-              placeholder="guild id"
-              value={guildId}
-            />
-          </label>
-          <button
-            className="h-11 self-end border border-teal-500 bg-teal-500 px-4 text-sm font-semibold text-slate-950 hover:bg-teal-400 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={loading}
-            type="submit"
-          >
-            {loading ? "Loading" : "Load"}
-          </button>
-        </form>
+            <Button className="mt-4 w-full" disabled={loading} type="submit">
+              <Search className="h-4 w-4" />
+              {loading ? "Loading" : "Load Settings"}
+            </Button>
+          </form>
 
-        {error ? (
-          <div className="border border-red-500 bg-red-950/40 px-4 py-3 text-sm text-red-100">
-            {error}
-          </div>
-        ) : null}
+          {error ? (
+            <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              {error}
+            </div>
+          ) : null}
 
-        {message ? (
-          <div className="border border-teal-500 bg-teal-950/30 px-4 py-3 text-sm text-teal-100">
-            {message}
-          </div>
-        ) : null}
+          {message ? (
+            <div className="mt-4 rounded-md border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900">
+              {message}
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Guild Settings</CardTitle>
+          <CardDescription>
+            Review access and logging behavior for the loaded guild.
+          </CardDescription>
+        </CardHeader>
 
         {settings ? (
-          <section className="flex flex-col gap-4 border border-slate-800 p-4">
+          <CardContent className="flex flex-col gap-4">
             <div className="grid gap-3 text-sm sm:grid-cols-2">
               <ReadOnlyValue label="Guild ID" value={settings.guildId} />
               <ReadOnlyValue
@@ -139,10 +159,9 @@ export function SettingsPanel() {
               />
             </div>
 
-            <label className="flex flex-col gap-1 text-xs font-semibold uppercase text-slate-400">
+            <label className="flex flex-col gap-1 text-xs font-semibold uppercase text-slate-500">
               Log Mode
-              <select
-                className="h-11 border border-slate-700 bg-slate-950 px-3 text-sm normal-case text-slate-100 outline-none focus:border-teal-400"
+              <Select
                 onChange={(event) => setLogMode(event.target.value)}
                 value={logMode}
               >
@@ -151,37 +170,43 @@ export function SettingsPanel() {
                     {option.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
 
             <div className="flex justify-end">
-              <button
-                className="h-11 border border-teal-500 bg-teal-500 px-4 text-sm font-semibold text-slate-950 hover:bg-teal-400 disabled:cursor-not-allowed disabled:opacity-50"
+              <Button
                 disabled={saving}
                 onClick={saveSettings}
                 type="button"
               >
-                {saving ? "Saving" : "Save"}
-              </button>
+                <Save className="h-4 w-4" />
+                {saving ? "Saving" : "Save Changes"}
+              </Button>
             </div>
-          </section>
-        ) : null}
-      </section>
-    </main>
+          </CardContent>
+        ) : (
+          <CardContent>
+          <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
+            Load a guild to review its access role and logging mode.
+          </div>
+          </CardContent>
+        )}
+      </Card>
+    </section>
   );
 }
 
 function ReadOnlyValue({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border border-slate-800 bg-slate-950 px-3 py-2">
+    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
       <p className="text-xs font-semibold uppercase text-slate-500">{label}</p>
-      <p className="mt-1 break-all font-mono text-sm text-slate-200">{value}</p>
+      <p className="mt-1 break-all font-mono text-sm text-slate-800">{value}</p>
     </div>
   );
 }
 
 async function fetchSettings(guildId: string) {
-  const query = new URLSearchParams({ guildId: guildId.trim() });
+  const query = new URLSearchParams({ guildId });
   const response = await fetch(`/api/settings?${query.toString()}`, {
     cache: "no-store"
   });

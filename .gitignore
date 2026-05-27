@@ -4,6 +4,7 @@ node_modules/
 
 # builds
 dist/
+dist-test/
 .next/
 out/
 coverage/
@@ -31,6 +32,11 @@ npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# local brainstorming companion output
+.superpowers/
+.claude/
+.serena/
 
 # OS/editor
 .DS_Store

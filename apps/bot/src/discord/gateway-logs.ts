@@ -418,11 +418,34 @@ async function writeVoiceStateEvent(
   newState: VoiceState,
   db: DbClient
 ) {
+  const eventName = resolveVoiceStateLogEventName(oldState, newState);
+
+  if (
+    shouldSkipVoiceStateLog({
+      eventName,
+      memberIsBot:
+        oldState.member?.user.bot === true || newState.member?.user.bot === true
+    })
+  ) {
+    return;
+  }
+
   if (await shouldSuppressTempVoiceStateEvent(oldState, newState, db)) {
     return;
   }
 
-  write(createVoiceEvent(oldState, newState));
+  write(createVoiceEvent(eventName, oldState, newState));
+}
+
+export function shouldSkipVoiceStateLog(input: {
+  eventName: string;
+  memberIsBot: boolean;
+}) {
+  return (
+    input.memberIsBot &&
+    (input.eventName === "voice.session.join" ||
+      input.eventName === "voice.session.leave")
+  );
 }
 
 async function shouldSuppressTempVoiceStateEvent(
@@ -558,11 +581,10 @@ function createReactionEvent(
 }
 
 function createVoiceEvent(
+  eventName: string,
   oldState: VoiceState,
   newState: VoiceState
 ): NormalizedEvent {
-  const eventName = resolveVoiceStateLogEventName(oldState, newState);
-
   return createEvent(eventName, {
     guildId: newState.guild.id,
     actorId: newState.member?.id ?? newState.id,

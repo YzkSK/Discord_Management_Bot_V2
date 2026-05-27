@@ -67,6 +67,7 @@ export async function getGuildConfigByGuildId(db: DbClient, guildId: string) {
       logMode: guildConfigs.logMode,
       tempVoiceCreateChannelId: guildConfigs.tempVoiceCreateChannelId,
       tempVoiceCategoryId: guildConfigs.tempVoiceCategoryId,
+      ttsTextChannelId: guildConfigs.ttsTextChannelId,
       updatedAt: guildConfigs.updatedAt
     })
     .from(guilds)
@@ -139,6 +140,41 @@ export async function updateGuildTempVoiceConfigByGuildId(
       set: {
         tempVoiceCreateChannelId: input.tempVoiceCreateChannelId ?? null,
         tempVoiceCategoryId: input.tempVoiceCategoryId ?? null,
+        updatedAt: sql`now()`
+      }
+    })
+    .returning();
+
+  return config ?? null;
+}
+
+export async function updateGuildTtsConfigByGuildId(
+  db: DbClient,
+  input: {
+    guildId: string;
+    ttsTextChannelId?: string | null;
+  }
+) {
+  const [guild] = await db
+    .select({ id: guilds.id })
+    .from(guilds)
+    .where(eq(guilds.guildId, input.guildId))
+    .limit(1);
+
+  if (!guild) {
+    return null;
+  }
+
+  const [config] = await db
+    .insert(guildConfigs)
+    .values({
+      guildRefId: guild.id,
+      ttsTextChannelId: input.ttsTextChannelId ?? null
+    })
+    .onConflictDoUpdate({
+      target: guildConfigs.guildRefId,
+      set: {
+        ttsTextChannelId: input.ttsTextChannelId ?? null,
         updatedAt: sql`now()`
       }
     })

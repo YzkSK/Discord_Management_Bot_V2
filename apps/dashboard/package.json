@@ -8,7 +8,7 @@
     "dev": "next dev",
     "lint": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/server.js",
-    "test": "node -e \"console.log('dashboard: no tests yet')\"",
+    "test": "tsc -p tsconfig.test.json && node --test dist-test/app/dashboard-ui.test.js dist-test/lib/utils.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -16,12 +16,16 @@
     "@discord-bot/db": "workspace:*",
     "@discord-bot/redis": "workspace:*",
     "@discord-bot/shared": "workspace:*",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.16.0",
     "next": "*",
     "next-auth": "^4.24.14",
     "react": "*",
     "react-dom": "*",
     "socket.io": "^4.8.3",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.0",

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { requireDashboardPageSession } from "../../dashboard-auth";
+import { DashboardShell } from "../dashboard-shell";
 
 import { SettingsPanel } from "./settings-panel";
 
@@ -13,5 +14,15 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
-  return <SettingsPanel />;
+  return (
+    <DashboardShell
+      currentPath="/settings"
+      description="Review dashboard access state and logging mode for a guild."
+      eyebrow="Guild Configuration"
+      session={session}
+      title="Settings"
+    >
+      <SettingsPanel />
+    </DashboardShell>
+  );
 }
