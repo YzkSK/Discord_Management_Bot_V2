@@ -11,7 +11,7 @@ import { handleForceJoinButtonInteraction } from "../commands/tts.js";
 export function installInteractionRouter(client: Client, context: CommandContext) {
   const commandContext: CommandContext = {
     ...context,
-    logWriter: createDiscordLogWriter(client, context)
+    logWriter: context.logWriter ?? createDiscordLogWriter(client, context)
   };
 
   client.on(Events.InteractionCreate, (interaction) => {

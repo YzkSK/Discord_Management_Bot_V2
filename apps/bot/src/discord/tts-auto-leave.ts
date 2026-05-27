@@ -1,5 +1,7 @@
 import type { Client, GuildBasedChannel, VoiceBasedChannel } from "discord.js";
 
+import type { DiscordLogWriter } from "./log-writer.js";
+import { createTtsSessionStoppedEvent } from "./tts-logs.js";
 import type { TtsSessionManager } from "./tts-session.js";
 import {
   installVoiceStateHandlers,
@@ -19,6 +21,7 @@ export interface ShouldAutoLeaveTtsChannelInput {
 }
 
 export interface InstallTtsAutoLeaveHandlerOptions {
+  logWriter?: DiscordLogWriter;
   ttsSessionManager: TtsSessionManager;
 }
 
@@ -28,7 +31,8 @@ export function installTtsAutoLeaveHandler(
 ) {
   installVoiceStateHandlers(client, {
     onTransition(transition, context) {
-      handleTtsAutoLeaveTransition(
+      return handleTtsAutoLeaveTransition(
+        options.logWriter,
         options.ttsSessionManager,
         transition,
         context
@@ -54,7 +58,8 @@ export function shouldAutoLeaveTtsChannel(
   return input.remainingMembers.every((member) => member.bot);
 }
 
-function handleTtsAutoLeaveTransition(
+async function handleTtsAutoLeaveTransition(
+  logWriter: DiscordLogWriter | undefined,
   ttsSessionManager: TtsSessionManager,
   transition: VoiceStateTransition,
   context: VoiceStateTransitionContext
@@ -72,6 +77,21 @@ function handleTtsAutoLeaveTransition(
     })
   ) {
     ttsSessionManager.leave(transition.guildId);
+    await logWriter
+      ?.write(
+        createTtsSessionStoppedEvent({
+          actorId: transition.userId,
+          guildId: transition.guildId,
+          reason: "auto-empty-channel",
+          voiceChannelId: connectedVoiceChannelId
+        })
+      )
+      .catch((error: unknown) => {
+        console.warn("failed to write tts auto leave log event", {
+          guildId: transition.guildId,
+          error
+        });
+      });
   }
 }
 

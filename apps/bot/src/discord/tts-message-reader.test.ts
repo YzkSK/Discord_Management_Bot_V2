@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  resolveTtsMessageSkipReason,
+  resolveTtsMessageSourceType,
   resolveReadableTtsChannelIds,
   shouldReadTtsMessage
 } from "./tts-message-reader.js";
@@ -70,5 +72,60 @@ describe("resolveReadableTtsChannelIds", () => {
     });
 
     assert.deepEqual(channels, ["text-1", "text-2"]);
+  });
+});
+
+describe("resolveTtsMessageSourceType", () => {
+  it("prefers temporary sources when the channel was added by join", () => {
+    assert.equal(
+      resolveTtsMessageSourceType({
+        channelId: "text-1",
+        temporaryChannelIds: ["text-1"]
+      }),
+      "temporary"
+    );
+  });
+
+  it("uses configured sources otherwise", () => {
+    assert.equal(
+      resolveTtsMessageSourceType({
+        channelId: "text-2",
+        temporaryChannelIds: ["text-1"]
+      }),
+      "configured"
+    );
+  });
+});
+
+describe("resolveTtsMessageSkipReason", () => {
+  it("does not log bot-authored skipped messages", () => {
+    assert.equal(
+      resolveTtsMessageSkipReason({ authorIsBot: true, content: "hello" }),
+      null
+    );
+  });
+
+  it("classifies empty messages", () => {
+    assert.equal(
+      resolveTtsMessageSkipReason({ authorIsBot: false, content: "  " }),
+      "empty"
+    );
+  });
+
+  it("classifies slash-command-like messages", () => {
+    assert.equal(
+      resolveTtsMessageSkipReason({ authorIsBot: false, content: "/join" }),
+      "command-like"
+    );
+  });
+
+  it("classifies messages beyond the TTS length limit", () => {
+    assert.equal(
+      resolveTtsMessageSkipReason({
+        authorIsBot: false,
+        content: "a".repeat(121)
+      }),
+      "too-long"
+    );
   });
 });
