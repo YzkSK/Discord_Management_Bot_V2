@@ -65,6 +65,7 @@ docker compose --profile app down
 - `pnpm test`: run package test placeholders
 - `pnpm db:generate`: generate Drizzle migrations
 - `pnpm db:migrate`: apply Drizzle migrations
+- `pnpm logs:archive`: manually archive old log rows to `./backups/archive`
 
 ## Current Phase Status
 
@@ -75,6 +76,7 @@ docker compose --profile app down
 - Phase4: Temp VC database, `/setup temp-vc`, Components V2 control channel message, generated voice channel lifecycle, and verification docs.
 - Phase5: Recruitment database, `/setup recruitment`, `/recruitment create`, join/leave/close interactions, and verification docs.
 - Phase6: TTS foundation with VOICEVOX, `/join`, `/force-join`, `/leave`, and `/setup tts`.
+- Phase7: health checks, PostgreSQL backup foundation, and logs archive foundation.
 
 ## Phase0 Completion Criteria
 
@@ -123,3 +125,7 @@ Phase6 Dashboard UI/UX notes are documented in:
 Phase6 TTS setup and verification notes are documented in:
 
 - `docs/tts.md`
+
+Phase7 maintenance setup and verification notes are documented in:
+
+- `docs/phase7-maintenance.md`
