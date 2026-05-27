@@ -15,11 +15,12 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "archive:logs": "pnpm build && node dist/src/maintenance/archive-logs-runner.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "dev": "tsc -p tsconfig.json --watch",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "tsc -p tsconfig.json && node --test dist/src/repositories/recruitments.test.js dist/src/schema/core.test.js",
+    "test": "tsc -p tsconfig.json && node --test dist/src/maintenance/archive-logs.test.js dist/src/repositories/health.test.js dist/src/repositories/recruitments.test.js dist/src/schema/core.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

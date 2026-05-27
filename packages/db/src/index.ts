@@ -1,6 +1,7 @@
 export * from "./client.js";
 export * from "./repositories/dashboard-access.js";
 export * from "./repositories/guilds.js";
+export * from "./repositories/health.js";
 export * from "./repositories/logs.js";
 export * from "./repositories/recruitments.js";
 export * from "./repositories/temp-voice.js";

@@ -86,6 +86,21 @@ services:
     profiles:
       - app
 
+  backup:
+    image: postgres:17-alpine
+    environment:
+      DATABASE_URL: postgres://discord_bot:discord_bot@postgres:5432/discord_bot
+      BACKUP_DIR: /backups/postgres
+    volumes:
+      - ./scripts/backup-postgres.sh:/usr/local/bin/backup-postgres.sh:ro
+      - ./backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "/usr/local/bin/backup-postgres.sh"]
+    profiles:
+      - maintenance
+
 volumes:
   postgres_data:
   redis_data:

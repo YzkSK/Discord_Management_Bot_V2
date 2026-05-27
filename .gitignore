@@ -19,7 +19,8 @@ coverage/
 *.key
 
 # database and backups
-backups/
+backups/*
+!backups/.gitkeep
 *.dump
 *.sql
 *.sql.gz
