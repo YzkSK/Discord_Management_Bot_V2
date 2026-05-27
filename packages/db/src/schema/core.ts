@@ -42,6 +42,7 @@ export const guildConfigs = pgTable(
     tempVoiceCreateChannelId: text("temp_voice_create_channel_id"),
     tempVoiceCategoryId: text("temp_voice_category_id"),
     ttsTextChannelId: text("tts_text_channel_id"),
+    language: text("language").notNull().default("en"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -56,6 +57,10 @@ export const guildConfigs = pgTable(
     logModeCheck: check(
       "guild_configs_log_mode_check",
       sql`${table.logMode} in ('full', 'metadata_only', 'disabled')`
+    ),
+    languageCheck: check(
+      "guild_configs_language_check",
+      sql`${table.language} in ('en', 'ja')`
     )
   })
 );

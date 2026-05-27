@@ -36,6 +36,13 @@
       "when": 1779807600000,
       "tag": "0004_tts_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779874046519,
+      "tag": "0005_known_amazoness",
+      "breakpoints": true
     }
   ]
 }

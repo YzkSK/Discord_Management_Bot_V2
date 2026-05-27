@@ -6,7 +6,11 @@ import { guildConfigs } from "./core.js";
 describe("guildConfigs schema", () => {
   it("exposes a persistent TTS text channel column", () => {
     const columns = guildConfigs as unknown as Record<string, unknown>;
-
     assert.notEqual(columns.ttsTextChannelId, undefined);
+  });
+
+  it("exposes a language column", () => {
+    const columns = guildConfigs as unknown as Record<string, unknown>;
+    assert.notEqual(columns.language, undefined);
   });
 });
