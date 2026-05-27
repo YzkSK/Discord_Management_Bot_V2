@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { getLocale } from "@discord-bot/shared";
 import type { NormalizedEvent } from "@discord-bot/shared";
 
 import {
@@ -10,6 +11,9 @@ import {
   hasLogChannelMarker,
   logChannelTopicMarker
 } from "./log-channel.js";
+
+const enLoc = getLocale("en");
+const jaLoc = getLocale("ja");
 
 describe("log channel marker", () => {
   it("detects marked channel topics", () => {
@@ -33,7 +37,7 @@ describe("log channel marker", () => {
   });
 });
 
-describe("log event formatting", () => {
+describe("log event formatting (en)", () => {
   it("formats a message event for Discord delivery", () => {
     const event: NormalizedEvent = {
       eventName: "message.create",
@@ -43,13 +47,11 @@ describe("log event formatting", () => {
       actorId: "user-1",
       channelId: "channel-1",
       messageId: "message-1",
-      payload: {
-        content: "hello"
-      }
+      payload: { content: "hello" }
     };
 
-    assert.equal(formatLogEventTitle(event.eventName), "Log: message.create");
-    assert.deepEqual(formatLogEventLines(event), [
+    assert.equal(formatLogEventTitle(event.eventName, enLoc), "Log: message.create");
+    assert.deepEqual(formatLogEventLines(event, enLoc), [
       "Actor: <@user-1>",
       "Channel: <#channel-1>",
       "Message ID: message-1",
@@ -67,15 +69,10 @@ describe("log event formatting", () => {
       actorId: null,
       channelId: null,
       messageId: null,
-      payload: {
-        role: {
-          id: "role-1",
-          name: "Admin"
-        }
-      }
+      payload: { role: { id: "role-1", name: "Admin" } }
     };
 
-    assert.deepEqual(formatLogEventLines(event), [
+    assert.deepEqual(formatLogEventLines(event, enLoc), [
       "Actor: unknown",
       "Channel: unknown",
       "Event time: 2026-05-12T00:00:00.000Z",
@@ -98,11 +95,35 @@ describe("log event formatting", () => {
       }
     };
 
-    assert.deepEqual(formatLogEventLines(event), [
+    assert.deepEqual(formatLogEventLines(event, enLoc), [
       "Actor: <@user-1>",
       "Channel: \u{1F3AE} Yuzuki",
       "Event time: 2026-05-12T00:00:00.000Z",
       'Details: {"tempVoiceChannelId":"deleted-channel-1","tempVoiceChannelName":"🎮 Yuzuki"}'
+    ]);
+  });
+});
+
+describe("log event formatting (ja)", () => {
+  it("formats a message event in Japanese", () => {
+    const event: NormalizedEvent = {
+      eventName: "message.create",
+      eventTimestamp: new Date("2026-05-12T00:00:00.000Z"),
+      receivedAt: new Date("2026-05-12T00:00:01.000Z"),
+      guildId: "guild-1",
+      actorId: "user-1",
+      channelId: "channel-1",
+      messageId: "message-1",
+      payload: { content: "hello" }
+    };
+
+    assert.equal(formatLogEventTitle(event.eventName, jaLoc), "ログ: message.create");
+    assert.deepEqual(formatLogEventLines(event, jaLoc), [
+      "アクター: <@user-1>",
+      "チャンネル: <#channel-1>",
+      "メッセージID: message-1",
+      "イベント時刻: 2026-05-12T00:00:00.000Z",
+      "内容: hello"
     ]);
   });
 });

@@ -5,10 +5,15 @@ import {
   type TextChannel
 } from "discord.js";
 import type { NormalizedEvent } from "@discord-bot/shared";
+import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/shared";
+import type { DbClient } from "@discord-bot/db";
+import { getGuildConfigByGuildId } from "@discord-bot/db";
 
 import { createComponentsV2TextMessage } from "./components-v2.js";
 
 export const logChannelTopicMarker = "[discord-management-bot:logs]";
+
+type Locale = ReturnType<typeof getLocale>;
 
 export function hasLogChannelMarker(topic: string | null | undefined) {
   return topic?.includes(logChannelTopicMarker) === true;
@@ -37,7 +42,8 @@ export async function markLogChannel(channel: TextChannel) {
 
 export async function sendEventToConfiguredLogChannel(
   client: Client,
-  event: NormalizedEvent
+  event: NormalizedEvent,
+  db: DbClient
 ) {
   if (!event.guildId) {
     return;
@@ -55,10 +61,17 @@ export async function sendEventToConfiguredLogChannel(
     return;
   }
 
+  const config = await getGuildConfigByGuildId(db, event.guildId).catch(() => null);
+  const lang: GuildLanguage =
+    config?.language && isGuildLanguage(config.language)
+      ? config.language
+      : "en";
+  const loc = getLocale(lang);
+
   await channel.send(
     createComponentsV2TextMessage({
-      title: formatLogEventTitle(event.eventName),
-      lines: formatLogEventLines(event)
+      title: formatLogEventTitle(event.eventName, loc),
+      lines: formatLogEventLines(event, loc)
     })
   );
 }
@@ -75,47 +88,49 @@ export async function findMarkedLogChannel(guild: Guild) {
   );
 }
 
-export function formatLogEventTitle(eventName: string) {
-  return `Log: ${eventName}`;
+export function formatLogEventTitle(eventName: string, loc: Locale) {
+  return loc.logTitle({ eventName });
 }
 
-export function formatLogEventLines(event: NormalizedEvent) {
+export function formatLogEventLines(event: NormalizedEvent, loc: Locale) {
   return [
-    event.actorId ? `Actor: <@${event.actorId}>` : "Actor: unknown",
-    formatChannelLine(event),
-    event.messageId ? `Message ID: ${event.messageId}` : null,
-    `Event time: ${event.eventTimestamp.toISOString()}`,
-    formatLogPayload(event.payload)
+    event.actorId ? loc.logActor({ actorId: event.actorId }) : loc.logActorUnknown,
+    formatChannelLine(event, loc),
+    event.messageId ? loc.logMessageId({ messageId: event.messageId }) : null,
+    loc.logEventTime({ timestamp: event.eventTimestamp.toISOString() }),
+    formatLogPayload(event.payload, loc)
   ].filter((line): line is string => line !== null);
 }
 
-function formatChannelLine(event: NormalizedEvent) {
+function formatChannelLine(event: NormalizedEvent, loc: Locale) {
   const tempVoiceChannelName =
     typeof event.payload.tempVoiceChannelName === "string"
       ? event.payload.tempVoiceChannelName
       : null;
 
   if (event.eventName.startsWith("voice.temp.") && tempVoiceChannelName) {
-    return `Channel: ${tempVoiceChannelName}`;
+    return loc.logChannelNamed({ name: tempVoiceChannelName });
   }
 
-  return event.channelId ? `Channel: <#${event.channelId}>` : "Channel: unknown";
+  return event.channelId
+    ? loc.logChannel({ channelId: event.channelId })
+    : loc.logChannelUnknown;
 }
 
-function formatLogPayload(payload: NormalizedEvent["payload"]) {
+function formatLogPayload(payload: NormalizedEvent["payload"], loc: Locale) {
   const content = typeof payload.content === "string" ? payload.content : null;
 
   if (content) {
-    return `Content: ${truncateForDiscord(content, 800)}`;
+    return loc.logContent({ content: truncateForDiscord(content, 800) });
   }
 
   const payloadSummary = JSON.stringify(payload);
 
   if (!payloadSummary || payloadSummary === "{}") {
-    return "Details: none";
+    return loc.logDetailsNone;
   }
 
-  return `Details: ${truncateForDiscord(payloadSummary, 800)}`;
+  return loc.logDetails({ details: truncateForDiscord(payloadSummary, 800) });
 }
 
 function truncateForDiscord(value: string, maxLength: number) {

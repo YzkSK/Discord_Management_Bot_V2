@@ -36,7 +36,7 @@ export function createDiscordLogWriter(
 
       await logIngestion.ingest(event, { realtimeEnabled });
       await appendLogEventToStream(options.redis, event, { realtimeEnabled });
-      await sendEventToConfiguredLogChannel(client, event).catch(
+      await sendEventToConfiguredLogChannel(client, event, options.db).catch(
         (error: unknown) => {
           console.warn("failed to send log event to configured channel", error);
         }
