@@ -36,7 +36,11 @@ export interface ResolveTtsMessageSourceTypeInput {
   temporaryChannelIds: string[];
 }
 
-export type TtsMessageSkipReason = "command-like" | "empty" | "too-long";
+export type TtsMessageSkipReason =
+  | "command-like"
+  | "empty"
+  | "too-long"
+  | "user-muted";
 
 export function installTtsMessageReader(
   client: Client,
@@ -106,6 +110,10 @@ export function resolveTtsMessageSkipReason(input: {
 
   if (!text) {
     return "empty";
+  }
+
+  if (text.startsWith("//")) {
+    return "user-muted";
   }
 
   if (text.startsWith("/")) {
