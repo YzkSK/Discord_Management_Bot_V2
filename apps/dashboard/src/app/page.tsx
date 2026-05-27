@@ -1,48 +1,44 @@
 import { redirect } from "next/navigation";
-import { Activity, ClipboardCheck, ListFilter, Settings } from "lucide-react";
+import { cookies } from "next/headers";
+import { CheckSquare, ChevronRight, ScrollText, Settings } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { getDashboardSession } from "../auth";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
-
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { DashboardShell } from "./dashboard-shell";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const session = await getDashboardSession();
+  if (!session?.user) redirect("/login");
 
-  if (!session?.user) {
-    redirect("/login");
-  }
+  const cookieStore = await cookies();
+  const guildId = cookieStore.get("dashboard-guild-id")?.value;
+  const guildName = cookieStore.get("dashboard-guild-name")?.value
+    ? decodeURIComponent(cookieStore.get("dashboard-guild-name")!.value)
+    : null;
+
+  if (!guildId) redirect("/guild");
 
   return (
     <DashboardShell
       currentPath="/"
-      description="Start from the guild you are testing, then move between logs and settings without losing context."
-      eyebrow="Phase6 UI/UX"
+      description="Verification workflow and quick navigation"
+      guildId={guildId}
+      guildName={guildName}
       session={session}
-      title="Operations Overview"
+      title="Overview"
     >
       <div className="grid gap-4 xl:grid-cols-[1.1fr_.9fr]">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <ClipboardCheck className="h-5 w-5 text-teal-700" />
+              <CheckSquare className="h-4 w-4 text-green-400" />
               Verification Flow
             </CardTitle>
-            <CardDescription>
-              Follow this order when checking bot behavior in Docker.
-            </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-3">
+          <CardContent className="grid gap-2">
             <OverviewStep
               body="Run /setup logs, /setup temp-vc, and /setup recruitment from Discord when you need fresh test targets."
               index="1"
@@ -54,7 +50,7 @@ export default async function HomePage() {
               title="Inspect Events"
             />
             <OverviewStep
-              body="Open Settings with the same guild ID to confirm access and logging configuration."
+              body="Open Settings with the same guild to confirm access and logging configuration."
               index="3"
               title="Confirm Settings"
             />
@@ -64,25 +60,22 @@ export default async function HomePage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-teal-700" />
-              Quick Actions
+              <ChevronRight className="h-4 w-4 text-zinc-400" />
+              Quick Access
             </CardTitle>
-            <CardDescription>
-              Jump to the views used most during local verification.
-            </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-3">
+          <CardContent className="grid gap-2">
             <QuickAction
-              body="Search events, switch presets, and inspect readable payload summaries."
+              body="Search events, switch presets, and inspect payload summaries."
               href="/logs"
-              icon={<ListFilter className="h-4 w-4" />}
-              title="Open Logs"
+              icon={<ScrollText className="h-4 w-4" />}
+              title="Logs"
             />
             <QuickAction
-              body="Check guild access and log mode for the selected server."
+              body="View and update access roles and log mode for the selected guild."
               href="/settings"
               icon={<Settings className="h-4 w-4" />}
-              title="Open Settings"
+              title="Settings"
             />
           </CardContent>
         </Card>
@@ -91,23 +84,15 @@ export default async function HomePage() {
   );
 }
 
-function OverviewStep({
-  body,
-  index,
-  title
-}: {
-  body: string;
-  index: string;
-  title: string;
-}) {
+function OverviewStep({ body, index, title }: { body: string; index: string; title: string }) {
   return (
-    <div className="grid grid-cols-[36px_1fr] gap-3 rounded-md border border-slate-200 bg-slate-50 p-4">
-      <Badge className="flex h-9 w-9 items-center justify-center rounded-md p-0">
+    <div className="grid grid-cols-[28px_1fr] gap-3 rounded-md border border-zinc-800 bg-zinc-950 p-3">
+      <div className="flex h-7 w-7 items-center justify-center rounded-md bg-green-500/10 text-xs font-bold text-green-400">
         {index}
-      </Badge>
+      </div>
       <div>
-        <h3 className="font-semibold text-slate-900">{title}</h3>
-        <p className="mt-1 text-sm leading-6 text-slate-600">{body}</p>
+        <h3 className="text-sm font-medium text-zinc-200">{title}</h3>
+        <p className="mt-0.5 text-xs leading-5 text-zinc-500">{body}</p>
       </div>
     </div>
   );
@@ -126,14 +111,14 @@ function QuickAction({
 }) {
   return (
     <a
-      className="block rounded-md border border-slate-200 bg-slate-50 p-4 hover:border-teal-400 hover:bg-teal-50"
+      className="flex items-start gap-3 rounded-md border border-zinc-800 bg-zinc-950 p-3 transition-colors hover:border-zinc-600 hover:bg-zinc-900"
       href={href}
     >
-      <h3 className="flex items-center gap-2 font-semibold text-teal-900">
-        {icon}
-        {title}
-      </h3>
-      <p className="mt-1 text-sm leading-6 text-slate-600">{body}</p>
+      <div className="mt-0.5 text-zinc-400">{icon}</div>
+      <div>
+        <h3 className="text-sm font-medium text-zinc-200">{title}</h3>
+        <p className="mt-0.5 text-xs leading-5 text-zinc-500">{body}</p>
+      </div>
     </a>
   );
 }

@@ -1,5 +1,4 @@
-import { sql } from "drizzle-orm";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 import type { DbClient } from "../client.js";
 import { guildConfigs, guilds } from "../schema/index.js";
@@ -188,4 +187,65 @@ export async function updateGuildTtsConfigByGuildId(
 
 export function isGuildLogMode(value: string): value is GuildLogMode {
   return guildLogModes.includes(value as GuildLogMode);
+}
+
+export async function getKnownGuildIds(
+  db: DbClient,
+  guildIds: string[]
+): Promise<Set<string>> {
+  if (guildIds.length === 0) return new Set();
+  const rows = await db
+    .select({ guildId: guilds.guildId })
+    .from(guilds)
+    .where(inArray(guilds.guildId, guildIds));
+  return new Set(rows.map((r) => r.guildId));
+}
+
+export async function getGuildsWithManagementRoles(
+  db: DbClient,
+  guildIds: string[]
+): Promise<string[]> {
+  if (guildIds.length === 0) return [];
+  const rows = await db
+    .select({ guildId: guilds.guildId })
+    .from(guilds)
+    .innerJoin(guildConfigs, eq(guildConfigs.guildRefId, guilds.id))
+    .where(
+      and(
+        inArray(guilds.guildId, guildIds),
+        sql`cardinality(${guildConfigs.dashboardManagementRoleIds}) > 0`
+      )
+    );
+  return rows.map((r) => r.guildId);
+}
+
+export async function getGuildManagementRoleIds(
+  db: DbClient,
+  guildId: string
+): Promise<string[]> {
+  const [row] = await db
+    .select({ roleIds: guildConfigs.dashboardManagementRoleIds })
+    .from(guilds)
+    .innerJoin(guildConfigs, eq(guildConfigs.guildRefId, guilds.id))
+    .where(eq(guilds.guildId, guildId))
+    .limit(1);
+  return row?.roleIds ?? [];
+}
+
+export async function updateGuildManagementRoleIds(
+  db: DbClient,
+  guildId: string,
+  roleIds: string[]
+): Promise<boolean> {
+  const [guild] = await db
+    .select({ id: guilds.id })
+    .from(guilds)
+    .where(eq(guilds.guildId, guildId))
+    .limit(1);
+  if (!guild) return false;
+  await db
+    .update(guildConfigs)
+    .set({ dashboardManagementRoleIds: roleIds, updatedAt: sql`now()` })
+    .where(eq(guildConfigs.guildRefId, guild.id));
+  return true;
 }

@@ -3,12 +3,12 @@ import type { Server as HttpServer } from "node:http";
 import { parseDashboardAuthEnv } from "@discord-bot/config";
 import { createDbConnection } from "@discord-bot/db";
 import { createRedisConnection, readRealtimeLogEvents } from "@discord-bot/redis";
-import { getToken } from "next-auth/jwt";
+import { decode } from "next-auth/jwt";
 import { Server, type Socket } from "socket.io";
 
 import { resolveDashboardAccess } from "./authorization.js";
 import {
-  fetchCurrentUserGuild,
+  fetchCurrentUserGuildById,
   fetchGuildMemberRoleIds
 } from "./discord-api.js";
 import {
@@ -58,19 +58,37 @@ async function subscribeToLogs(socket: Socket, payload: unknown) {
 }
 
 async function authorizeSocket(socket: Socket, guildId: string) {
-  const token = await getToken({
-    req: socket.request as never,
-    ...(env.NEXTAUTH_SECRET ? { secret: env.NEXTAUTH_SECRET } : {})
-  });
+  const cookieHeader = socket.request.headers.cookie ?? "";
+  const sessionTokenRaw = cookieHeader
+    .split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith("next-auth.session-token=") || c.startsWith("__Secure-next-auth.session-token="))
+    ?.split("=")
+    .slice(1)
+    .join("=");
+
+  if (!sessionTokenRaw) {
+    return false;
+  }
+
+  const token = await decode({
+    token: decodeURIComponent(sessionTokenRaw),
+    secret: env.NEXTAUTH_SECRET ?? ""
+  }).catch(() => null);
 
   if (!token?.sub || !token.discordAccessToken) {
     return false;
   }
 
-  const discordGuild = await fetchCurrentUserGuild(
-    token.discordAccessToken,
-    guildId
-  );
+  let discordGuild;
+  try {
+    discordGuild = await fetchCurrentUserGuildById(
+      token.discordAccessToken as string,
+      guildId
+    );
+  } catch {
+    return false;
+  }
 
   if (!discordGuild) {
     return false;

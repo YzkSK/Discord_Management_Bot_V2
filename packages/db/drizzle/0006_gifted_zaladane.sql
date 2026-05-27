@@ -1,0 +1,1 @@
+ALTER TABLE "guild_configs" ADD COLUMN "dashboard_management_role_ids" text[] DEFAULT '{}' NOT NULL;

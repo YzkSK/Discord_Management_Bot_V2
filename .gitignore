@@ -19,8 +19,7 @@ coverage/
 *.key
 
 # database and backups
-backups/*
-!backups/.gitkeep
+backups/
 *.dump
 *.sql
 *.sql.gz
@@ -36,11 +35,11 @@ yarn-error.log*
 
 # local brainstorming companion output
 .superpowers/
-.claude/
-.serena/
 
 # OS/editor
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
+.claude/
+.serena/

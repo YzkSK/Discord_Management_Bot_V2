@@ -9,9 +9,10 @@
   "include": [
     "src/app/dashboard-ui.ts",
     "src/app/dashboard-ui.test.ts",
-    "src/app/api/health/health.ts",
-    "src/app/api/health/health.test.ts",
+    "src/app/dashboard-style-policy.test.ts",
     "src/lib/utils.ts",
-    "src/lib/utils.test.ts"
+    "src/lib/utils.test.ts",
+    "src/app/api/guilds/guild-filter.ts",
+    "src/app/api/guilds/guild-filter.test.ts"
   ]
 }

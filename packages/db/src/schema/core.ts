@@ -43,6 +43,10 @@ export const guildConfigs = pgTable(
     tempVoiceCategoryId: text("temp_voice_category_id"),
     ttsTextChannelId: text("tts_text_channel_id"),
     language: text("language").notNull().default("en"),
+    dashboardManagementRoleIds: text("dashboard_management_role_ids")
+      .array()
+      .notNull()
+      .default(sql`'{}'`),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

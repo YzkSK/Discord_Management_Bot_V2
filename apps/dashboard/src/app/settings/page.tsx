@@ -1,28 +1,34 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 
-import { requireDashboardPageSession } from "../../dashboard-auth";
+import { getDashboardSession } from "../../auth";
 import { DashboardShell } from "../dashboard-shell";
-
 import { SettingsPanel } from "./settings-panel";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const session = await requireDashboardPageSession();
+  const session = await getDashboardSession();
+  if (!session?.user) redirect("/login");
 
-  if (!session) {
-    redirect("/login");
-  }
+  const cookieStore = await cookies();
+  const guildId = cookieStore.get("dashboard-guild-id")?.value;
+  const guildName = cookieStore.get("dashboard-guild-name")?.value
+    ? decodeURIComponent(cookieStore.get("dashboard-guild-name")!.value)
+    : null;
+
+  if (!guildId) redirect("/guild");
 
   return (
     <DashboardShell
       currentPath="/settings"
-      description="Review dashboard access state and logging mode for a guild."
-      eyebrow="Guild Configuration"
+      description="Log mode, access control, and guild configuration"
+      guildId={guildId}
+      guildName={guildName}
       session={session}
       title="Settings"
     >
-      <SettingsPanel />
+      <SettingsPanel guildId={guildId} />
     </DashboardShell>
   );
 }

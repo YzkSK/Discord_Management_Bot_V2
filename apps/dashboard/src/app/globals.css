@@ -2,15 +2,15 @@
 @source "../**/*.{ts,tsx}";
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 body {
   margin: 0;
-  background: #f1f5f9;
-  color: #0f172a;
+  background: #09090b;
+  color: #f4f4f5;
   font-family:
-    Arial,
-    Helvetica,
+    Inter,
+    system-ui,
     sans-serif;
 }

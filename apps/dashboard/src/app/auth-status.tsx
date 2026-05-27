@@ -10,25 +10,29 @@ import { cn } from "../lib/utils";
 export function AuthStatus({ session }: { session: Session | null }) {
   if (!session?.user) {
     return (
-      <a className={cn(buttonVariants({ variant: "outline" }))} href="/login">
+      <a className={cn(buttonVariants({ variant: "outline", size: "sm" }))} href="/login">
         Sign in
       </a>
     );
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-      <span className="font-medium text-slate-800">
-        {session.user.name ?? session.user.id ?? "Signed in"}
-      </span>
+    <div className="flex items-center gap-2">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-xs font-medium text-zinc-300">
+          {session.user.name ?? "Signed in"}
+        </p>
+        <p className="truncate text-[10px] text-zinc-600">
+          {session.user.id}
+        </p>
+      </div>
       <Button
         onClick={() => void signOut({ callbackUrl: "/login" })}
         size="sm"
         type="button"
-        variant="outline"
+        variant="ghost"
       >
-        <LogOut className="h-4 w-4" />
-        Sign out
+        <LogOut className="h-3.5 w-3.5" />
       </Button>
     </div>
   );

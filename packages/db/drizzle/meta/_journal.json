@@ -43,6 +43,13 @@
       "when": 1779874046519,
       "tag": "0005_known_amazoness",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779778747825,
+      "tag": "0006_gifted_zaladane",
+      "breakpoints": true
     }
   ]
 }

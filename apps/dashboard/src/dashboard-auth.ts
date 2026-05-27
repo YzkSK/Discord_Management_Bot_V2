@@ -7,7 +7,7 @@ import type { NextRequest } from "next/server";
 import { resolveDashboardAccess } from "./authorization";
 import { authOptions, getDashboardSession } from "./auth";
 import {
-  fetchCurrentUserGuild,
+  fetchCurrentUserGuildById,
   fetchGuildMemberRoleIds
 } from "./discord-api";
 
@@ -53,10 +53,19 @@ export async function authorizeDashboardApi(
     } as const;
   }
 
-  const discordGuild = await fetchCurrentUserGuild(
-    token.discordAccessToken,
-    input.guildId
-  );
+  let discordGuild;
+  try {
+    discordGuild = await fetchCurrentUserGuildById(
+      token.discordAccessToken,
+      input.guildId
+    );
+  } catch {
+    return {
+      allowed: false,
+      status: 502,
+      error: "Discord API error."
+    } as const;
+  }
 
   if (!discordGuild) {
     return {
