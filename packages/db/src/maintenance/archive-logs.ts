@@ -1,3 +1,5 @@
+import { join, win32 } from "node:path";
+
 export interface ArchiveCutoffs {
   archiveBefore: Date;
   deleteBefore: Date;
@@ -45,7 +47,10 @@ export function resolveArchiveDir(input: {
     return env.ARCHIVE_DIR;
   }
 
-  return join(env.INIT_CWD ?? input.cwd ?? process.cwd(), "backups", "archive");
+  const baseDirectory = env.INIT_CWD ?? input.cwd ?? process.cwd();
+  const joinPath = isWindowsPath(baseDirectory) ? win32.join : join;
+
+  return joinPath(baseDirectory, "backups", "archive");
 }
 
 export function toArchiveSummary(input: ArchiveSummaryInput): ArchiveSummary {
@@ -63,4 +68,7 @@ function subtractUtcDays(date: Date, days: number) {
   next.setUTCDate(next.getUTCDate() - days);
   return next;
 }
-import { join } from "node:path";
+
+function isWindowsPath(path: string) {
+  return /^[a-zA-Z]:[\\/]/.test(path) || path.includes("\\");
+}
