@@ -26,12 +26,21 @@ type DashboardLocale = {
   // Language options
   languageEn: string;
   languageJa: string;
+  // Settings panel sections (UI branch)
+  guildInfo: string;
+  dashboardAccess: string;
+  dashboardAccessNote: string;
+  saveRoles: string;
+  savingRoles: string;
+  accessRolesUpdated: string;
+  failedToLoadSettings: string;
   // Logs page
   search: string;
   guild: string;
   event: string;
   actor: string;
   reset: string;
+  noLogsFound: string;
   shown: (vars: { count: number }) => string;
   filters: (vars: { count: number }) => string;
   realtimeStatus: (vars: { status: string }) => string;
@@ -70,6 +79,13 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     logModeDisabled: "Disabled",
     languageEn: "English",
     languageJa: "日本語",
+    guildInfo: "Guild Info",
+    dashboardAccess: "Dashboard Access",
+    dashboardAccessNote: "Roles that can access the dashboard in addition to server owner and administrators.",
+    saveRoles: "Save Roles",
+    savingRoles: "Saving…",
+    accessRolesUpdated: "Access roles updated.",
+    failedToLoadSettings: "Failed to load settings.",
     search: "Search",
     guild: "Guild",
     event: "Event",
@@ -79,6 +95,7 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     filters: ({ count }) => `${count} filters`,
     realtimeStatus: ({ status }) => `realtime ${status}`,
     loadMore: "Load More",
+    noLogsFound: "No logs found for this guild.",
     enterGuildIdToLoadLogs: "Enter a guild ID to load logs.",
     enterGuildIdAndSearch: "Enter a guild ID and search logs.",
     received: "Received",
@@ -111,6 +128,13 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     logModeDisabled: "無効",
     languageEn: "English",
     languageJa: "日本語",
+    guildInfo: "Guild情報",
+    dashboardAccess: "ダッシュボードアクセス",
+    dashboardAccessNote: "サーバーオーナーと管理者に加えて、ダッシュボードにアクセスできるロールです。",
+    saveRoles: "ロールを保存",
+    savingRoles: "保存中…",
+    accessRolesUpdated: "アクセスロールを更新しました。",
+    failedToLoadSettings: "設定の読み込みに失敗しました。",
     search: "検索",
     guild: "Guild",
     event: "イベント",
@@ -120,6 +144,7 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     filters: ({ count }) => `${count}フィルター`,
     realtimeStatus: ({ status }) => `リアルタイム ${status}`,
     loadMore: "さらに読み込む",
+    noLogsFound: "このGuildのログが見つかりませんでした。",
     enterGuildIdToLoadLogs: "Guild IDを入力してログを読み込んでください。",
     enterGuildIdAndSearch: "Guild IDを入力してログを検索してください。",
     received: "受信時刻",

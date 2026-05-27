@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
+import type { GuildLanguage } from "@discord-bot/shared";
+import { getDashboardLocale, detectBrowserLanguage } from "../../lib/locale";
 import { io } from "socket.io-client";
 
 import { Button } from "../../components/ui/button";
@@ -54,6 +56,8 @@ interface LogFilters {
 const initialFilters: LogFilters = { actorId: "", eventName: "", guildId: "", search: "" };
 const eventPresets = getDashboardEventPresets();
 
+
+
 function eventBadgeClass(name: string) {
   if (name.startsWith("message")) return "border border-blue-500/20 bg-blue-500/10 text-blue-400";
   if (name.startsWith("voice")) return "border border-purple-500/20 bg-purple-500/10 text-purple-400";
@@ -64,6 +68,8 @@ function eventBadgeClass(name: string) {
 }
 
 export function LogsExplorer() {
+  const [uiLang] = useState<GuildLanguage>(detectBrowserLanguage);
+  const loc = getDashboardLocale(uiLang);
   const [filters, setFilters] = useState(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState(initialFilters);
   const [logs, setLogs] = useState<LogItem[]>([]);
@@ -119,7 +125,7 @@ export function LogsExplorer() {
 
   async function loadLogs(next: LogFilters) {
     if (!normalizeGuildId(next.guildId)) {
-      setLogs([]); setNextCursor(null); setError("No guild selected."); setLoading(false);
+      setLogs([]); setNextCursor(null); setError(loc.enterGuildIdToLoadLogs); setLoading(false);
       return;
     }
     setLoading(true); setError(null); setExpandedId(null);
@@ -163,26 +169,26 @@ export function LogsExplorer() {
         <form onSubmit={submitFilters}>
           <div className="grid gap-3 lg:grid-cols-[1.2fr_1fr_1fr_auto_auto]">
             <FilterInput
-              label="Search"
+              label={loc.search}
               onChange={(v) => setFilters({ ...filters, search: v })}
               placeholder="content, channel, payload text"
               value={filters.search}
             />
             <FilterInput
-              label="Event"
+              label={loc.event}
               onChange={(v) => setFilters({ ...filters, eventName: v })}
               placeholder="event prefix"
               value={filters.eventName}
             />
             <FilterInput
-              label="Actor"
+              label={loc.actor}
               onChange={(v) => setFilters({ ...filters, actorId: v })}
               placeholder="actor id"
               value={filters.actorId}
             />
             <Button className="h-9 self-end" type="submit">
               <Search className="h-3.5 w-3.5" />
-              Search
+              {loc.search}
             </Button>
             <Button
               className="h-9 self-end"
@@ -191,7 +197,7 @@ export function LogsExplorer() {
               variant="outline"
             >
               <X className="h-3.5 w-3.5" />
-              Reset
+              {loc.reset}
             </Button>
           </div>
         </form>
@@ -214,9 +220,9 @@ export function LogsExplorer() {
           ))}
 
           <div className="ml-auto flex items-center gap-3">
-            <span className="text-xs text-zinc-500">{logs.length} rows</span>
+            <span className="text-xs text-zinc-500">{loc.shown({ count: logs.length })}</span>
             {activeFilterCount > 0 && (
-              <span className="text-xs text-zinc-500">{activeFilterCount} filters</span>
+              <span className="text-xs text-zinc-500">{loc.filters({ count: activeFilterCount })}</span>
             )}
             <div className={`flex items-center gap-1.5 text-xs ${isLive ? "text-green-400" : "text-zinc-500"}`}>
               <span className={`inline-block h-1.5 w-1.5 rounded ${isLive ? "bg-green-400 animate-pulse" : "bg-zinc-600"}`} />
@@ -237,25 +243,27 @@ export function LogsExplorer() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-36">Received</TableHead>
-                <TableHead className="w-52">Event</TableHead>
-                <TableHead className="w-40">Actor</TableHead>
-                <TableHead>Summary</TableHead>
-                <TableHead className="w-20">Raw</TableHead>
+                <TableHead className="w-36">{loc.received}</TableHead>
+                <TableHead className="w-52">{loc.event}</TableHead>
+                <TableHead className="w-40">{loc.actor}</TableHead>
+                <TableHead>{loc.summary}</TableHead>
+                <TableHead className="w-20">{loc.raw}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading && <LoadingRows />}
-              {!loading && logs.length === 0 && <EmptyRow />}
+              {loading && <LoadingRows label={loc.loadingLogs} />}
+              {!loading && logs.length === 0 && <EmptyRow label={loc.noLogsFound} />}
               {!loading &&
                 logs.map((log) => (
                   <LogRow
                     expanded={expandedId === log.id}
+                    hideLabel={loc.hide}
                     key={log.id}
                     log={log}
                     onToggle={() =>
                       setExpandedId(expandedId === log.id ? null : log.id)
                     }
+                    viewLabel={loc.view}
                   />
                 ))}
             </TableBody>
@@ -271,7 +279,7 @@ export function LogsExplorer() {
             type="button"
             variant="outline"
           >
-            {loadingMore ? "Loading..." : "Load more"}
+            {loadingMore ? loc.loading : loc.loadMore}
           </Button>
         </div>
       )}
@@ -305,12 +313,16 @@ function FilterInput({
 
 function LogRow({
   expanded,
+  hideLabel,
   log,
-  onToggle
+  onToggle,
+  viewLabel
 }: {
   expanded: boolean;
+  hideLabel: string;
   log: LogItem;
   onToggle: () => void;
+  viewLabel: string;
 }) {
   return (
     <>
@@ -329,7 +341,7 @@ function LogRow({
             onClick={onToggle}
             type="button"
           >
-            {expanded ? "Hide" : "View"}
+            {expanded ? hideLabel : viewLabel}
           </button>
         </TableCell>
       </TableRow>
@@ -346,19 +358,19 @@ function LogRow({
   );
 }
 
-function LoadingRows() {
+function LoadingRows({ label }: { label: string }) {
   return Array.from({ length: 5 }, (_, i) => (
     <TableRow key={i}>
-      <TableCell className="text-zinc-600" colSpan={5}>Loading…</TableCell>
+      <TableCell className="text-zinc-600" colSpan={5}>{label}</TableCell>
     </TableRow>
   ));
 }
 
-function EmptyRow() {
+function EmptyRow({ label }: { label: string }) {
   return (
     <TableRow>
       <TableCell className="py-10 text-center text-zinc-600" colSpan={5}>
-        No logs found for this guild.
+        {label}
       </TableCell>
     </TableRow>
   );

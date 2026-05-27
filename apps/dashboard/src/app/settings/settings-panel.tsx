@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
+import type { GuildLanguage } from "@discord-bot/shared";
+import { isGuildLanguage } from "@discord-bot/shared";
+import { getDashboardLocale, detectBrowserLanguage } from "../../lib/locale";
 
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
@@ -17,21 +20,18 @@ interface SettingsResponse {
   guildName: string | null;
   isActive?: boolean;
   logMode: string;
+  language: string;
   updatedAt: string;
   accessRole: string;
   dashboardManagementRoleIds: string[];
   availableRoles?: DiscordRole[];
 }
 
-const logModeOptions = [
-  { label: "Full", value: "full" },
-  { label: "Metadata Only", value: "metadata_only" },
-  { label: "Disabled", value: "disabled" }
-];
-
 export function SettingsPanel({ guildId }: { guildId: string }) {
   const [settings, setSettings] = useState<SettingsResponse | null>(null);
   const [logMode, setLogMode] = useState("full");
+  const [language, setLanguage] = useState("en");
+  const [uiLang, setUiLang] = useState<GuildLanguage>(detectBrowserLanguage);
   const [managementRoleIds, setManagementRoleIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,11 +39,28 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const loc = getDashboardLocale(uiLang);
+
+  const logModeOptions = [
+    { label: loc.logModeFull, value: "full" },
+    { label: loc.logModeMetadataOnly, value: "metadata_only" },
+    { label: loc.logModeDisabled, value: "disabled" }
+  ];
+
+  const languageOptions = [
+    { label: loc.languageEn, value: "en" },
+    { label: loc.languageJa, value: "ja" }
+  ];
+
   useEffect(() => {
     fetchSettings(guildId)
       .then((data) => {
         setSettings(data);
         setLogMode(data.logMode);
+        setLanguage(data.language);
+        if (isGuildLanguage(data.language)) {
+          setUiLang(data.language);
+        }
         setManagementRoleIds(data.dashboardManagementRoleIds);
       })
       .catch((e: unknown) => setError(toErrorMessage(e)))
@@ -54,9 +71,9 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
     if (!settings) return;
     setSaving(true); setError(null); setMessage(null);
     try {
-      const data = await updateSettings(settings.guildId, logMode);
+      const data = await updateSettings(settings.guildId, logMode, language);
       setSettings((s) => (s ? { ...s, ...data } : s));
-      setMessage("Settings saved.");
+      setMessage(loc.settingsSaved);
     } catch (e) { setError(toErrorMessage(e)); } finally { setSaving(false); }
   }
 
@@ -65,18 +82,18 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
     setSavingRoles(true); setError(null); setMessage(null);
     try {
       await updateManagementRoles(settings.guildId, managementRoleIds);
-      setMessage("Access roles updated.");
+      setMessage(loc.accessRolesUpdated);
     } catch (e) { setError(toErrorMessage(e)); } finally { setSavingRoles(false); }
   }
 
   if (loading) {
-    return <p className="text-sm text-zinc-500">Loading settings…</p>;
+    return <p className="text-sm text-zinc-500">{loc.loading}…</p>;
   }
 
   if (!settings) {
     return (
       <div className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-        {error ?? "Failed to load settings."}
+        {error ?? loc.failedToLoadSettings}
       </div>
     );
   }
@@ -87,20 +104,36 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
     <section className="grid max-w-4xl gap-4 xl:grid-cols-[1fr_1fr]">
       <Card>
         <CardHeader>
-          <CardTitle>Guild Info</CardTitle>
+          <CardTitle>{loc.guildInfo}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3">
           <div className="grid gap-3 sm:grid-cols-2">
-            <ReadOnlyValue label="Guild ID" value={settings.guildId} />
-            <ReadOnlyValue label="Guild Name" value={settings.guildName ?? "—"} />
-            <ReadOnlyValue label="Access Role" value={settings.accessRole} />
-            <ReadOnlyValue label="Updated" value={formatDate(settings.updatedAt)} />
+            <ReadOnlyValue label={loc.guildId} value={settings.guildId} />
+            <ReadOnlyValue label={loc.guildName} value={settings.guildName ?? "—"} />
+            <ReadOnlyValue label={loc.access} value={settings.accessRole} />
+            <ReadOnlyValue label={loc.updated} value={formatDate(settings.updatedAt)} />
           </div>
 
           <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-            Log Mode
+            {loc.logMode}
             <Select onChange={(e) => setLogMode(e.target.value)} value={logMode}>
               {logModeOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </Select>
+          </label>
+
+          <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+            {loc.language}
+            <Select
+              onChange={(e) => {
+                const val = e.target.value;
+                setLanguage(val);
+                if (isGuildLanguage(val)) setUiLang(val);
+              }}
+              value={language}
+            >
+              {languageOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </Select>
@@ -120,7 +153,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
           <div className="flex justify-end">
             <Button disabled={saving} onClick={saveLogMode} type="button" size="sm">
               <Save className="h-3.5 w-3.5" />
-              {saving ? "Saving…" : "Save"}
+              {saving ? loc.saving : loc.saveChanges}
             </Button>
           </div>
         </CardContent>
@@ -129,11 +162,11 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
       {isOwner && settings.availableRoles !== undefined && (
         <Card>
           <CardHeader>
-            <CardTitle>Dashboard Access</CardTitle>
+            <CardTitle>{loc.dashboardAccess}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <p className="text-xs text-zinc-500">
-              Roles that can access the dashboard in addition to server owner and administrators.
+              {loc.dashboardAccessNote}
             </p>
             <div className="flex flex-col gap-1.5">
               {settings.availableRoles.map((role) => (
@@ -160,7 +193,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
             <div className="flex justify-end">
               <Button disabled={savingRoles} onClick={saveManagementRoles} size="sm" type="button">
                 <Save className="h-3.5 w-3.5" />
-                {savingRoles ? "Saving…" : "Save Roles"}
+                {savingRoles ? loc.savingRoles : loc.saveRoles}
               </Button>
             </div>
           </CardContent>
@@ -186,9 +219,9 @@ async function fetchSettings(guildId: string): Promise<SettingsResponse> {
   return (await r.json()) as SettingsResponse;
 }
 
-async function updateSettings(guildId: string, logMode: string) {
+async function updateSettings(guildId: string, logMode: string, language: string) {
   const r = await fetch("/api/settings", {
-    body: JSON.stringify({ guildId, logMode }),
+    body: JSON.stringify({ guildId, logMode, language }),
     headers: { "content-type": "application/json" },
     method: "PATCH"
   });
