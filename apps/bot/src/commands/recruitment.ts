@@ -184,7 +184,7 @@ async function handleRecruitmentCreate(
   await interaction.reply({
     ...createComponentsV2TextMessage({
       title: loc.recruitmentCreated,
-      lines: [`Post: ${message.url}`],
+      lines: [loc.recruitmentPostLink({ url: message.url })],
       privateResponse: true
     })
   });

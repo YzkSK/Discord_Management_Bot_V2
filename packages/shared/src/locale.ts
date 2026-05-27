@@ -47,6 +47,7 @@ type Locale = {
   recruitmentSetupRequired: string;
   recruitmentSetupRequiredMessage: string;
   recruitmentCreated: string;
+  recruitmentPostLink: (vars: { url: string }) => string;
   ttsJoinFailed: string;
   ttsJoinVoiceFirst: string;
   ttsAlreadyConnected: string;
@@ -120,6 +121,7 @@ const locales: Record<GuildLanguage, Locale> = {
     recruitmentSetupRequiredMessage:
       "Run `/setup recruitment channel:<text channel>` first.",
     recruitmentCreated: "Recruitment created",
+    recruitmentPostLink: ({ url }) => `Post: ${url}`,
     ttsJoinFailed: "TTS join failed",
     ttsJoinVoiceFirst: "Join a voice channel first.",
     ttsAlreadyConnected: "TTS already connected",
@@ -199,6 +201,7 @@ const locales: Record<GuildLanguage, Locale> = {
     recruitmentSetupRequiredMessage:
       "先に `/setup recruitment channel:<テキストチャンネル>` を実行してください。",
     recruitmentCreated: "募集を作成しました",
+    recruitmentPostLink: ({ url }) => `投稿: ${url}`,
     ttsJoinFailed: "TTS参加失敗",
     ttsJoinVoiceFirst: "先にボイスチャンネルに参加してください。",
     ttsAlreadyConnected: "TTS接続中",
