@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import type { GuildLanguage } from "@discord-bot/shared";
+import { getDashboardLocale, detectBrowserLanguage } from "../../lib/locale";
 import { io } from "socket.io-client";
 
 import { Badge } from "../../components/ui/badge";
@@ -63,6 +65,8 @@ const initialFilters: LogFilters = {
 const eventPresets = getDashboardEventPresets();
 
 export function LogsExplorer() {
+  const [uiLang] = useState<GuildLanguage>(detectBrowserLanguage);
+  const loc = getDashboardLocale(uiLang);
   const [filters, setFilters] = useState(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState(initialFilters);
   const [logs, setLogs] = useState<LogItem[]>([]);
@@ -144,7 +148,7 @@ export function LogsExplorer() {
     if (!normalizeGuildId(nextFilters.guildId)) {
       setLogs([]);
       setNextCursor(null);
-      setError("Enter a guild ID to load logs.");
+      setError(loc.enterGuildIdToLoadLogs);
       setExpandedId(null);
       setLoading(false);
       return;
@@ -224,32 +228,32 @@ export function LogsExplorer() {
           <form onSubmit={submitFilters}>
             <div className="grid gap-3 lg:grid-cols-[1.2fr_1fr_1fr_1fr_auto_auto]">
               <FilterInput
-                label="Search"
+                label={loc.search}
                 onChange={(value) => setFilters({ ...filters, search: value })}
                 placeholder="channel name, session key, payload text"
                 value={filters.search}
               />
               <FilterInput
-                label="Guild"
+                label={loc.guild}
                 onChange={(value) => setFilters({ ...filters, guildId: value })}
                 placeholder="required guild id"
                 value={filters.guildId}
               />
               <FilterInput
-                label="Event"
+                label={loc.event}
                 onChange={(value) => setFilters({ ...filters, eventName: value })}
                 placeholder="event prefix"
                 value={filters.eventName}
               />
               <FilterInput
-                label="Actor"
+                label={loc.actor}
                 onChange={(value) => setFilters({ ...filters, actorId: value })}
                 placeholder="actor id"
                 value={filters.actorId}
               />
               <Button className="h-10 self-end" type="submit">
                 <Search className="h-4 w-4" />
-                Search
+                {loc.search}
               </Button>
               <Button
                 className="h-10 self-end"
@@ -257,7 +261,7 @@ export function LogsExplorer() {
                 type="button"
                 variant="outline"
               >
-                Reset
+                {loc.reset}
               </Button>
             </div>
           </form>
@@ -280,10 +284,10 @@ export function LogsExplorer() {
               );
             })}
             <div className="ml-auto flex flex-wrap gap-2">
-              <Badge variant="outline">{logs.length} shown</Badge>
-              <Badge variant="outline">{activeFilterCount} filters</Badge>
+              <Badge variant="outline">{loc.shown({ count: logs.length })}</Badge>
+              <Badge variant="outline">{loc.filters({ count: activeFilterCount })}</Badge>
               <Badge variant={realtimeStatus === "live" ? "success" : "outline"}>
-                realtime {realtimeStatus}
+                {loc.realtimeStatus({ status: realtimeStatus })}
               </Badge>
             </div>
           </div>
@@ -301,25 +305,27 @@ export function LogsExplorer() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-44">Received</TableHead>
-                <TableHead className="w-56">Event</TableHead>
-                <TableHead className="w-44">Actor</TableHead>
-                <TableHead>Summary</TableHead>
-                <TableHead className="w-24">Raw</TableHead>
+                <TableHead className="w-44">{loc.received}</TableHead>
+                <TableHead className="w-56">{loc.event}</TableHead>
+                <TableHead className="w-44">{loc.actor}</TableHead>
+                <TableHead>{loc.summary}</TableHead>
+                <TableHead className="w-24">{loc.raw}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? <LoadingRows /> : null}
-              {!loading && logs.length === 0 ? <EmptyRow /> : null}
+              {loading ? <LoadingRows label={loc.loadingLogs} /> : null}
+              {!loading && logs.length === 0 ? <EmptyRow label={loc.enterGuildIdAndSearch} /> : null}
               {!loading
                 ? logs.map((log) => (
                     <LogRow
                       expanded={expandedId === log.id}
+                      hideLabel={loc.hide}
                       key={log.id}
                       log={log}
                       onToggle={() =>
                         setExpandedId(expandedId === log.id ? null : log.id)
                       }
+                      viewLabel={loc.view}
                     />
                   ))
                 : null}
@@ -335,7 +341,7 @@ export function LogsExplorer() {
           type="button"
           variant="outline"
         >
-          {loadingMore ? "Loading" : "Load More"}
+          {loadingMore ? loc.loading : loc.loadMore}
         </Button>
       </div>
     </section>
@@ -368,12 +374,16 @@ function FilterInput({
 
 function LogRow({
   expanded,
+  hideLabel,
   log,
-  onToggle
+  onToggle,
+  viewLabel
 }: {
   expanded: boolean;
+  hideLabel: string;
   log: LogItem;
   onToggle: () => void;
+  viewLabel: string;
 }) {
   return (
     <>
@@ -395,7 +405,7 @@ function LogRow({
             type="button"
             variant="outline"
           >
-            {expanded ? "Hide" : "View"}
+            {expanded ? hideLabel : viewLabel}
           </Button>
         </TableCell>
       </TableRow>
@@ -412,21 +422,21 @@ function LogRow({
   );
 }
 
-function LoadingRows() {
+function LoadingRows({ label }: { label: string }) {
   return Array.from({ length: 5 }, (_, index) => (
     <TableRow key={index}>
       <TableCell className="text-slate-500" colSpan={5}>
-        Loading logs
+        {label}
       </TableCell>
     </TableRow>
   ));
 }
 
-function EmptyRow() {
+function EmptyRow({ label }: { label: string }) {
   return (
     <TableRow>
       <TableCell className="py-10 text-center text-slate-500" colSpan={5}>
-        Enter a guild ID and search logs.
+        {label}
       </TableCell>
     </TableRow>
   );
