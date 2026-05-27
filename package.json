@@ -14,7 +14,8 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "db:generate": "pnpm --filter @discord-bot/db db:generate",
-    "db:migrate": "pnpm --filter @discord-bot/db db:migrate"
+    "db:migrate": "pnpm --filter @discord-bot/db db:migrate",
+    "logs:archive": "pnpm --filter @discord-bot/db archive:logs"
   },
   "devDependencies": {
     "@types/node": "*",
