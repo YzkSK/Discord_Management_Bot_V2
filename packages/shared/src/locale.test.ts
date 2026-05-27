@@ -38,4 +38,14 @@ describe("getLocale('ja')", () => {
   it("returns Japanese actor unknown", () => {
     assert.equal(getLocale("ja").logActorUnknown, "アクター: 不明");
   });
+
+  it("interpolates actor id in Japanese", () => {
+    const loc = getLocale("ja");
+    assert.equal(loc.logActor({ actorId: "123" }), "アクター: <@123>");
+  });
+
+  it("interpolates channel id in Japanese force-join message", () => {
+    const loc = getLocale("ja");
+    assert.equal(loc.ttsForceJoinMoveTo({ id: "456" }), "TTSを <#456> に移動しますか？");
+  });
 });

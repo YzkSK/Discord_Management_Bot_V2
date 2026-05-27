@@ -234,6 +234,6 @@ const locales: Record<GuildLanguage, Locale> = {
   }
 };
 
-export function getLocale(lang: GuildLanguage): Locale {
+export function getLocale(lang: GuildLanguage) {
   return locales[lang];
 }
