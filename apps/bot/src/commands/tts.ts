@@ -30,20 +30,17 @@ type Loc = ReturnType<typeof getLocale>;
 
 export const joinCommand = new SlashCommandBuilder()
   .setName("join")
-  .setNameLocalization("ja", "参加")
   .setDescription("Join your voice channel and read this text channel.")
   .setDescriptionLocalization("ja", "ボイスチャンネルに参加してこのテキストチャンネルを読み上げます。");
 
 export const forceJoinCommand = new SlashCommandBuilder()
   .setName("force-join")
-  .setNameLocalization("ja", "強制参加")
   .setDescription("Move TTS to your voice channel after confirmation.")
   .setDescriptionLocalization("ja", "確認後、TTSをあなたのボイスチャンネルに移動します。")
   .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages);
 
 export const leaveCommand = new SlashCommandBuilder()
   .setName("leave")
-  .setNameLocalization("ja", "退出")
   .setDescription("Stop TTS and leave the current voice channel.")
   .setDescriptionLocalization("ja", "TTSを停止し、現在のボイスチャンネルから退出します。");
 

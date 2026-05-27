@@ -25,14 +25,12 @@ type Loc = ReturnType<typeof getLocale>;
 
 export const recruitmentCommand = new SlashCommandBuilder()
   .setName("recruitment")
-  .setNameLocalization("ja", "募集")
   .setDescription("Create and manage recruitment posts.")
   .setDescriptionLocalization("ja", "募集投稿を作成・管理します。")
   .setDMPermission(false)
   .addSubcommand((subcommand) =>
     subcommand
       .setName("create")
-      .setNameLocalization("ja", "作成")
       .setDescription("Create a recruitment post.")
       .setDescriptionLocalization("ja", "募集投稿を作成します。")
       .addStringOption((option) =>
