@@ -12,6 +12,8 @@
     "src/app/settings/access-grants.ts",
     "src/app/settings/access-grants.test.ts",
     "src/app/dashboard-style-policy.test.ts",
+    "src/lib/locale.ts",
+    "src/lib/locale.test.ts",
     "src/lib/utils.ts",
     "src/lib/utils.test.ts",
     "src/app/api/guilds/guild-filter.ts",
