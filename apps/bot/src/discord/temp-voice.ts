@@ -1,8 +1,10 @@
 import {
   ChannelType,
   type Client,
+  DiscordAPIError,
   type GuildBasedChannel,
   PermissionFlagsBits,
+  RESTJSONErrorCodes,
   type TextChannel,
   type VoiceBasedChannel
 } from "discord.js";
@@ -167,12 +169,25 @@ async function createGeneratedChannel(
     return;
   }
 
-  const channel = await context.newState.guild.channels.create({
-    name: formatTempVoiceChannelName(member.displayName),
-    ...(input.categoryId ? { parent: input.categoryId } : {}),
-    reason: tempVoiceCreateReason,
-    type: ChannelType.GuildVoice
-  });
+  let channel;
+  try {
+    channel = await context.newState.guild.channels.create({
+      name: formatTempVoiceChannelName(member.displayName),
+      ...(input.categoryId ? { parent: input.categoryId } : {}),
+      reason: tempVoiceCreateReason,
+      type: ChannelType.GuildVoice
+    });
+  } catch (error) {
+    if (error instanceof DiscordAPIError && error.code === RESTJSONErrorCodes.MissingPermissions) {
+      console.warn("temp-vc: bot lacks permission to create voice channel", {
+        guildId: transition.guildId,
+        categoryId: input.categoryId
+      });
+      return;
+    }
+    throw error;
+  }
+
   suppressTempVoiceChannelLog(channel.id);
   const controlChannel = await createControlChannel(context, {
     categoryId: input.categoryId,
