@@ -34,6 +34,22 @@ type DashboardLocale = {
   savingRoles: string;
   accessRolesUpdated: string;
   failedToLoadSettings: string;
+  settingsOverview: string;
+  logsSettings: string;
+  tempVcSettings: string;
+  ttsSettings: string;
+  recruitmentSettings: string;
+  configured: string;
+  notConfigured: string;
+  readOnly: string;
+  tempVcCreateChannelId: string;
+  tempVcCategoryId: string;
+  ttsTextChannelId: string;
+  recruitmentMarker: string;
+  saveTempVcSettings: string;
+  saveTtsSettings: string;
+  tempVcSettingsSaved: string;
+  ttsSettingsSaved: string;
   accessGrantTarget: string;
   accessGrantUser: string;
   accessGrantRole: string;
@@ -104,6 +120,22 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     savingRoles: "Saving…",
     accessRolesUpdated: "Access roles updated.",
     failedToLoadSettings: "Failed to load settings.",
+    settingsOverview: "Overview",
+    logsSettings: "Logs",
+    tempVcSettings: "Temp VC",
+    ttsSettings: "TTS",
+    recruitmentSettings: "Recruitment",
+    configured: "Configured",
+    notConfigured: "Not configured",
+    readOnly: "Read-only",
+    tempVcCreateChannelId: "Creation Channel ID",
+    tempVcCategoryId: "Category ID",
+    ttsTextChannelId: "TTS Text Channel ID",
+    recruitmentMarker: "Channel Marker",
+    saveTempVcSettings: "Save Temp VC",
+    saveTtsSettings: "Save TTS",
+    tempVcSettingsSaved: "Temp VC settings saved.",
+    ttsSettingsSaved: "TTS settings saved.",
     accessGrantTarget: "Target",
     accessGrantUser: "User",
     accessGrantRole: "Role",
@@ -171,6 +203,22 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     savingRoles: "保存中…",
     accessRolesUpdated: "アクセスロールを更新しました。",
     failedToLoadSettings: "設定の読み込みに失敗しました。",
+    settingsOverview: "概要",
+    logsSettings: "ログ",
+    tempVcSettings: "一時VC",
+    ttsSettings: "TTS",
+    recruitmentSettings: "募集",
+    configured: "設定済み",
+    notConfigured: "未設定",
+    readOnly: "閲覧のみ",
+    tempVcCreateChannelId: "作成チャンネルID",
+    tempVcCategoryId: "カテゴリID",
+    ttsTextChannelId: "TTSテキストチャンネルID",
+    recruitmentMarker: "チャンネルマーカー",
+    saveTempVcSettings: "一時VCを保存",
+    saveTtsSettings: "TTSを保存",
+    tempVcSettingsSaved: "一時VC設定を保存しました。",
+    ttsSettingsSaved: "TTS設定を保存しました。",
     accessGrantTarget: "対象",
     accessGrantUser: "ユーザー",
     accessGrantRole: "ロール",

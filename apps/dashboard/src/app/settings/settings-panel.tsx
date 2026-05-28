@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Plus, Save, Trash2 } from "lucide-react";
-import type { GuildLanguage } from "@discord-bot/shared";
+import type { DashboardSettingsFeatures, GuildLanguage } from "@discord-bot/shared";
 import { isGuildLanguage } from "@discord-bot/shared";
 import { getDashboardLocale, detectBrowserLanguage } from "../../lib/locale";
 import {
@@ -12,8 +12,10 @@ import {
   type DashboardAccessGrant,
   type GrantableAccessRole
 } from "./access-grants";
+import { buildSettingsSectionSummaries, type SettingsSectionKey } from "./settings-sections";
 
 import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
 import { Select } from "../../components/ui/select";
@@ -40,6 +42,7 @@ interface SettingsResponse {
   updatedAt: string;
   accessRole: string;
   dashboardManagementRoleIds: string[];
+  features: DashboardSettingsFeatures;
   availableRoles?: DiscordRole[];
 }
 
@@ -47,6 +50,9 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   const [settings, setSettings] = useState<SettingsResponse | null>(null);
   const [logMode, setLogMode] = useState("full");
   const [language, setLanguage] = useState("en");
+  const [tempVcCreateChannelId, setTempVcCreateChannelId] = useState("");
+  const [tempVcCategoryId, setTempVcCategoryId] = useState("");
+  const [ttsTextChannelId, setTtsTextChannelId] = useState("");
   const [uiLang, setUiLang] = useState<GuildLanguage>(detectBrowserLanguage);
   const [managementRoleIds, setManagementRoleIds] = useState<string[]>([]);
   const [accessGrants, setAccessGrants] = useState<DashboardAccessGrant[]>([]);
@@ -55,6 +61,8 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   const [grantRole, setGrantRole] = useState<GrantableAccessRole>("viewer");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingTempVc, setSavingTempVc] = useState(false);
+  const [savingTts, setSavingTts] = useState(false);
   const [savingRoles, setSavingRoles] = useState(false);
   const [savingGrant, setSavingGrant] = useState(false);
   const [deletingGrantKey, setDeletingGrantKey] = useState<string | null>(null);
@@ -80,6 +88,9 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
         setSettings(data);
         setLogMode(data.logMode);
         setLanguage(data.language);
+        setTempVcCreateChannelId(data.features.tempVc.createChannelId ?? "");
+        setTempVcCategoryId(data.features.tempVc.categoryId ?? "");
+        setTtsTextChannelId(data.features.tts.textChannelId ?? "");
         if (isGuildLanguage(data.language)) {
           setUiLang(data.language);
         }
@@ -103,6 +114,33 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
       setSettings((s) => (s ? { ...s, ...data } : s));
       setMessage(loc.settingsSaved);
     } catch (e) { setError(toErrorMessage(e)); } finally { setSaving(false); }
+  }
+
+  async function saveTempVcSettings() {
+    if (!settings) return;
+    setSavingTempVc(true); setError(null); setMessage(null);
+    try {
+      const data = await updateTempVcSettings(
+        settings.guildId,
+        tempVcCreateChannelId,
+        tempVcCategoryId
+      );
+      setSettings((s) => (s ? { ...s, ...data } : s));
+      setTempVcCreateChannelId(data.features.tempVc.createChannelId ?? "");
+      setTempVcCategoryId(data.features.tempVc.categoryId ?? "");
+      setMessage(loc.tempVcSettingsSaved);
+    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTempVc(false); }
+  }
+
+  async function saveTtsSettings() {
+    if (!settings) return;
+    setSavingTts(true); setError(null); setMessage(null);
+    try {
+      const data = await updateTtsSettings(settings.guildId, ttsTextChannelId);
+      setSettings((s) => (s ? { ...s, ...data } : s));
+      setTtsTextChannelId(data.features.tts.textChannelId ?? "");
+      setMessage(loc.ttsSettingsSaved);
+    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTts(false); }
   }
 
   async function saveManagementRoles() {
@@ -183,14 +221,15 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   }
 
   const isOwner = settings.accessRole === "owner";
+  const summaries = buildSettingsSectionSummaries(settings.features);
 
   return (
-    <section className="grid max-w-4xl gap-4 xl:grid-cols-[1fr_1fr]">
+    <section className="grid max-w-5xl gap-4">
       <Card>
         <CardHeader>
-          <CardTitle>{loc.guildInfo}</CardTitle>
+          <CardTitle>{loc.settingsOverview}</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-3">
+        <CardContent className="grid gap-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <ReadOnlyValue label={loc.guildId} value={settings.guildId} />
             <ReadOnlyValue label={loc.guildName} value={settings.guildName ?? "—"} />
@@ -198,6 +237,36 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
             <ReadOnlyValue label={loc.updated} value={formatDate(settings.updatedAt)} />
           </div>
 
+          <div className="grid gap-2 sm:grid-cols-4">
+            {summaries.map((summary) => (
+              <FeatureStatus
+                configured={summary.configured}
+                key={summary.key}
+                label={sectionLabel(summary.key, loc)}
+                loc={loc}
+              />
+            ))}
+          </div>
+
+          {error && (
+            <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+              {error}
+            </div>
+          )}
+          {message && (
+            <div className="rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-400">
+              {message}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>{loc.logsSettings}</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3">
           <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
             {loc.logMode}
             <Select onChange={(e) => setLogMode(e.target.value)} value={logMode}>
@@ -223,17 +292,6 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
             </Select>
           </label>
 
-          {error && (
-            <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
-              {error}
-            </div>
-          )}
-          {message && (
-            <div className="rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-400">
-              {message}
-            </div>
-          )}
-
           <div className="flex justify-end">
             <Button disabled={saving} onClick={saveLogMode} type="button" size="sm">
               <Save className="h-3.5 w-3.5" />
@@ -242,6 +300,86 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
           </div>
         </CardContent>
       </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{loc.tempVcSettings}</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            <FeatureStatus
+              configured={settings.features.tempVc.configured}
+              label={loc.tempVcSettings}
+              loc={loc}
+            />
+            <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+              {loc.tempVcCreateChannelId}
+              <Input
+                onChange={(e) => setTempVcCreateChannelId(e.target.value)}
+                value={tempVcCreateChannelId}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+              {loc.tempVcCategoryId}
+              <Input
+                onChange={(e) => setTempVcCategoryId(e.target.value)}
+                value={tempVcCategoryId}
+              />
+            </label>
+            <div className="flex justify-end">
+              <Button disabled={savingTempVc} onClick={saveTempVcSettings} type="button" size="sm">
+                <Save className="h-3.5 w-3.5" />
+                {savingTempVc ? loc.saving : loc.saveTempVcSettings}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{loc.ttsSettings}</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            <FeatureStatus
+              configured={settings.features.tts.configured}
+              label={loc.ttsSettings}
+              loc={loc}
+            />
+            <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+              {loc.ttsTextChannelId}
+              <Input
+                onChange={(e) => setTtsTextChannelId(e.target.value)}
+                value={ttsTextChannelId}
+              />
+            </label>
+            <div className="flex justify-end">
+              <Button disabled={savingTts} onClick={saveTtsSettings} type="button" size="sm">
+                <Save className="h-3.5 w-3.5" />
+                {savingTts ? loc.saving : loc.saveTtsSettings}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{loc.recruitmentSettings}</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <FeatureStatus
+                configured={settings.features.recruitment.configured}
+                label={loc.recruitmentSettings}
+                loc={loc}
+              />
+              <Badge variant="outline">{loc.readOnly}</Badge>
+            </div>
+            <ReadOnlyValue
+              label={loc.recruitmentMarker}
+              value={settings.features.recruitment.channelMarker}
+            />
+          </CardContent>
+        </Card>
+      </div>
 
       {isOwner && (
         <Card>
@@ -433,6 +571,43 @@ async function updateSettings(guildId: string, logMode: string, language: string
   return (await r.json()) as SettingsResponse;
 }
 
+async function updateTempVcSettings(
+  guildId: string,
+  createChannelId: string,
+  categoryId: string
+) {
+  const r = await fetch("/api/settings", {
+    body: JSON.stringify({
+      guildId,
+      section: "tempVc",
+      values: {
+        createChannelId,
+        categoryId
+      }
+    }),
+    headers: { "content-type": "application/json" },
+    method: "PATCH"
+  });
+  if (!r.ok) throw new Error(`Failed to save Temp VC settings (${r.status})`);
+  return (await r.json()) as SettingsResponse;
+}
+
+async function updateTtsSettings(guildId: string, textChannelId: string) {
+  const r = await fetch("/api/settings", {
+    body: JSON.stringify({
+      guildId,
+      section: "tts",
+      values: {
+        textChannelId
+      }
+    }),
+    headers: { "content-type": "application/json" },
+    method: "PATCH"
+  });
+  if (!r.ok) throw new Error(`Failed to save TTS settings (${r.status})`);
+  return (await r.json()) as SettingsResponse;
+}
+
 async function updateManagementRoles(guildId: string, roleIds: string[]) {
   const r = await fetch("/api/settings", {
     body: JSON.stringify({ guildId, dashboardManagementRoleIds: roleIds }),
@@ -489,6 +664,35 @@ function accessGrantKey(grant: {
   targetId: string;
 }) {
   return `${grant.guildId}:${grant.targetType}:${grant.targetId}`;
+}
+
+function FeatureStatus({
+  configured,
+  label,
+  loc
+}: {
+  configured: boolean;
+  label: string;
+  loc: ReturnType<typeof getDashboardLocale>;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
+      <span className="text-xs font-medium text-zinc-300">{label}</span>
+      <Badge variant={configured ? "success" : "outline"}>
+        {configured ? loc.configured : loc.notConfigured}
+      </Badge>
+    </div>
+  );
+}
+
+function sectionLabel(
+  key: SettingsSectionKey,
+  loc: ReturnType<typeof getDashboardLocale>
+) {
+  if (key === "logs") return loc.logsSettings;
+  if (key === "tempVc") return loc.tempVcSettings;
+  if (key === "tts") return loc.ttsSettings;
+  return loc.recruitmentSettings;
 }
 
 function formatGrantTarget(grant: DashboardAccessGrant, roles: DiscordRole[] | undefined) {

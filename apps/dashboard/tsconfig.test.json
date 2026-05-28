@@ -11,6 +11,8 @@
     "src/app/dashboard-ui.test.ts",
     "src/app/settings/access-grants.ts",
     "src/app/settings/access-grants.test.ts",
+    "src/app/settings/settings-sections.ts",
+    "src/app/settings/settings-sections.test.ts",
     "src/app/dashboard-style-policy.test.ts",
     "src/lib/locale.ts",
     "src/lib/locale.test.ts",
