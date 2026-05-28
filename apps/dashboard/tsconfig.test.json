@@ -19,6 +19,8 @@
     "src/app/api/guilds/guild-filter.ts",
     "src/app/api/guilds/guild-filter.test.ts",
     "src/app/api/dashboard-access/validation.ts",
-    "src/app/api/dashboard-access/validation.test.ts"
+    "src/app/api/dashboard-access/validation.test.ts",
+    "src/app/api/settings/validation.ts",
+    "src/app/api/settings/validation.test.ts"
   ]
 }

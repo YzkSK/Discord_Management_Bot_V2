@@ -134,14 +134,22 @@ export async function updateGuildTempVoiceConfigByGuildId(
     .insert(guildConfigs)
     .values({
       guildRefId: guild.id,
-      tempVoiceCreateChannelId: input.tempVoiceCreateChannelId ?? null,
-      tempVoiceCategoryId: input.tempVoiceCategoryId ?? null
+      ...(input.tempVoiceCreateChannelId !== undefined
+        ? { tempVoiceCreateChannelId: input.tempVoiceCreateChannelId }
+        : {}),
+      ...(input.tempVoiceCategoryId !== undefined
+        ? { tempVoiceCategoryId: input.tempVoiceCategoryId }
+        : {})
     })
     .onConflictDoUpdate({
       target: guildConfigs.guildRefId,
       set: {
-        tempVoiceCreateChannelId: input.tempVoiceCreateChannelId ?? null,
-        tempVoiceCategoryId: input.tempVoiceCategoryId ?? null,
+        ...(input.tempVoiceCreateChannelId !== undefined
+          ? { tempVoiceCreateChannelId: input.tempVoiceCreateChannelId }
+          : {}),
+        ...(input.tempVoiceCategoryId !== undefined
+          ? { tempVoiceCategoryId: input.tempVoiceCategoryId }
+          : {}),
         updatedAt: sql`now()`
       }
     })
@@ -171,12 +179,16 @@ export async function updateGuildTtsConfigByGuildId(
     .insert(guildConfigs)
     .values({
       guildRefId: guild.id,
-      ttsTextChannelId: input.ttsTextChannelId ?? null
+      ...(input.ttsTextChannelId !== undefined
+        ? { ttsTextChannelId: input.ttsTextChannelId }
+        : {})
     })
     .onConflictDoUpdate({
       target: guildConfigs.guildRefId,
       set: {
-        ttsTextChannelId: input.ttsTextChannelId ?? null,
+        ...(input.ttsTextChannelId !== undefined
+          ? { ttsTextChannelId: input.ttsTextChannelId }
+          : {}),
         updatedAt: sql`now()`
       }
     })
