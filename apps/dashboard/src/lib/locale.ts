@@ -34,6 +34,24 @@ type DashboardLocale = {
   savingRoles: string;
   accessRolesUpdated: string;
   failedToLoadSettings: string;
+  accessGrantTarget: string;
+  accessGrantUser: string;
+  accessGrantRole: string;
+  accessGrantUserId: string;
+  accessGrantRoleId: string;
+  accessGrantSelectRole: string;
+  accessGrantAccess: string;
+  accessGrantAction: string;
+  accessGrantViewer: string;
+  accessGrantAdmin: string;
+  accessGrantSave: string;
+  accessGrantSaved: string;
+  accessGrantUpdated: string;
+  accessGrantDeleted: string;
+  accessGrantTargetRequired: string;
+  accessGrantId: string;
+  noAccessGrants: string;
+  managementRoleShortcutNote: string;
   // Logs page
   search: string;
   guild: string;
@@ -86,6 +104,24 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     savingRoles: "Saving…",
     accessRolesUpdated: "Access roles updated.",
     failedToLoadSettings: "Failed to load settings.",
+    accessGrantTarget: "Target",
+    accessGrantUser: "User",
+    accessGrantRole: "Role",
+    accessGrantUserId: "User ID",
+    accessGrantRoleId: "Role ID",
+    accessGrantSelectRole: "Select role",
+    accessGrantAccess: "Access",
+    accessGrantAction: "Action",
+    accessGrantViewer: "Viewer",
+    accessGrantAdmin: "Admin",
+    accessGrantSave: "Save Grant",
+    accessGrantSaved: "Dashboard access grant saved.",
+    accessGrantUpdated: "Dashboard access grant updated.",
+    accessGrantDeleted: "Dashboard access grant deleted.",
+    accessGrantTargetRequired: "Target ID is required.",
+    accessGrantId: "ID",
+    noAccessGrants: "No explicit dashboard access grants.",
+    managementRoleShortcutNote: "Existing management role shortcut. Selected roles receive admin access.",
     search: "Search",
     guild: "Guild",
     event: "Event",
@@ -135,6 +171,24 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     savingRoles: "保存中…",
     accessRolesUpdated: "アクセスロールを更新しました。",
     failedToLoadSettings: "設定の読み込みに失敗しました。",
+    accessGrantTarget: "対象",
+    accessGrantUser: "ユーザー",
+    accessGrantRole: "ロール",
+    accessGrantUserId: "ユーザーID",
+    accessGrantRoleId: "ロールID",
+    accessGrantSelectRole: "ロールを選択",
+    accessGrantAccess: "アクセス権限",
+    accessGrantAction: "操作",
+    accessGrantViewer: "閲覧者",
+    accessGrantAdmin: "管理者",
+    accessGrantSave: "権限を保存",
+    accessGrantSaved: "ダッシュボードアクセス権限を保存しました。",
+    accessGrantUpdated: "ダッシュボードアクセス権限を更新しました。",
+    accessGrantDeleted: "ダッシュボードアクセス権限を削除しました。",
+    accessGrantTargetRequired: "対象IDを入力してください。",
+    accessGrantId: "ID",
+    noAccessGrants: "明示的なダッシュボードアクセス権限はありません。",
+    managementRoleShortcutNote: "既存の管理ロールショートカットです。選択したロールには管理者権限が付与されます。",
     search: "検索",
     guild: "Guild",
     event: "イベント",

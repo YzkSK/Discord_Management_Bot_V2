@@ -124,7 +124,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
     });
 
     if (!payload.targetId) {
-      setError("Target ID is required.");
+      setError(loc.accessGrantTargetRequired);
       return;
     }
 
@@ -133,7 +133,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
       const grant = await upsertDashboardAccessGrant(payload);
       setAccessGrants((current) => upsertAccessGrant(current, grant));
       setGrantTargetId("");
-      setMessage("Dashboard access grant saved.");
+      setMessage(loc.accessGrantSaved);
     } catch (e) { setError(toErrorMessage(e)); } finally { setSavingGrant(false); }
   }
 
@@ -148,7 +148,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
         targetId: grant.targetId
       });
       setAccessGrants((current) => removeAccessGrant(current, grant));
-      setMessage("Dashboard access grant deleted.");
+      setMessage(loc.accessGrantDeleted);
     } catch (e) { setError(toErrorMessage(e)); } finally { setDeletingGrantKey(null); }
   }
 
@@ -166,7 +166,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
         role
       });
       setAccessGrants((current) => upsertAccessGrant(current, updatedGrant));
-      setMessage("Dashboard access grant updated.");
+      setMessage(loc.accessGrantUpdated);
     } catch (e) { setError(toErrorMessage(e)); }
   }
 
@@ -256,7 +256,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
             <div className="grid gap-3 rounded-md border border-zinc-800 bg-zinc-950 p-3">
               <div className="grid gap-2 sm:grid-cols-[110px_1fr_120px]">
                 <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                  Target
+                  {loc.accessGrantTarget}
                   <Select
                     onChange={(e) => {
                       const targetType = e.target.value === "role" ? "role" : "user";
@@ -265,19 +265,19 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
                     }}
                     value={grantTargetType}
                   >
-                    <option value="user">User</option>
-                    <option value="role">Role</option>
+                    <option value="user">{loc.accessGrantUser}</option>
+                    <option value="role">{loc.accessGrantRole}</option>
                   </Select>
                 </label>
 
                 <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                  {grantTargetType === "role" ? "Role" : "User ID"}
+                  {grantTargetType === "role" ? loc.accessGrantRole : loc.accessGrantUserId}
                   {grantTargetType === "role" && settings.availableRoles?.length ? (
                     <Select
                       onChange={(e) => setGrantTargetId(e.target.value)}
                       value={grantTargetId}
                     >
-                      <option value="">Select role</option>
+                      <option value="">{loc.accessGrantSelectRole}</option>
                       {settings.availableRoles.map((role) => (
                         <option key={role.id} value={role.id}>{role.name}</option>
                       ))}
@@ -285,20 +285,20 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
                   ) : (
                     <Input
                       onChange={(e) => setGrantTargetId(e.target.value)}
-                      placeholder={grantTargetType === "role" ? "Role ID" : "User ID"}
+                      placeholder={grantTargetType === "role" ? loc.accessGrantRoleId : loc.accessGrantUserId}
                       value={grantTargetId}
                     />
                   )}
                 </label>
 
                 <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                  Role
+                  {loc.accessGrantRole}
                   <Select
                     onChange={(e) => setGrantRole(e.target.value === "admin" ? "admin" : "viewer")}
                     value={grantRole}
                   >
-                    <option value="viewer">Viewer</option>
-                    <option value="admin">Admin</option>
+                    <option value="viewer">{loc.accessGrantViewer}</option>
+                    <option value="admin">{loc.accessGrantAdmin}</option>
                   </Select>
                 </label>
               </div>
@@ -306,7 +306,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
               <div className="flex justify-end">
                 <Button disabled={savingGrant} onClick={saveAccessGrant} size="sm" type="button">
                   <Plus className="h-3.5 w-3.5" />
-                  {savingGrant ? "Saving" : "Save Grant"}
+                  {savingGrant ? loc.saving : loc.accessGrantSave}
                 </Button>
               </div>
             </div>
@@ -315,17 +315,17 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-24">Target</TableHead>
-                    <TableHead>ID</TableHead>
-                    <TableHead className="w-28">Access</TableHead>
-                    <TableHead className="w-20">Action</TableHead>
+                    <TableHead className="w-24">{loc.accessGrantTarget}</TableHead>
+                    <TableHead>{loc.accessGrantId}</TableHead>
+                    <TableHead className="w-28">{loc.accessGrantAccess}</TableHead>
+                    <TableHead className="w-20">{loc.accessGrantAction}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {accessGrants.length === 0 ? (
                     <TableRow>
                       <TableCell className="py-8 text-center text-zinc-600" colSpan={4}>
-                        No explicit dashboard access grants.
+                        {loc.noAccessGrants}
                       </TableCell>
                     </TableRow>
                   ) : accessGrants.map((grant) => (
@@ -344,8 +344,8 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
                           }}
                           value={grant.role}
                         >
-                          <option value="viewer">Viewer</option>
-                          <option value="admin">Admin</option>
+                          <option value="viewer">{loc.accessGrantViewer}</option>
+                          <option value="admin">{loc.accessGrantAdmin}</option>
                         </Select>
                       </TableCell>
                       <TableCell>
@@ -368,7 +368,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
             {settings.availableRoles !== undefined && (
               <div className="grid gap-3 border-t border-zinc-800 pt-4">
                 <p className="text-xs text-zinc-500">
-                  Existing management role shortcut. Selected roles receive admin access.
+                  {loc.managementRoleShortcutNote}
                 </p>
                 <div className="flex flex-col gap-1.5">
                   {settings.availableRoles.map((role) => (
