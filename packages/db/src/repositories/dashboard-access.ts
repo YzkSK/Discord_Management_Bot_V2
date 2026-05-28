@@ -25,6 +25,16 @@ export interface ListDashboardAccessGrantsInput {
   roleIds?: string[];
 }
 
+export interface ListGuildDashboardAccessGrantsInput {
+  guildId: string;
+}
+
+export interface DeleteDashboardAccessGrantInput {
+  guildId: string;
+  targetType: DashboardAccessTargetType;
+  targetId: string;
+}
+
 export async function ensureDashboardAccessGrant(
   db: DbClient,
   input: EnsureDashboardAccessGrantInput
@@ -99,4 +109,58 @@ export async function listDashboardAccessGrants(
         role: grant.role as GrantableDashboardAccessRole
       }))
     );
+}
+
+export async function listGuildDashboardAccessGrants(
+  db: DbClient,
+  input: ListGuildDashboardAccessGrantsInput
+) {
+  return db
+    .select({
+      id: dashboardAccessGrants.id,
+      guildId: dashboardAccessGrants.guildId,
+      targetType: dashboardAccessGrants.targetType,
+      targetId: dashboardAccessGrants.targetId,
+      role: dashboardAccessGrants.role,
+      createdAt: dashboardAccessGrants.createdAt,
+      updatedAt: dashboardAccessGrants.updatedAt
+    })
+    .from(dashboardAccessGrants)
+    .where(eq(dashboardAccessGrants.guildId, input.guildId))
+    .then((grants) =>
+      grants.map((grant) => ({
+        ...grant,
+        targetType: grant.targetType as DashboardAccessTargetType,
+        role: grant.role as GrantableDashboardAccessRole
+      }))
+    );
+}
+
+export async function deleteDashboardAccessGrant(
+  db: DbClient,
+  input: DeleteDashboardAccessGrantInput
+) {
+  const [grant] = await db
+    .delete(dashboardAccessGrants)
+    .where(
+      and(
+        eq(dashboardAccessGrants.guildId, input.guildId),
+        eq(dashboardAccessGrants.targetType, input.targetType),
+        eq(dashboardAccessGrants.targetId, input.targetId)
+      )
+    )
+    .returning({
+      guildId: dashboardAccessGrants.guildId,
+      targetType: dashboardAccessGrants.targetType,
+      targetId: dashboardAccessGrants.targetId,
+      role: dashboardAccessGrants.role
+    });
+
+  return grant
+    ? {
+        ...grant,
+        targetType: grant.targetType as DashboardAccessTargetType,
+        role: grant.role as GrantableDashboardAccessRole
+      }
+    : null;
 }
