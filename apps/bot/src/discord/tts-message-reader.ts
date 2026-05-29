@@ -1,5 +1,6 @@
 import {
   getGuildConfigByGuildId,
+  getEffectiveTtsSpeakerId,
   listEffectiveTtsDictionaryEntries,
   type DbClient,
   type EffectiveTtsDictionaryEntry
@@ -19,6 +20,7 @@ export interface InstallTtsMessageReaderOptions {
   loadDictionaryEntries?: (
     input: LoadTtsDictionaryEntriesInput
   ) => Promise<EffectiveTtsDictionaryEntry[]>;
+  loadSpeakerId?: (input: LoadTtsSpeakerIdInput) => Promise<number>;
   logWriter: DiscordLogWriter;
   rateLimiter?: TtsRateLimiter;
   speakerId: number;
@@ -46,6 +48,12 @@ export interface ResolveTtsMessageSourceTypeInput {
 }
 
 export interface LoadTtsDictionaryEntriesInput {
+  guildId: string;
+  userId: string;
+}
+
+export interface LoadTtsSpeakerIdInput {
+  fallbackSpeakerId: number;
   guildId: string;
   userId: string;
 }
@@ -331,6 +339,15 @@ export async function handleTtsMessage(
     options.loadDictionaryEntries ??
     ((input: LoadTtsDictionaryEntriesInput) =>
       listEffectiveTtsDictionaryEntries(options.db, input));
+  const loadSpeakerId =
+    options.loadSpeakerId ??
+    ((input: LoadTtsSpeakerIdInput) =>
+      getEffectiveTtsSpeakerId(options.db, input));
+  const speakerId = await loadSpeakerId({
+    fallbackSpeakerId: options.speakerId,
+    guildId: message.guildId,
+    userId: message.author.id
+  });
   const text = applyTtsDictionaryEntries(
     sanitizedText,
     await loadDictionaryEntries({
@@ -340,7 +357,7 @@ export async function handleTtsMessage(
   );
 
   try {
-    const audio = await options.voicevox.synthesize(text);
+    const audio = await options.voicevox.synthesize(text, speakerId);
     await options.ttsSessionManager.play(message.guildId, audio);
     await options.logWriter.write(
       createTtsMessageSpokenEvent({
@@ -352,7 +369,7 @@ export async function handleTtsMessage(
           channelId: message.channelId,
           temporaryChannelIds
         }),
-        speakerId: options.speakerId,
+        speakerId,
         textLength: text.length,
         voiceChannelId
       })
@@ -369,7 +386,7 @@ export async function handleTtsMessage(
         error: error instanceof Error ? error.message : String(error),
         sourceChannelId: message.channelId,
         sourceMessageId: message.id,
-        speakerId: options.speakerId,
+        speakerId,
         textLength: text.length,
         voiceChannelId
       },

@@ -262,6 +262,7 @@ describe("TtsMessageRateLimiter", () => {
 describe("handleTtsMessage", () => {
   it("passes dictionary-applied text to VOICEVOX", async () => {
     let synthesizedText = "";
+    let synthesizedSpeakerId = 0;
 
     await handleTtsMessage(
       {
@@ -286,6 +287,14 @@ describe("handleTtsMessage", () => {
             }
           ];
         },
+        loadSpeakerId: async (input) => {
+          assert.deepEqual(input, {
+            fallbackSpeakerId: 1,
+            guildId: "guild-1",
+            userId: "user-1"
+          });
+          return 5;
+        },
         logWriter: {
           recordHandlerError: async () => undefined,
           write: async () => undefined
@@ -298,8 +307,9 @@ describe("handleTtsMessage", () => {
           play: async () => undefined
         } as never,
         voicevox: {
-          synthesize: async (text) => {
+          synthesize: async (text, speakerId) => {
             synthesizedText = text;
+            synthesizedSpeakerId = speakerId ?? 0;
             return Buffer.from("audio");
           }
         }
@@ -307,6 +317,7 @@ describe("handleTtsMessage", () => {
     );
 
     assert.equal(synthesizedText, "えーぴーあいを読む");
+    assert.equal(synthesizedSpeakerId, 5);
   });
 
   it("skips messages when the rate limiter blocks the user", async () => {
