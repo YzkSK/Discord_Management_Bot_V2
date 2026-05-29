@@ -12,6 +12,7 @@ type TtsMessageSourceType = "configured" | "temporary";
 type TtsMessageSkipReason =
   | "command-like"
   | "empty"
+  | "rate-limited"
   | "too-long"
   | "user-muted";
 

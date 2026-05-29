@@ -7,7 +7,9 @@ import {
   resolveTtsMessageSkipReason,
   resolveTtsMessageSourceType,
   resolveReadableTtsChannelIds,
-  shouldReadTtsMessage
+  sanitizeTtsText,
+  shouldReadTtsMessage,
+  TtsMessageRateLimiter
 } from "./tts-message-reader.js";
 
 describe("shouldReadTtsMessage", () => {
@@ -186,6 +188,75 @@ describe("applyTtsDictionaryEntries", () => {
       "えーぴーあいを使う"
     );
   });
+
+  it("treats dictionary keys as literal text instead of regex patterns", () => {
+    assert.equal(
+      applyTtsDictionaryEntries("a.b axb", [
+        {
+          fromText: "a.b",
+          isEnabled: true,
+          priority: 1,
+          scope: "guild",
+          toText: "dot"
+        }
+      ]),
+      "dot axb"
+    );
+  });
+
+  it("limits replacement count to avoid dictionary loops and runaway output", () => {
+    assert.equal(
+      applyTtsDictionaryEntries(
+        "aaaa",
+        [
+          {
+            fromText: "a",
+            isEnabled: true,
+            priority: 1,
+            scope: "guild",
+            toText: "aa"
+          }
+        ],
+        { maxReplacements: 2 }
+      ),
+      "aaaaaa"
+    );
+  });
+});
+
+describe("sanitizeTtsText", () => {
+  it("removes URLs and Discord mentions from readable text", () => {
+    assert.equal(
+      sanitizeTtsText("見て https://example.com <@123> <#456> ok"),
+      "見て ok"
+    );
+  });
+});
+
+describe("TtsMessageRateLimiter", () => {
+  it("blocks bursts from the same guild and user within the window", () => {
+    const limiter = new TtsMessageRateLimiter({
+      maxMessages: 2,
+      windowMs: 1_000
+    });
+
+    assert.equal(
+      limiter.allow({ guildId: "guild-1", now: 1_000, userId: "user-1" }),
+      true
+    );
+    assert.equal(
+      limiter.allow({ guildId: "guild-1", now: 1_100, userId: "user-1" }),
+      true
+    );
+    assert.equal(
+      limiter.allow({ guildId: "guild-1", now: 1_200, userId: "user-1" }),
+      false
+    );
+    assert.equal(
+      limiter.allow({ guildId: "guild-1", now: 2_100, userId: "user-1" }),
+      true
+    );
+  });
 });
 
 describe("handleTtsMessage", () => {
@@ -236,5 +307,50 @@ describe("handleTtsMessage", () => {
     );
 
     assert.equal(synthesizedText, "えーぴーあいを読む");
+  });
+
+  it("skips messages when the rate limiter blocks the user", async () => {
+    let synthesized = false;
+    let skippedReason = "";
+
+    await handleTtsMessage(
+      {
+        author: { bot: false, id: "user-1" },
+        channelId: "text-1",
+        content: "hello",
+        guildId: "guild-1",
+        id: "message-1",
+        inGuild: () => true
+      } as never,
+      {
+        db: {} as never,
+        loadDictionaryEntries: async () => [],
+        logWriter: {
+          recordHandlerError: async () => undefined,
+          write: async (event) => {
+            skippedReason = String(event.payload.reason);
+          }
+        },
+        rateLimiter: {
+          allow: () => false
+        },
+        speakerId: 1,
+        ttsSessionManager: {
+          getReadableChannelIds: () => ["text-1"],
+          getVoiceChannelId: () => "voice-1",
+          isConnected: () => true,
+          play: async () => undefined
+        } as never,
+        voicevox: {
+          synthesize: async () => {
+            synthesized = true;
+            return Buffer.from("audio");
+          }
+        }
+      }
+    );
+
+    assert.equal(synthesized, false);
+    assert.equal(skippedReason, "rate-limited");
   });
 });
