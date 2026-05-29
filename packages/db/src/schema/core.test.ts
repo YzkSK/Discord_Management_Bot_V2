@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { guildConfigs, ttsDictionaryEntries } from "./core.js";
+import { guildConfigs, ttsDictionaryEntries, ttsSpeakerSettings } from "./core.js";
 
 describe("guildConfigs schema", () => {
   it("exposes a persistent TTS text channel column", () => {
@@ -26,5 +26,13 @@ describe("ttsDictionaryEntries schema", () => {
     assert.notEqual(columns.toText, undefined);
     assert.notEqual(columns.priority, undefined);
     assert.notEqual(columns.isEnabled, undefined);
+  });
+});
+
+describe("ttsSpeakerSettings schema", () => {
+  it("exposes guild, optional user, and speaker id columns", () => {
+    assert.ok(ttsSpeakerSettings.guildId);
+    assert.ok(ttsSpeakerSettings.userId);
+    assert.ok(ttsSpeakerSettings.speakerId);
   });
 });
