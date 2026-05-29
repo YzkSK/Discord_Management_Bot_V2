@@ -55,4 +55,29 @@ describe("createVoicevoxClient", () => {
     assert.equal(urls[0]?.includes("speaker=2"), true);
     assert.equal(urls[1]?.includes("speaker=2"), true);
   });
+
+  it("uses a per-call speaker override when provided", async () => {
+    const urls: string[] = [];
+    const fetchImpl: typeof fetch = async (url) => {
+      urls.push(String(url));
+
+      if (String(url).includes("/audio_query")) {
+        return new Response(JSON.stringify({ accent_phrases: [] }), {
+          status: 200
+        });
+      }
+
+      return new Response(new Uint8Array([1, 2, 3]), { status: 200 });
+    };
+    const client = createVoicevoxClient({
+      baseUrl: "http://voicevox:50021",
+      fetch: fetchImpl,
+      speaker: 2
+    });
+
+    await client.synthesize("hello", 5);
+
+    assert.equal(urls[0]?.includes("speaker=5"), true);
+    assert.equal(urls[1]?.includes("speaker=5"), true);
+  });
 });

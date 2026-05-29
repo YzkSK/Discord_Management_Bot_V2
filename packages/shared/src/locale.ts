@@ -74,6 +74,10 @@ type Locale = {
   ttsLeaveNotInGuild: string;
   ttsDisconnected: string;
   ttsChannelsCleared: string;
+  ttsSpeakerFailed: string;
+  ttsSpeakerUpdated: string;
+  ttsSpeakerUser: (vars: { id: number }) => string;
+  ttsSpeakerServerDefault: (vars: { id: number }) => string;
 };
 
 const locales: Record<GuildLanguage, Locale> = {
@@ -152,7 +156,11 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsLeaveFailed: "TTS leave failed",
     ttsLeaveNotInGuild: "This command can only be used in a guild.",
     ttsDisconnected: "TTS disconnected",
-    ttsChannelsCleared: "Temporary TTS text channels were cleared."
+    ttsChannelsCleared: "Temporary TTS text channels were cleared.",
+    ttsSpeakerFailed: "TTS speaker update failed",
+    ttsSpeakerUpdated: "TTS speaker updated",
+    ttsSpeakerUser: ({ id }) => `Your TTS speaker: ${id}`,
+    ttsSpeakerServerDefault: ({ id }) => `Server default TTS speaker: ${id}`
   },
   ja: {
     logTitle: ({ eventName }) => `ログ: ${eventName}`,
@@ -233,7 +241,11 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsLeaveFailed: "TTS退出失敗",
     ttsLeaveNotInGuild: "このコマンドはサーバー内でのみ使用できます。",
     ttsDisconnected: "TTS切断完了",
-    ttsChannelsCleared: "一時TTSテキストチャンネルをクリアしました。"
+    ttsChannelsCleared: "一時TTSテキストチャンネルをクリアしました。",
+    ttsSpeakerFailed: "TTS話者変更失敗",
+    ttsSpeakerUpdated: "TTS話者を更新しました",
+    ttsSpeakerUser: ({ id }) => `あなたのTTS話者: ${id}`,
+    ttsSpeakerServerDefault: ({ id }) => `サーバーデフォルトTTS話者: ${id}`
   }
 };
 

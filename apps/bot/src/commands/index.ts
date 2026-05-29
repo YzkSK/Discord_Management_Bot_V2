@@ -19,8 +19,10 @@ import {
   handleForceJoinCommand,
   handleJoinCommand,
   handleLeaveCommand,
+  handleSpeakerCommand,
   joinCommand,
   leaveCommand,
+  speakerCommand,
   type TtsCommandContext
 } from "./tts.js";
 
@@ -37,7 +39,8 @@ export const slashCommands = [
   recruitmentCommand,
   joinCommand,
   forceJoinCommand,
-  leaveCommand
+  leaveCommand,
+  speakerCommand
 ] as const;
 
 export function slashCommandPayloads() {
@@ -63,6 +66,9 @@ export async function handleChatInputCommand(
       return;
     case leaveCommand.name:
       await handleLeaveCommand(interaction, context);
+      return;
+    case speakerCommand.name:
+      await handleSpeakerCommand(interaction, context);
       return;
     default:
       await interaction.reply({

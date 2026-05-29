@@ -36,6 +36,24 @@ Disconnects the bot from voice and clears temporary TTS source channels.
 
 The persistent `/setup tts` channel is not removed.
 
+### `/speaker set speaker_id:<id>`
+
+Sets your personal VOICEVOX speaker for TTS.
+
+This setting is used before the server default speaker.
+
+### `/speaker server-default speaker_id:<id>`
+
+Sets the server default VOICEVOX speaker for TTS.
+
+Required access:
+
+- Discord server owner, or
+- Dashboard `admin` grant for the user, or
+- Dashboard `admin` grant for one of the user's roles.
+
+Dashboard `viewer` is not enough.
+
 ## Message Rules
 
 TTS reads messages only when the bot is connected to voice.
@@ -66,7 +84,13 @@ Message content is not duplicated in TTS logs; message events are linked by IDs.
 
 ## Latency Tuning
 
-`VOICEVOX_SPEAKER_ID` controls the VOICEVOX speaker used by TTS.
+`VOICEVOX_SPEAKER_ID` is the fallback VOICEVOX speaker used by TTS.
+
+Speaker priority:
+
+1. User speaker set by `/speaker set`.
+2. Server default speaker set by `/speaker server-default`.
+3. `VOICEVOX_SPEAKER_ID`.
 
 The default is `2` because it was faster than the previous default in local CPU Docker checks.
 
@@ -114,10 +138,11 @@ Manual check:
 1. Join a Discord voice channel.
 2. Run `/setup tts channel:#your-text-channel`.
 3. Run `/join` in a text channel.
-4. Send a normal message in the `/join` text channel.
-5. Send a normal message in the configured `/setup tts` channel.
-6. Confirm both are read while the bot is connected.
-7. Run `/leave` and confirm reading stops.
+4. Optionally run `/speaker set speaker_id:<id>`.
+5. Send a normal message in the `/join` text channel.
+6. Send a normal message in the configured `/setup tts` channel.
+7. Confirm both are read while the bot is connected.
+8. Run `/leave` and confirm reading stops.
 
 For forced movement:
 

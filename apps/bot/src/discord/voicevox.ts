@@ -5,7 +5,7 @@ export interface NormalizeTtsTextInput {
 }
 
 export interface VoicevoxClient {
-  synthesize: (text: string) => Promise<Buffer>;
+  synthesize: (text: string, speaker?: number) => Promise<Buffer>;
 }
 
 export interface CreateVoicevoxClientInput {
@@ -41,9 +41,15 @@ export function createVoicevoxClient(
   const speaker = input.speaker ?? 1;
 
   return {
-    async synthesize(text: string) {
-      const query = await requestAudioQuery(fetchImpl, baseUrl, speaker, text);
-      return requestSynthesis(fetchImpl, baseUrl, speaker, query);
+    async synthesize(text: string, speakerOverride?: number) {
+      const resolvedSpeaker = speakerOverride ?? speaker;
+      const query = await requestAudioQuery(
+        fetchImpl,
+        baseUrl,
+        resolvedSpeaker,
+        text
+      );
+      return requestSynthesis(fetchImpl, baseUrl, resolvedSpeaker, query);
     }
   };
 }
