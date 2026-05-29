@@ -302,3 +302,50 @@ export const recruitmentParticipants = pgTable(
     ).on(table.recruitmentId, table.joinedAt)
   })
 );
+
+export const ttsDictionaryEntries = pgTable(
+  "tts_dictionary_entries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    guildId: text("guild_id").notNull(),
+    scope: text("scope").notNull(),
+    userId: text("user_id"),
+    fromText: text("from_text").notNull(),
+    toText: text("to_text").notNull(),
+    priority: integer("priority").notNull().default(0),
+    isEnabled: boolean("is_enabled").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  (table) => ({
+    ttsDictionaryEntriesGuildIdx: index(
+      "tts_dictionary_entries_guild_id_idx"
+    ).on(table.guildId),
+    ttsDictionaryEntriesGuildFromUniqueIdx: uniqueIndex(
+      "tts_dictionary_entries_guild_from_unique_idx"
+    )
+      .on(table.guildId, table.fromText)
+      .where(sql`${table.scope} = 'guild'`),
+    ttsDictionaryEntriesUserFromUniqueIdx: uniqueIndex(
+      "tts_dictionary_entries_user_from_unique_idx"
+    )
+      .on(table.guildId, table.userId, table.fromText)
+      .where(sql`${table.scope} = 'user'`),
+    scopeCheck: check(
+      "tts_dictionary_entries_scope_check",
+      sql`${table.scope} in ('guild', 'user')`
+    ),
+    userScopeCheck: check(
+      "tts_dictionary_entries_user_scope_check",
+      sql`(${table.scope} = 'guild' and ${table.userId} is null) or (${table.scope} = 'user' and ${table.userId} is not null)`
+    ),
+    priorityCheck: check(
+      "tts_dictionary_entries_priority_check",
+      sql`${table.priority} >= 0`
+    )
+  })
+);

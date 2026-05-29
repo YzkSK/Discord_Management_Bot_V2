@@ -1,6 +1,6 @@
 {
-  "id": "3dcc9ec2-3a53-4a9d-a4fb-eca6e6b01ed5",
-  "prevId": "f264dcd1-6239-447f-a9ac-a8bfbcb3ed48",
+  "id": "7a0d132f-141b-49b9-8745-6d7e1edee979",
+  "prevId": "f351c4e2-0d04-4041-b915-9699f40505ad",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -407,6 +407,26 @@
           "primaryKey": false,
           "notNull": false
         },
+        "tts_text_channel_id": {
+          "name": "tts_text_channel_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "language": {
+          "name": "language",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'en'"
+        },
+        "dashboard_management_role_ids": {
+          "name": "dashboard_management_role_ids",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -420,12 +440,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
-        },
-        "tts_text_channel_id": {
-          "name": "tts_text_channel_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -467,6 +481,10 @@
         "guild_configs_log_mode_check": {
           "name": "guild_configs_log_mode_check",
           "value": "\"guild_configs\".\"log_mode\" in ('full', 'metadata_only', 'disabled')"
+        },
+        "guild_configs_language_check": {
+          "name": "guild_configs_language_check",
+          "value": "\"guild_configs\".\"language\" in ('en', 'ja')"
         }
       },
       "isRLSEnabled": false
@@ -1107,6 +1125,163 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.tts_dictionary_entries": {
+      "name": "tts_dictionary_entries",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "guild_id": {
+          "name": "guild_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "from_text": {
+          "name": "from_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "to_text": {
+          "name": "to_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "priority": {
+          "name": "priority",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "is_enabled": {
+          "name": "is_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "tts_dictionary_entries_guild_id_idx": {
+          "name": "tts_dictionary_entries_guild_id_idx",
+          "columns": [
+            {
+              "expression": "guild_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "tts_dictionary_entries_guild_from_unique_idx": {
+          "name": "tts_dictionary_entries_guild_from_unique_idx",
+          "columns": [
+            {
+              "expression": "guild_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "from_text",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"tts_dictionary_entries\".\"scope\" = 'guild'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "tts_dictionary_entries_user_from_unique_idx": {
+          "name": "tts_dictionary_entries_user_from_unique_idx",
+          "columns": [
+            {
+              "expression": "guild_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "from_text",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"tts_dictionary_entries\".\"scope\" = 'user'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "tts_dictionary_entries_scope_check": {
+          "name": "tts_dictionary_entries_scope_check",
+          "value": "\"tts_dictionary_entries\".\"scope\" in ('guild', 'user')"
+        },
+        "tts_dictionary_entries_user_scope_check": {
+          "name": "tts_dictionary_entries_user_scope_check",
+          "value": "(\"tts_dictionary_entries\".\"scope\" = 'guild' and \"tts_dictionary_entries\".\"user_id\" is null) or (\"tts_dictionary_entries\".\"scope\" = 'user' and \"tts_dictionary_entries\".\"user_id\" is not null)"
+        },
+        "tts_dictionary_entries_priority_check": {
+          "name": "tts_dictionary_entries_priority_check",
+          "value": "\"tts_dictionary_entries\".\"priority\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     }
   },

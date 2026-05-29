@@ -1,6 +1,6 @@
 {
-  "id": "3dcc9ec2-3a53-4a9d-a4fb-eca6e6b01ed5",
-  "prevId": "f264dcd1-6239-447f-a9ac-a8bfbcb3ed48",
+  "id": "f351c4e2-0d04-4041-b915-9699f40505ad",
+  "prevId": "5be1da03-9c0f-4225-a867-45139343ed51",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -426,6 +426,20 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "language": {
+          "name": "language",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'en'"
+        },
+        "dashboard_management_role_ids": {
+          "name": "dashboard_management_role_ids",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
         }
       },
       "indexes": {
@@ -467,6 +481,10 @@
         "guild_configs_log_mode_check": {
           "name": "guild_configs_log_mode_check",
           "value": "\"guild_configs\".\"log_mode\" in ('full', 'metadata_only', 'disabled')"
+        },
+        "guild_configs_language_check": {
+          "name": "guild_configs_language_check",
+          "value": "\"guild_configs\".\"language\" in ('en', 'ja')"
         }
       },
       "isRLSEnabled": false
