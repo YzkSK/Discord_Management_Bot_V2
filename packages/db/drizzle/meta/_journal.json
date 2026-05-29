@@ -57,6 +57,13 @@
       "when": 1780053533430,
       "tag": "0007_wild_photon",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780055199867,
+      "tag": "0008_ancient_karnak",
+      "breakpoints": true
     }
   ]
 }

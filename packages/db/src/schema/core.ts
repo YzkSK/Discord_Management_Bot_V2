@@ -349,3 +349,38 @@ export const ttsDictionaryEntries = pgTable(
     )
   })
 );
+
+export const ttsSpeakerSettings = pgTable(
+  "tts_speaker_settings",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    guildId: text("guild_id").notNull(),
+    userId: text("user_id"),
+    speakerId: integer("speaker_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  (table) => ({
+    ttsSpeakerSettingsGuildIdx: index(
+      "tts_speaker_settings_guild_id_idx"
+    ).on(table.guildId),
+    ttsSpeakerSettingsGuildDefaultUniqueIdx: uniqueIndex(
+      "tts_speaker_settings_guild_default_unique_idx"
+    )
+      .on(table.guildId)
+      .where(sql`${table.userId} is null`),
+    ttsSpeakerSettingsUserUniqueIdx: uniqueIndex(
+      "tts_speaker_settings_user_unique_idx"
+    )
+      .on(table.guildId, table.userId)
+      .where(sql`${table.userId} is not null`),
+    speakerIdCheck: check(
+      "tts_speaker_settings_speaker_id_check",
+      sql`${table.speakerId} >= 0`
+    )
+  })
+);
