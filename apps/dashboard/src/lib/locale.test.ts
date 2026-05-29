@@ -19,4 +19,11 @@ describe("dashboard access locale", () => {
     assert.equal(loc.accessGrantSaved, "ダッシュボードアクセス権限を保存しました。");
     assert.equal(loc.noAccessGrants, "明示的なダッシュボードアクセス権限はありません。");
   });
+
+  it("provides English and Japanese labels for feature settings", () => {
+    assert.equal(getDashboardLocale("en").settingsOverview, "Overview");
+    assert.equal(getDashboardLocale("en").tempVcSettings, "Temp VC");
+    assert.equal(getDashboardLocale("ja").settingsOverview, "概要");
+    assert.equal(getDashboardLocale("ja").tempVcSettings, "一時VC");
+  });
 });
