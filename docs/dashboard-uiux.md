@@ -24,3 +24,19 @@ Use the Dashboard to move between:
 - `/` for the verification flow and quick links.
 
 Phase6 does not yet implement full TempVC or Recruitment settings screens.
+
+## Phase9 Settings Expansion
+
+Phase9 reorganizes `/settings` into feature-oriented sections:
+
+- Overview
+- Logs
+- Temp VC
+- TTS
+- Recruitment
+- Dashboard Access
+
+The page uses the feature-domain Settings API to show configured status and
+keeps Dashboard labels localized in English and Japanese. Recruitment remains
+read-only in Phase9 because it is still marker-based rather than persisted as a
+`guild_configs` setting.

@@ -2,16 +2,21 @@ import {
   createDbConnection,
   getGuildConfigByGuildId,
   getGuildManagementRoleIds,
-  isGuildLogMode,
+  updateGuildTempVoiceConfigByGuildId,
+  updateGuildTtsConfigByGuildId,
   updateGuildConfigByGuildId,
   updateGuildManagementRoleIds
 } from "@discord-bot/db";
-import { isGuildLanguage } from "@discord-bot/shared";
+import { buildDashboardSettingsFeatures } from "@discord-bot/shared";
 import { parseDashboardAuthEnv } from "@discord-bot/config";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { authorizeDashboardApi } from "../../../dashboard-auth";
 import { fetchGuildRoles } from "../../../discord-api";
+import {
+  parseSettingsPatchBody,
+  type SettingsPatchValue
+} from "./validation";
 
 export const dynamic = "force-dynamic";
 
@@ -57,12 +62,7 @@ export async function GET(request: NextRequest) {
       : undefined;
 
     return NextResponse.json({
-      guildId: config.guildId,
-      guildName: config.guildName,
-      isActive: config.isActive,
-      logMode: config.logMode,
-      language: config.language,
-      updatedAt: config.updatedAt.toISOString(),
+      ...toSettingsResponse(config),
       accessRole: authorization.role,
       dashboardManagementRoleIds: managementRoleIds,
       ...(availableRoles !== undefined ? { availableRoles } : {})
@@ -74,18 +74,6 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   const body = await request.json().catch(() => null);
-  const guildId =
-    typeof body === "object" && body && "guildId" in body
-      ? String(body.guildId).trim()
-      : "";
-  const logMode =
-    typeof body === "object" && body && "logMode" in body
-      ? String(body.logMode).trim()
-      : "";
-  const languageRaw =
-    typeof body === "object" && body && "language" in body
-      ? String(body.language).trim()
-      : null;
   const rawRoleIds =
     typeof body === "object" && body && "dashboardManagementRoleIds" in body
       ? body.dashboardManagementRoleIds
@@ -94,6 +82,8 @@ export async function PATCH(request: NextRequest) {
     Array.isArray(rawRoleIds) && rawRoleIds.every((v) => typeof v === "string")
       ? rawRoleIds
       : undefined;
+  const parsedPatch = parseSettingsPatchBody(body);
+  const guildId = readBodyGuildId(body);
 
   const authorization = await authorizeDashboardApi({
     request,
@@ -126,19 +116,26 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ dashboardManagementRoleIds });
     }
 
-    if (!isGuildLogMode(logMode)) {
-      return NextResponse.json({ error: "Invalid logMode." }, { status: 400 });
+    if (!parsedPatch.ok) {
+      return NextResponse.json({ error: parsedPatch.error }, { status: 400 });
     }
 
-    if (languageRaw !== null && !isGuildLanguage(languageRaw)) {
-      return NextResponse.json({ error: "Invalid language." }, { status: 400 });
-    }
-
-    const config = await updateGuildConfigByGuildId(dbConnection.db, {
+    const updated = await updateSettingsSection(dbConnection.db, {
       guildId: authorization.guild.id,
-      logMode,
-      ...(languageRaw !== null ? { language: languageRaw } : {})
+      patch: parsedPatch.value
     });
+
+    if (!updated) {
+      return NextResponse.json(
+        { error: "Guild config is not initialized." },
+        { status: 404 }
+      );
+    }
+
+    const config = await getGuildConfigByGuildId(
+      dbConnection.db,
+      authorization.guild.id
+    );
 
     if (!config) {
       return NextResponse.json(
@@ -148,10 +145,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     return NextResponse.json({
-      guildId: authorization.guild.id,
-      logMode: config.logMode,
-      language: config.language,
-      updatedAt: config.updatedAt.toISOString(),
+      ...toSettingsResponse(config),
       accessRole: authorization.role
     });
   } finally {
@@ -162,4 +156,63 @@ export async function PATCH(request: NextRequest) {
 function optionalParam(query: URLSearchParams, key: string) {
   const value = query.get(key)?.trim();
   return value ? value : undefined;
+}
+
+function readBodyGuildId(body: unknown) {
+  return typeof body === "object" &&
+    body !== null &&
+    "guildId" in body &&
+    typeof body.guildId === "string"
+    ? body.guildId.trim()
+    : "";
+}
+
+type SettingsConfig = NonNullable<Awaited<ReturnType<typeof getGuildConfigByGuildId>>>;
+
+function toSettingsResponse(config: SettingsConfig) {
+  const features = buildDashboardSettingsFeatures(config);
+
+  return {
+    guildId: config.guildId,
+    guildName: config.guildName,
+    isActive: config.isActive,
+    logMode: features.logs.logMode,
+    language: features.logs.language,
+    updatedAt: config.updatedAt.toISOString(),
+    features
+  };
+}
+
+async function updateSettingsSection(
+  db: Parameters<typeof updateGuildConfigByGuildId>[0],
+  input: {
+    guildId: string;
+    patch: SettingsPatchValue;
+  }
+) {
+  if (input.patch.section === "logs") {
+    return updateGuildConfigByGuildId(db, {
+      guildId: input.guildId,
+      ...input.patch.values
+    });
+  }
+
+  if (input.patch.section === "tempVc") {
+    return updateGuildTempVoiceConfigByGuildId(db, {
+      guildId: input.guildId,
+      ...("createChannelId" in input.patch.values
+        ? { tempVoiceCreateChannelId: input.patch.values.createChannelId }
+        : {}),
+      ...("categoryId" in input.patch.values
+        ? { tempVoiceCategoryId: input.patch.values.categoryId }
+        : {})
+    });
+  }
+
+  return updateGuildTtsConfigByGuildId(db, {
+    guildId: input.guildId,
+    ...("textChannelId" in input.patch.values
+      ? { ttsTextChannelId: input.patch.values.textChannelId }
+      : {})
+  });
 }
