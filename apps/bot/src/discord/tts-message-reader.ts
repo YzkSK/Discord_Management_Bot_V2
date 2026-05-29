@@ -1,4 +1,9 @@
-import { getGuildConfigByGuildId, type DbClient } from "@discord-bot/db";
+import {
+  getGuildConfigByGuildId,
+  listEffectiveTtsDictionaryEntries,
+  type DbClient,
+  type EffectiveTtsDictionaryEntry
+} from "@discord-bot/db";
 import { Events, type Client, type Message } from "discord.js";
 
 import type { DiscordLogWriter } from "./log-writer.js";
@@ -11,6 +16,9 @@ import { normalizeTtsText, type VoicevoxClient } from "./voicevox.js";
 
 export interface InstallTtsMessageReaderOptions {
   db: DbClient;
+  loadDictionaryEntries?: (
+    input: LoadTtsDictionaryEntriesInput
+  ) => Promise<EffectiveTtsDictionaryEntry[]>;
   logWriter: DiscordLogWriter;
   speakerId: number;
   ttsSessionManager: TtsSessionManager;
@@ -34,6 +42,11 @@ export interface ResolveReadableTtsChannelIdsInput {
 export interface ResolveTtsMessageSourceTypeInput {
   channelId: string;
   temporaryChannelIds: string[];
+}
+
+export interface LoadTtsDictionaryEntriesInput {
+  guildId: string;
+  userId: string;
 }
 
 export type TtsMessageSkipReason =
@@ -127,7 +140,20 @@ export function resolveTtsMessageSkipReason(input: {
   return null;
 }
 
-async function handleTtsMessage(
+export function applyTtsDictionaryEntries(
+  text: string,
+  entries: EffectiveTtsDictionaryEntry[]
+) {
+  return entries.reduce((current, entry) => {
+    if (!entry.isEnabled || !entry.fromText) {
+      return current;
+    }
+
+    return current.replaceAll(entry.fromText, entry.toText);
+  }, text);
+}
+
+export async function handleTtsMessage(
   message: Message,
   options: InstallTtsMessageReaderOptions
 ) {
@@ -179,14 +205,26 @@ async function handleTtsMessage(
     return;
   }
 
-  const text = normalizeTtsText({
+  const normalizedText = normalizeTtsText({
     authorIsBot: message.author.bot,
     content: message.content
   });
 
-  if (!text) {
+  if (!normalizedText) {
     return;
   }
+
+  const loadDictionaryEntries =
+    options.loadDictionaryEntries ??
+    ((input: LoadTtsDictionaryEntriesInput) =>
+      listEffectiveTtsDictionaryEntries(options.db, input));
+  const text = applyTtsDictionaryEntries(
+    normalizedText,
+    await loadDictionaryEntries({
+      guildId: message.guildId,
+      userId: message.author.id
+    })
+  );
 
   try {
     const audio = await options.voicevox.synthesize(text);

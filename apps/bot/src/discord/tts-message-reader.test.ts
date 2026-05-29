@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  applyTtsDictionaryEntries,
+  handleTtsMessage,
   resolveTtsMessageSkipReason,
   resolveTtsMessageSourceType,
   resolveReadableTtsChannelIds,
@@ -137,5 +139,102 @@ describe("resolveTtsMessageSkipReason", () => {
       }),
       "too-long"
     );
+  });
+});
+
+describe("applyTtsDictionaryEntries", () => {
+  it("applies partial replacements in the provided priority order", () => {
+    assert.equal(
+      applyTtsDictionaryEntries("AIでVCに入る", [
+        {
+          fromText: "AI",
+          isEnabled: true,
+          priority: 10,
+          scope: "user",
+          toText: "えーあい"
+        },
+        {
+          fromText: "VC",
+          isEnabled: true,
+          priority: 1,
+          scope: "guild",
+          toText: "ボイスチャンネル"
+        }
+      ]),
+      "えーあいでボイスチャンネルに入る"
+    );
+  });
+
+  it("lets user dictionary entries win when they are ordered before guild entries", () => {
+    assert.equal(
+      applyTtsDictionaryEntries("APIを使う", [
+        {
+          fromText: "API",
+          isEnabled: true,
+          priority: 5,
+          scope: "user",
+          toText: "えーぴーあい"
+        },
+        {
+          fromText: "API",
+          isEnabled: true,
+          priority: 100,
+          scope: "guild",
+          toText: "あぴ"
+        }
+      ]),
+      "えーぴーあいを使う"
+    );
+  });
+});
+
+describe("handleTtsMessage", () => {
+  it("passes dictionary-applied text to VOICEVOX", async () => {
+    let synthesizedText = "";
+
+    await handleTtsMessage(
+      {
+        author: { bot: false, id: "user-1" },
+        channelId: "text-1",
+        content: "APIを読む",
+        guildId: "guild-1",
+        id: "message-1",
+        inGuild: () => true
+      } as never,
+      {
+        db: {} as never,
+        loadDictionaryEntries: async (input) => {
+          assert.deepEqual(input, { guildId: "guild-1", userId: "user-1" });
+          return [
+            {
+              fromText: "API",
+              isEnabled: true,
+              priority: 1,
+              scope: "user",
+              toText: "えーぴーあい"
+            }
+          ];
+        },
+        logWriter: {
+          recordHandlerError: async () => undefined,
+          write: async () => undefined
+        },
+        speakerId: 1,
+        ttsSessionManager: {
+          getReadableChannelIds: () => ["text-1"],
+          getVoiceChannelId: () => "voice-1",
+          isConnected: () => true,
+          play: async () => undefined
+        } as never,
+        voicevox: {
+          synthesize: async (text) => {
+            synthesizedText = text;
+            return Buffer.from("audio");
+          }
+        }
+      }
+    );
+
+    assert.equal(synthesizedText, "えーぴーあいを読む");
   });
 });
