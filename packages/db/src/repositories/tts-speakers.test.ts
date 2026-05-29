@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  isUserTtsSpeakerSetting,
   normalizeTtsSpeakerSettingInput,
   resolveTtsSpeakerId
 } from "./tts-speakers.js";
@@ -79,6 +80,26 @@ describe("resolveTtsSpeakerId", () => {
         userSpeakerId: null
       }),
       1
+    );
+  });
+});
+
+describe("isUserTtsSpeakerSetting", () => {
+  it("keeps settings with a user id", () => {
+    assert.equal(
+      isUserTtsSpeakerSetting({
+        userId: "user-1"
+      }),
+      true
+    );
+  });
+
+  it("rejects guild default settings", () => {
+    assert.equal(
+      isUserTtsSpeakerSetting({
+        userId: null
+      }),
+      false
     );
   });
 });

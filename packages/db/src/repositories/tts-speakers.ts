@@ -142,6 +142,21 @@ export async function getUserTtsSpeaker(
   return setting ?? null;
 }
 
+export async function listUserTtsSpeakers(db: DbClient, guildId: string) {
+  const settings = await db
+    .select()
+    .from(ttsSpeakerSettings)
+    .where(eq(ttsSpeakerSettings.guildId, normalizeRequiredString(guildId, "guildId")));
+
+  return settings.filter(isUserTtsSpeakerSetting);
+}
+
+export function isUserTtsSpeakerSetting<T extends { userId: string | null }>(
+  setting: T
+): setting is T & { userId: string } {
+  return setting.userId !== null;
+}
+
 export async function getEffectiveTtsSpeakerId(
   db: DbClient,
   input: GetEffectiveTtsSpeakerIdInput

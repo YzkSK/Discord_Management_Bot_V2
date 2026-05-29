@@ -54,6 +54,26 @@ Required access:
 
 Dashboard `viewer` is not enough.
 
+## Dashboard Settings
+
+The Dashboard Settings page can manage TTS settings for a loaded guild.
+
+Dashboard `viewer` can review TTS settings. Dashboard `admin` or the Discord server owner can update them.
+
+Managed settings:
+
+- TTS text channel ID
+- Server default VOICEVOX speaker ID
+- User-specific VOICEVOX speaker overrides
+- Guild and user dictionary entries
+
+Dictionary entries support:
+
+- `guild` scope for server-wide replacements
+- `user` scope for one user's replacements
+- priority
+- enabled/disabled state
+
 ## Message Rules
 
 TTS reads messages only when the bot is connected to voice.
