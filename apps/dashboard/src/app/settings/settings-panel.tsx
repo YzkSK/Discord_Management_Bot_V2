@@ -46,6 +46,30 @@ interface SettingsResponse {
   availableRoles?: DiscordRole[];
 }
 
+interface TtsDictionaryEntry {
+  fromText: string;
+  guildId: string;
+  isEnabled: boolean;
+  priority: number;
+  scope: "guild" | "user";
+  toText: string;
+  userId: string | null;
+}
+
+interface TtsSpeakerSetting {
+  guildId: string;
+  speakerId: number;
+  userId: string | null;
+}
+
+interface TtsSettingsResponse {
+  accessRole: string;
+  dictionaryEntries: TtsDictionaryEntry[];
+  guildDefaultSpeaker: TtsSpeakerSetting | null;
+  guildId: string;
+  userSpeakers: TtsSpeakerSetting[];
+}
+
 export function SettingsPanel({ guildId }: { guildId: string }) {
   const [settings, setSettings] = useState<SettingsResponse | null>(null);
   const [logMode, setLogMode] = useState("full");
@@ -53,6 +77,16 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   const [tempVcCreateChannelId, setTempVcCreateChannelId] = useState("");
   const [tempVcCategoryId, setTempVcCategoryId] = useState("");
   const [ttsTextChannelId, setTtsTextChannelId] = useState("");
+  const [ttsSettings, setTtsSettings] = useState<TtsSettingsResponse | null>(null);
+  const [ttsDefaultSpeakerId, setTtsDefaultSpeakerId] = useState("");
+  const [ttsUserSpeakerUserId, setTtsUserSpeakerUserId] = useState("");
+  const [ttsUserSpeakerId, setTtsUserSpeakerId] = useState("");
+  const [ttsDictionaryScope, setTtsDictionaryScope] = useState<"guild" | "user">("guild");
+  const [ttsDictionaryUserId, setTtsDictionaryUserId] = useState("");
+  const [ttsDictionaryFromText, setTtsDictionaryFromText] = useState("");
+  const [ttsDictionaryToText, setTtsDictionaryToText] = useState("");
+  const [ttsDictionaryPriority, setTtsDictionaryPriority] = useState("0");
+  const [ttsDictionaryEnabled, setTtsDictionaryEnabled] = useState(true);
   const [uiLang, setUiLang] = useState<GuildLanguage>(detectBrowserLanguage);
   const [managementRoleIds, setManagementRoleIds] = useState<string[]>([]);
   const [accessGrants, setAccessGrants] = useState<DashboardAccessGrant[]>([]);
@@ -63,6 +97,8 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   const [saving, setSaving] = useState(false);
   const [savingTempVc, setSavingTempVc] = useState(false);
   const [savingTts, setSavingTts] = useState(false);
+  const [savingTtsDictionary, setSavingTtsDictionary] = useState(false);
+  const [savingTtsSpeaker, setSavingTtsSpeaker] = useState(false);
   const [savingRoles, setSavingRoles] = useState(false);
   const [savingGrant, setSavingGrant] = useState(false);
   const [deletingGrantKey, setDeletingGrantKey] = useState<string | null>(null);
@@ -95,12 +131,19 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
           setUiLang(data.language);
         }
         setManagementRoleIds(data.dashboardManagementRoleIds);
-        if (data.accessRole === "owner") {
-          return fetchAccessGrants(data.guildId).then((grants) => {
-            setAccessGrants(grants);
-          });
-        }
-        return undefined;
+        return Promise.all([
+          fetchTtsSettings(data.guildId).then((tts) => {
+            setTtsSettings(tts);
+            setTtsDefaultSpeakerId(
+              tts.guildDefaultSpeaker?.speakerId.toString() ?? ""
+            );
+          }),
+          data.accessRole === "owner"
+            ? fetchAccessGrants(data.guildId).then((grants) => {
+                setAccessGrants(grants);
+              })
+            : Promise.resolve()
+        ]);
       })
       .catch((e: unknown) => setError(toErrorMessage(e)))
       .finally(() => setLoading(false));
@@ -141,6 +184,94 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
       setTtsTextChannelId(data.features.tts.textChannelId ?? "");
       setMessage(loc.ttsSettingsSaved);
     } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTts(false); }
+  }
+
+  async function saveTtsDefaultSpeaker() {
+    if (!settings) return;
+    setSavingTtsSpeaker(true); setError(null); setMessage(null);
+    try {
+      const data = await patchTtsSpeaker({
+        guildId: settings.guildId,
+        speakerId: Number(ttsDefaultSpeakerId),
+        target: "guild-default"
+      });
+      setTtsDefaultSpeakerId(data.setting.speakerId.toString());
+      const tts = await fetchTtsSettings(settings.guildId);
+      setTtsSettings(tts);
+      setMessage(loc.ttsSpeakerSaved);
+    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTtsSpeaker(false); }
+  }
+
+  async function saveTtsUserSpeaker() {
+    if (!settings) return;
+    setSavingTtsSpeaker(true); setError(null); setMessage(null);
+    try {
+      await patchTtsSpeaker({
+        guildId: settings.guildId,
+        speakerId: Number(ttsUserSpeakerId),
+        target: "user",
+        userId: ttsUserSpeakerUserId
+      });
+      setTtsUserSpeakerId("");
+      setTtsUserSpeakerUserId("");
+      setTtsSettings(await fetchTtsSettings(settings.guildId));
+      setMessage(loc.ttsSpeakerSaved);
+    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTtsSpeaker(false); }
+  }
+
+  async function deleteTtsSpeaker(input: {
+    target: "guild-default" | "user";
+    userId?: string;
+  }) {
+    if (!settings) return;
+    setSavingTtsSpeaker(true); setError(null); setMessage(null);
+    try {
+      await deleteTtsSpeakerSetting({
+        guildId: settings.guildId,
+        ...input
+      });
+      if (input.target === "guild-default") setTtsDefaultSpeakerId("");
+      setTtsSettings(await fetchTtsSettings(settings.guildId));
+      setMessage(loc.ttsSpeakerDeleted);
+    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTtsSpeaker(false); }
+  }
+
+  async function saveTtsDictionaryEntry() {
+    if (!settings) return;
+    setSavingTtsDictionary(true); setError(null); setMessage(null);
+    try {
+      await patchTtsDictionaryEntry({
+        fromText: ttsDictionaryFromText,
+        guildId: settings.guildId,
+        isEnabled: ttsDictionaryEnabled,
+        priority: Number(ttsDictionaryPriority),
+        scope: ttsDictionaryScope,
+        toText: ttsDictionaryToText,
+        ...(ttsDictionaryScope === "user" ? { userId: ttsDictionaryUserId } : {})
+      });
+      setTtsDictionaryFromText("");
+      setTtsDictionaryToText("");
+      setTtsDictionaryUserId("");
+      setTtsDictionaryPriority("0");
+      setTtsDictionaryEnabled(true);
+      setTtsSettings(await fetchTtsSettings(settings.guildId));
+      setMessage(loc.ttsDictionarySaved);
+    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTtsDictionary(false); }
+  }
+
+  async function deleteTtsDictionary(entry: TtsDictionaryEntry) {
+    if (!settings) return;
+    setSavingTtsDictionary(true); setError(null); setMessage(null);
+    try {
+      await deleteTtsDictionaryEntry({
+        fromText: entry.fromText,
+        guildId: settings.guildId,
+        scope: entry.scope,
+        ...(entry.userId ? { userId: entry.userId } : {})
+      });
+      setTtsSettings(await fetchTtsSettings(settings.guildId));
+      setMessage(loc.ttsDictionaryDeleted);
+    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTtsDictionary(false); }
   }
 
   async function saveManagementRoles() {
@@ -221,6 +352,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   }
 
   const isOwner = settings.accessRole === "owner";
+  const canEditTts = settings.accessRole !== "viewer";
   const summaries = buildSettingsSectionSummaries(settings.features);
 
   return (
@@ -356,6 +488,205 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
                 <Save className="h-3.5 w-3.5" />
                 {savingTts ? loc.saving : loc.saveTtsSettings}
               </Button>
+            </div>
+
+            <div className="grid gap-3 border-t border-zinc-800 pt-3">
+              <p className="text-xs font-semibold text-zinc-300">{loc.ttsSpeakerDefault}</p>
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+                <Input
+                  disabled={!canEditTts}
+                  onChange={(e) => setTtsDefaultSpeakerId(e.target.value)}
+                  value={ttsDefaultSpeakerId}
+                />
+                <Button
+                  disabled={!canEditTts || savingTtsSpeaker}
+                  onClick={saveTtsDefaultSpeaker}
+                  size="sm"
+                  type="button"
+                >
+                  <Save className="h-3.5 w-3.5" />
+                  {loc.saveChanges}
+                </Button>
+                <Button
+                  disabled={!canEditTts || savingTtsSpeaker || !ttsSettings?.guildDefaultSpeaker}
+                  onClick={() => void deleteTtsSpeaker({ target: "guild-default" })}
+                  size="icon"
+                  type="button"
+                  variant="ghost"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid gap-3 border-t border-zinc-800 pt-3">
+              <p className="text-xs font-semibold text-zinc-300">{loc.ttsUserSpeakers}</p>
+              <div className="grid gap-2 sm:grid-cols-[1fr_120px_auto]">
+                <Input
+                  disabled={!canEditTts}
+                  onChange={(e) => setTtsUserSpeakerUserId(e.target.value)}
+                  placeholder={loc.accessGrantUserId}
+                  value={ttsUserSpeakerUserId}
+                />
+                <Input
+                  disabled={!canEditTts}
+                  onChange={(e) => setTtsUserSpeakerId(e.target.value)}
+                  placeholder={loc.ttsSpeakerId}
+                  value={ttsUserSpeakerId}
+                />
+                <Button
+                  disabled={!canEditTts || savingTtsSpeaker}
+                  onClick={saveTtsUserSpeaker}
+                  size="sm"
+                  type="button"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  {loc.saveChanges}
+                </Button>
+              </div>
+              <div className="overflow-hidden rounded-md border border-zinc-800">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{loc.accessGrantUserId}</TableHead>
+                      <TableHead className="w-28">{loc.ttsSpeakerId}</TableHead>
+                      <TableHead className="w-16">{loc.accessGrantAction}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {!ttsSettings?.userSpeakers.length ? (
+                      <TableRow>
+                        <TableCell className="py-5 text-center text-zinc-600" colSpan={3}>
+                          {loc.notConfigured}
+                        </TableCell>
+                      </TableRow>
+                    ) : ttsSettings.userSpeakers.map((speaker) => (
+                      <TableRow key={speaker.userId}>
+                        <TableCell className="break-all font-mono text-xs">{speaker.userId}</TableCell>
+                        <TableCell>{speaker.speakerId}</TableCell>
+                        <TableCell>
+                          <Button
+                            disabled={!canEditTts || savingTtsSpeaker}
+                            onClick={() => {
+                              if (speaker.userId) {
+                                void deleteTtsSpeaker({
+                                  target: "user",
+                                  userId: speaker.userId
+                                });
+                              }
+                            }}
+                            size="icon"
+                            type="button"
+                            variant="ghost"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            <div className="grid gap-3 border-t border-zinc-800 pt-3">
+              <p className="text-xs font-semibold text-zinc-300">{loc.ttsDictionary}</p>
+              <div className="grid gap-2 sm:grid-cols-[110px_1fr_1fr]">
+                <Select
+                  disabled={!canEditTts}
+                  onChange={(e) => setTtsDictionaryScope(e.target.value === "user" ? "user" : "guild")}
+                  value={ttsDictionaryScope}
+                >
+                  <option value="guild">guild</option>
+                  <option value="user">user</option>
+                </Select>
+                <Input
+                  disabled={!canEditTts || ttsDictionaryScope === "guild"}
+                  onChange={(e) => setTtsDictionaryUserId(e.target.value)}
+                  placeholder={loc.accessGrantUserId}
+                  value={ttsDictionaryUserId}
+                />
+                <Input
+                  disabled={!canEditTts}
+                  onChange={(e) => setTtsDictionaryPriority(e.target.value)}
+                  placeholder={loc.ttsPriority}
+                  value={ttsDictionaryPriority}
+                />
+              </div>
+              <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                <Input
+                  disabled={!canEditTts}
+                  onChange={(e) => setTtsDictionaryFromText(e.target.value)}
+                  placeholder={loc.ttsFromText}
+                  value={ttsDictionaryFromText}
+                />
+                <Input
+                  disabled={!canEditTts}
+                  onChange={(e) => setTtsDictionaryToText(e.target.value)}
+                  placeholder={loc.ttsToText}
+                  value={ttsDictionaryToText}
+                />
+                <label className="flex items-center gap-2 text-xs text-zinc-400">
+                  <input
+                    checked={ttsDictionaryEnabled}
+                    disabled={!canEditTts}
+                    onChange={(e) => setTtsDictionaryEnabled(e.target.checked)}
+                    type="checkbox"
+                  />
+                  {loc.ttsEnabled}
+                </label>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  disabled={!canEditTts || savingTtsDictionary}
+                  onClick={saveTtsDictionaryEntry}
+                  size="sm"
+                  type="button"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  {loc.saveChanges}
+                </Button>
+              </div>
+              <div className="overflow-hidden rounded-md border border-zinc-800">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-20">{loc.ttsScope}</TableHead>
+                      <TableHead>{loc.ttsFromText}</TableHead>
+                      <TableHead>{loc.ttsToText}</TableHead>
+                      <TableHead className="w-20">{loc.ttsPriority}</TableHead>
+                      <TableHead className="w-16">{loc.accessGrantAction}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {!ttsSettings?.dictionaryEntries.length ? (
+                      <TableRow>
+                        <TableCell className="py-5 text-center text-zinc-600" colSpan={5}>
+                          {loc.notConfigured}
+                        </TableCell>
+                      </TableRow>
+                    ) : ttsSettings.dictionaryEntries.map((entry) => (
+                      <TableRow key={ttsDictionaryKey(entry)}>
+                        <TableCell>{entry.scope}</TableCell>
+                        <TableCell className="break-all">{entry.fromText}</TableCell>
+                        <TableCell className="break-all">{entry.toText}</TableCell>
+                        <TableCell>{entry.priority}</TableCell>
+                        <TableCell>
+                          <Button
+                            disabled={!canEditTts || savingTtsDictionary}
+                            onClick={() => void deleteTtsDictionary(entry)}
+                            size="icon"
+                            type="button"
+                            variant="ghost"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -608,6 +939,85 @@ async function updateTtsSettings(guildId: string, textChannelId: string) {
   return (await r.json()) as SettingsResponse;
 }
 
+async function fetchTtsSettings(guildId: string): Promise<TtsSettingsResponse> {
+  const query = new URLSearchParams({ guildId });
+  const r = await fetch(`/api/tts-settings?${query.toString()}`, { cache: "no-store" });
+  if (!r.ok) throw new Error(`Failed to load TTS settings (${r.status})`);
+  return (await r.json()) as TtsSettingsResponse;
+}
+
+async function patchTtsSpeaker(input:
+  | {
+      guildId: string;
+      speakerId: number;
+      target: "guild-default";
+    }
+  | {
+      guildId: string;
+      speakerId: number;
+      target: "user";
+      userId: string;
+    }
+) {
+  const r = await fetch("/api/tts-settings", {
+    body: JSON.stringify({ ...input, kind: "speaker" }),
+    headers: { "content-type": "application/json" },
+    method: "PATCH"
+  });
+  if (!r.ok) throw new Error(`Failed to save TTS speaker (${r.status})`);
+  return (await r.json()) as { setting: TtsSpeakerSetting };
+}
+
+async function deleteTtsSpeakerSetting(input:
+  | {
+      guildId: string;
+      target: "guild-default";
+    }
+  | {
+      guildId: string;
+      target: "user";
+      userId?: string;
+    }
+) {
+  const r = await fetch("/api/tts-settings", {
+    body: JSON.stringify({ ...input, kind: "speaker" }),
+    headers: { "content-type": "application/json" },
+    method: "DELETE"
+  });
+  if (!r.ok) throw new Error(`Failed to delete TTS speaker (${r.status})`);
+}
+
+async function patchTtsDictionaryEntry(input: {
+  fromText: string;
+  guildId: string;
+  isEnabled: boolean;
+  priority: number;
+  scope: "guild" | "user";
+  toText: string;
+  userId?: string;
+}) {
+  const r = await fetch("/api/tts-settings", {
+    body: JSON.stringify({ ...input, kind: "dictionary" }),
+    headers: { "content-type": "application/json" },
+    method: "PATCH"
+  });
+  if (!r.ok) throw new Error(`Failed to save TTS dictionary (${r.status})`);
+}
+
+async function deleteTtsDictionaryEntry(input: {
+  fromText: string;
+  guildId: string;
+  scope: "guild" | "user";
+  userId?: string;
+}) {
+  const r = await fetch("/api/tts-settings", {
+    body: JSON.stringify({ ...input, kind: "dictionary" }),
+    headers: { "content-type": "application/json" },
+    method: "DELETE"
+  });
+  if (!r.ok) throw new Error(`Failed to delete TTS dictionary (${r.status})`);
+}
+
 async function updateManagementRoles(guildId: string, roleIds: string[]) {
   const r = await fetch("/api/settings", {
     body: JSON.stringify({ guildId, dashboardManagementRoleIds: roleIds }),
@@ -664,6 +1074,10 @@ function accessGrantKey(grant: {
   targetId: string;
 }) {
   return `${grant.guildId}:${grant.targetType}:${grant.targetId}`;
+}
+
+function ttsDictionaryKey(entry: TtsDictionaryEntry) {
+  return `${entry.guildId}:${entry.scope}:${entry.userId ?? ""}:${entry.fromText}`;
 }
 
 function FeatureStatus({

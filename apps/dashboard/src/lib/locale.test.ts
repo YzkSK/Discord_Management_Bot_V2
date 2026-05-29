@@ -26,4 +26,18 @@ describe("dashboard access locale", () => {
     assert.equal(getDashboardLocale("ja").settingsOverview, "概要");
     assert.equal(getDashboardLocale("ja").tempVcSettings, "一時VC");
   });
+  it("provides labels for TTS dictionary and speaker settings", () => {
+    const en = getDashboardLocale("en");
+    const ja = getDashboardLocale("ja");
+
+    assert.equal(en.ttsDictionary, "Dictionary");
+    assert.equal(en.ttsSpeakerDefault, "Default Speaker ID");
+    assert.equal(en.ttsUserSpeakers, "User Speakers");
+    assert.equal(en.ttsFromText, "From Text");
+    assert.equal(en.ttsToText, "To Text");
+    assert.equal(en.ttsSpeakerSaved, "TTS speaker saved.");
+    assert.equal(ja.ttsDictionary, "辞書");
+    assert.equal(ja.ttsSpeakerDefault, "デフォルト話者ID");
+    assert.equal(ja.ttsUserSpeakers, "ユーザー別話者");
+  });
 });
