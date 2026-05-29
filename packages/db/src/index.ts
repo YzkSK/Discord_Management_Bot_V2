@@ -5,4 +5,5 @@ export * from "./repositories/health.js";
 export * from "./repositories/logs.js";
 export * from "./repositories/recruitments.js";
 export * from "./repositories/temp-voice.js";
+export * from "./repositories/tts-dictionary.js";
 export * from "./schema/index.js";
