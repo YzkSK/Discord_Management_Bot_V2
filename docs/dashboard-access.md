@@ -28,6 +28,9 @@ Discord roles.
 
 When a user matches multiple grants, the highest grant wins.
 
+Phase9 adds owner-only Dashboard management for these grants. The server owner
+can add, edit, and delete user or role grants from `/settings`.
+
 ## Storage
 
 Dashboard grants are stored in `dashboard_access_grants`.
@@ -60,6 +63,9 @@ Discord server owner is treated as `owner`; other users need a matching
 For settings, `/api/settings` requires `guildId` and at least `viewer` access
 for `GET`. Updating settings with `PATCH` requires `admin` or `owner`.
 
+For Dashboard access management, `/api/dashboard-access` requires `owner`
+access for `GET`, `PATCH`, and `DELETE`.
+
 ## Auth Setup
 
 Discord Developer Portal setup required for local Dashboard auth:
@@ -86,3 +92,8 @@ Phase3 exposes a minimal settings foundation:
 - Allowed `logMode` values: `full`, `metadata_only`, `disabled`
 
 This is a functional foundation, not final Dashboard UI polish.
+
+Phase9 expands `/api/settings` with feature-domain settings for Logs, Temp VC,
+Recruitment, and TTS while preserving the legacy top-level fields. See
+`docs/phase9-dashboard-settings.md` for the current Settings API shape and
+verification flow.
