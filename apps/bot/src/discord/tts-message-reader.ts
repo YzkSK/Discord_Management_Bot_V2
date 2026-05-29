@@ -20,6 +20,7 @@ export interface InstallTtsMessageReaderOptions {
     input: LoadTtsDictionaryEntriesInput
   ) => Promise<EffectiveTtsDictionaryEntry[]>;
   logWriter: DiscordLogWriter;
+  rateLimiter?: TtsRateLimiter;
   speakerId: number;
   ttsSessionManager: TtsSessionManager;
   voicevox: VoicevoxClient;
@@ -49,9 +50,25 @@ export interface LoadTtsDictionaryEntriesInput {
   userId: string;
 }
 
+export interface TtsRateLimitInput {
+  guildId: string;
+  userId: string;
+  now?: number;
+}
+
+export interface TtsRateLimiter {
+  allow: (input: TtsRateLimitInput) => boolean;
+}
+
+export interface TtsMessageRateLimiterOptions {
+  maxMessages?: number;
+  windowMs?: number;
+}
+
 export type TtsMessageSkipReason =
   | "command-like"
   | "empty"
+  | "rate-limited"
   | "too-long"
   | "user-muted";
 
@@ -59,8 +76,13 @@ export function installTtsMessageReader(
   client: Client,
   options: InstallTtsMessageReaderOptions
 ) {
+  const readerOptions: InstallTtsMessageReaderOptions = {
+    ...options,
+    rateLimiter: options.rateLimiter ?? new TtsMessageRateLimiter()
+  };
+
   client.on(Events.MessageCreate, (message) => {
-    void handleTtsMessage(message, options).catch((error: unknown) => {
+    void handleTtsMessage(message, readerOptions).catch((error: unknown) => {
       console.error("tts message reader failed", {
         channelId: message.channelId,
         guildId: message.guildId,
@@ -140,17 +162,71 @@ export function resolveTtsMessageSkipReason(input: {
   return null;
 }
 
+export class TtsMessageRateLimiter implements TtsRateLimiter {
+  private readonly maxMessages: number;
+  private readonly windowMs: number;
+  private readonly buckets = new Map<string, number[]>();
+
+  constructor(options: TtsMessageRateLimiterOptions = {}) {
+    this.maxMessages = options.maxMessages ?? 5;
+    this.windowMs = options.windowMs ?? 10_000;
+  }
+
+  allow(input: TtsRateLimitInput) {
+    const now = input.now ?? Date.now();
+    const key = `${input.guildId}:${input.userId}`;
+    const threshold = now - this.windowMs;
+    const bucket = (this.buckets.get(key) ?? []).filter(
+      (timestamp) => timestamp > threshold
+    );
+
+    if (bucket.length >= this.maxMessages) {
+      this.buckets.set(key, bucket);
+      return false;
+    }
+
+    bucket.push(now);
+    this.buckets.set(key, bucket);
+    return true;
+  }
+}
+
+export interface ApplyTtsDictionaryEntriesOptions {
+  maxReplacements?: number;
+}
+
 export function applyTtsDictionaryEntries(
   text: string,
-  entries: EffectiveTtsDictionaryEntry[]
+  entries: EffectiveTtsDictionaryEntry[],
+  options: ApplyTtsDictionaryEntriesOptions = {}
 ) {
+  const maxReplacements = options.maxReplacements ?? 50;
+  let replacementCount = 0;
+
   return entries.reduce((current, entry) => {
     if (!entry.isEnabled || !entry.fromText) {
       return current;
     }
 
-    return current.replaceAll(entry.fromText, entry.toText);
+    let next = current;
+    while (
+      replacementCount < maxReplacements &&
+      next.includes(entry.fromText)
+    ) {
+      next = next.replace(entry.fromText, entry.toText);
+      replacementCount += 1;
+    }
+
+    return next;
   }, text);
+}
+
+export function sanitizeTtsText(text: string) {
+  return text
+    .replace(/https?:\/\/\S+|www\.\S+/gi, " ")
+    .replace(/<@!?\d+>|<@&\d+>|<#\d+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export async function handleTtsMessage(
@@ -205,6 +281,27 @@ export async function handleTtsMessage(
     return;
   }
 
+  if (
+    options.rateLimiter &&
+    !options.rateLimiter.allow({
+      guildId: message.guildId,
+      userId: message.author.id
+    })
+  ) {
+    await options.logWriter.write(
+      createTtsMessageSkippedEvent({
+        actorId: message.author.id,
+        guildId: message.guildId,
+        reason: "rate-limited",
+        sourceChannelId: message.channelId,
+        sourceMessageId: message.id,
+        textLength: message.content.trim().length,
+        voiceChannelId
+      })
+    );
+    return;
+  }
+
   const normalizedText = normalizeTtsText({
     authorIsBot: message.author.bot,
     content: message.content
@@ -214,12 +311,28 @@ export async function handleTtsMessage(
     return;
   }
 
+  const sanitizedText = sanitizeTtsText(normalizedText);
+  if (!sanitizedText) {
+    await options.logWriter.write(
+      createTtsMessageSkippedEvent({
+        actorId: message.author.id,
+        guildId: message.guildId,
+        reason: "empty",
+        sourceChannelId: message.channelId,
+        sourceMessageId: message.id,
+        textLength: normalizedText.length,
+        voiceChannelId
+      })
+    );
+    return;
+  }
+
   const loadDictionaryEntries =
     options.loadDictionaryEntries ??
     ((input: LoadTtsDictionaryEntriesInput) =>
       listEffectiveTtsDictionaryEntries(options.db, input));
   const text = applyTtsDictionaryEntries(
-    normalizedText,
+    sanitizedText,
     await loadDictionaryEntries({
       guildId: message.guildId,
       userId: message.author.id
