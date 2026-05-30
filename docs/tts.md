@@ -102,6 +102,22 @@ Message content is not duplicated in TTS logs; message events are linked by IDs.
 - `tts.message.skipped`: a readable-channel message was skipped because it was empty, command-like, user-muted, or too long.
 - `system.voicevox.error`: VOICEVOX synthesis or playback failed.
 
+## Queue And Retry
+
+Accepted TTS messages are processed through a local guild-scoped queue.
+
+Messages from the same guild are synthesized and played in order. Messages from different guilds can be processed independently.
+
+VOICEVOX `audio_query` and `synthesis` retry transient failures with backoff before writing `system.voicevox.error`.
+
+Current defaults:
+
+- maximum attempts: 3
+- base backoff: 250ms
+- backoff sequence: 250ms, 500ms
+
+This is a local in-process queue foundation. Redis-backed durable queueing can replace the queue interface later if needed.
+
 ## Latency Tuning
 
 `VOICEVOX_SPEAKER_ID` is the fallback VOICEVOX speaker used by TTS.

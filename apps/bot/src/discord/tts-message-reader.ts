@@ -12,6 +12,7 @@ import {
   createTtsMessageSkippedEvent,
   createTtsMessageSpokenEvent
 } from "./tts-logs.js";
+import { LocalTtsPlaybackQueue, type TtsPlaybackQueue } from "./tts-queue.js";
 import type { TtsSessionManager } from "./tts-session.js";
 import { normalizeTtsText, type VoicevoxClient } from "./voicevox.js";
 
@@ -24,6 +25,7 @@ export interface InstallTtsMessageReaderOptions {
   logWriter: DiscordLogWriter;
   rateLimiter?: TtsRateLimiter;
   speakerId: number;
+  ttsQueue?: TtsPlaybackQueue;
   ttsSessionManager: TtsSessionManager;
   voicevox: VoicevoxClient;
 }
@@ -86,7 +88,8 @@ export function installTtsMessageReader(
 ) {
   const readerOptions: InstallTtsMessageReaderOptions = {
     ...options,
-    rateLimiter: options.rateLimiter ?? new TtsMessageRateLimiter()
+    rateLimiter: options.rateLimiter ?? new TtsMessageRateLimiter(),
+    ttsQueue: options.ttsQueue ?? new LocalTtsPlaybackQueue()
   };
 
   client.on(Events.MessageCreate, (message) => {
@@ -356,41 +359,45 @@ export async function handleTtsMessage(
     })
   );
 
-  try {
-    const audio = await options.voicevox.synthesize(text, speakerId);
-    await options.ttsSessionManager.play(message.guildId, audio);
-    await options.logWriter.write(
-      createTtsMessageSpokenEvent({
+  const ttsQueue = options.ttsQueue ?? new LocalTtsPlaybackQueue();
+
+  await ttsQueue.enqueue({ guildId: message.guildId }, async () => {
+    try {
+      const audio = await options.voicevox.synthesize(text, speakerId);
+      await options.ttsSessionManager.play(message.guildId, audio);
+      await options.logWriter.write(
+        createTtsMessageSpokenEvent({
+          actorId: message.author.id,
+          guildId: message.guildId,
+          sourceChannelId: message.channelId,
+          sourceMessageId: message.id,
+          sourceType: resolveTtsMessageSourceType({
+            channelId: message.channelId,
+            temporaryChannelIds
+          }),
+          speakerId,
+          textLength: text.length,
+          voiceChannelId
+        })
+      );
+    } catch (error) {
+      await options.logWriter.write({
         actorId: message.author.id,
+        channelId: message.channelId,
+        eventName: "system.voicevox.error",
+        eventTimestamp: new Date(),
         guildId: message.guildId,
-        sourceChannelId: message.channelId,
-        sourceMessageId: message.id,
-        sourceType: resolveTtsMessageSourceType({
-          channelId: message.channelId,
-          temporaryChannelIds
-        }),
-        speakerId,
-        textLength: text.length,
-        voiceChannelId
-      })
-    );
-  } catch (error) {
-    await options.logWriter.write({
-      actorId: message.author.id,
-      channelId: message.channelId,
-      eventName: "system.voicevox.error",
-      eventTimestamp: new Date(),
-      guildId: message.guildId,
-      messageId: message.id,
-      payload: {
-        error: error instanceof Error ? error.message : String(error),
-        sourceChannelId: message.channelId,
-        sourceMessageId: message.id,
-        speakerId,
-        textLength: text.length,
-        voiceChannelId
-      },
-      receivedAt: new Date()
-    });
-  }
+        messageId: message.id,
+        payload: {
+          error: error instanceof Error ? error.message : String(error),
+          sourceChannelId: message.channelId,
+          sourceMessageId: message.id,
+          speakerId,
+          textLength: text.length,
+          voiceChannelId
+        },
+        receivedAt: new Date()
+      });
+    }
+  });
 }

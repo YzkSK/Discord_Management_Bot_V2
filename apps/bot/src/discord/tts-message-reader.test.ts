@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   applyTtsDictionaryEntries,
   handleTtsMessage,
+  type InstallTtsMessageReaderOptions,
   resolveTtsMessageSkipReason,
   resolveTtsMessageSourceType,
   resolveReadableTtsChannelIds,
@@ -363,5 +364,51 @@ describe("handleTtsMessage", () => {
 
     assert.equal(synthesized, false);
     assert.equal(skippedReason, "rate-limited");
+  });
+
+  it("enqueues accepted messages before synthesis and playback", async () => {
+    const queuedGuilds: string[] = [];
+    const played: string[] = [];
+
+    await handleTtsMessage(
+      {
+        author: { bot: false, id: "user-1" },
+        channelId: "text-1",
+        content: "first",
+        guildId: "guild-1",
+        id: "message-1",
+        inGuild: () => true
+      } as never,
+      {
+        db: {} as never,
+        loadDictionaryEntries: async () => [],
+        loadSpeakerId: async () => 1,
+        logWriter: {
+          recordHandlerError: async () => undefined,
+          write: async () => undefined
+        },
+        speakerId: 1,
+        ttsQueue: {
+          enqueue: async (input, job) => {
+            queuedGuilds.push(input.guildId);
+            return job();
+          }
+        } satisfies NonNullable<InstallTtsMessageReaderOptions["ttsQueue"]>,
+        ttsSessionManager: {
+          getReadableChannelIds: () => ["text-1"],
+          getVoiceChannelId: () => "voice-1",
+          isConnected: () => true,
+          play: async (_guildId: string, audio: Buffer) => {
+            played.push(audio.toString());
+          }
+        } as never,
+        voicevox: {
+          synthesize: async (text) => Buffer.from(text)
+        }
+      }
+    );
+
+    assert.deepEqual(queuedGuilds, ["guild-1"]);
+    assert.deepEqual(played, ["first"]);
   });
 });
