@@ -1,6 +1,8 @@
 # TTS
 
-Phase6 adds the first VOICEVOX TTS foundation.
+Phase10 completes the current TTS foundation with VOICEVOX read-aloud,
+dictionary replacement, safety guardrails, speaker settings, and queue/retry
+behavior.
 
 ## Commands
 
@@ -74,6 +76,81 @@ Dictionary entries support:
 - priority
 - enabled/disabled state
 
+## Dictionary Usage
+
+Dictionary entries are managed from the Dashboard Settings page in the TTS
+section.
+
+Use a `guild` entry when every user in the server should share the replacement.
+Use a `user` entry when one user's reading should override the server-wide
+dictionary.
+
+Replacement order:
+
+1. Enabled user entries for the message author.
+2. Enabled guild entries.
+3. Higher priority entries before lower priority entries within each scope.
+
+Dictionary keys are treated as literal text, not regular expressions.
+Partial matches are replaced before the text is sent to VOICEVOX.
+
+Example:
+
+```text
+key: www
+replacement: わらわら
+scope: guild
+priority: 10
+enabled: true
+```
+
+Verification:
+
+1. Open the Dashboard Settings page for a guild.
+2. Add a guild dictionary entry.
+3. Join a voice channel and run `/join`.
+4. Send a message containing the dictionary key in a readable TTS channel.
+5. Confirm the replacement text is read aloud.
+6. Add a user dictionary entry for the same key with a different replacement.
+7. Send the same message as that user and confirm the user entry wins.
+
+## Speaker Settings
+
+TTS speaker priority:
+
+1. User speaker override, set by `/speaker set speaker_id:<id>` or Dashboard
+   Settings.
+2. Server default speaker, set by
+   `/speaker server-default speaker_id:<id>` or Dashboard Settings.
+3. `VOICEVOX_SPEAKER_ID`.
+
+Users can change their own speaker:
+
+```text
+/speaker set speaker_id:2
+```
+
+The Discord server owner or Dashboard `admin` can change the server default:
+
+```text
+/speaker server-default speaker_id:2
+```
+
+Dashboard `viewer` can review speaker settings but cannot edit them.
+
+Verification:
+
+1. Run `/speaker set speaker_id:<id>` as a normal user.
+2. Send a TTS message and confirm the user's speaker is used.
+3. Run `/speaker server-default speaker_id:<id>` as the server owner or a
+   Dashboard admin.
+4. Send a message from a user without an override and confirm the server
+   default speaker is used.
+5. Open Dashboard Settings and confirm the same user and server speaker values
+   are visible.
+6. Update a speaker from Dashboard Settings and confirm the next TTS message
+   uses the new value.
+
 ## Message Rules
 
 TTS reads messages only when the bot is connected to voice.
@@ -90,6 +167,36 @@ Skipped messages:
 - slash-command-like messages starting with `/`,
 - user-muted messages starting with `//`,
 - text beyond the current 120 character limit.
+
+## Safety Guardrails
+
+Phase10 applies lightweight safety guardrails before VOICEVOX synthesis:
+
+- URLs are removed from readable text.
+- Discord mentions are removed from readable text.
+- Slash-command-like messages starting with `/` are skipped.
+- User-muted messages starting with `//` are skipped.
+- Empty messages are skipped.
+- Messages are limited to the current 120 character TTS limit.
+- Dictionary entries use literal text replacement only; regex patterns are not
+  evaluated.
+- Dictionary replacement count is capped to avoid runaway replacement loops.
+- Per-user guild rate limiting blocks short bursts before synthesis.
+
+Safety verification:
+
+1. Send a normal message and confirm it is read.
+2. Send `// muted text` and confirm it is not read.
+3. Send `/join` or another slash-command-like message and confirm it is not
+   read.
+4. Send a message containing a URL and confirm the URL itself is not read.
+5. Send a message containing a Discord mention and confirm the mention is not
+   read.
+6. Send a very long message and confirm only the TTS-limited text is processed.
+7. Add dictionary entries that could repeatedly replace each other, then confirm
+   TTS still completes without looping.
+8. Send a burst of messages from the same user and confirm later messages are
+   skipped while rate limited.
 
 ## Logs
 
