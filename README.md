@@ -79,6 +79,7 @@ docker compose --profile app down
 - Phase7: health checks, PostgreSQL backup foundation, and logs archive foundation.
 - Phase8: production Compose, nginx reverse proxy, and SSH deploy workflow foundation.
 - Phase9: Dashboard RBAC management, feature-domain Settings API, Settings UI expansion, and verification docs.
+- Phase10: TTS dictionary, safety guardrails, speaker settings, queue/retry foundation, and verification docs.
 
 ## Phase0 Completion Criteria
 
@@ -135,3 +136,7 @@ Phase8 deploy setup and verification notes are documented in:
 Phase9 Dashboard RBAC and Settings notes are documented in:
 
 - `docs/phase9-dashboard-settings.md`
+
+Phase10 TTS dictionary, safety, speaker settings, queue, and verification notes are documented in:
+
+- `docs/tts.md`
