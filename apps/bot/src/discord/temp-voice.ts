@@ -30,7 +30,7 @@ import {
   type VoiceStateTransition,
   type VoiceStateTransitionContext
 } from "./voice-state.js";
-import { createComponentsV2TextMessage } from "./components-v2.js";
+import { createTempVoiceControlMessage } from "./temp-voice-controls.js";
 import {
   createDiscordLogWriter,
   type DiscordLogWriter
@@ -288,16 +288,7 @@ async function sendControlChannelMessage(
   channel: TextChannel,
   input: { ownerId: string; tempVoiceChannelId: string }
 ) {
-  await channel.send(
-    createComponentsV2TextMessage({
-      title: "Temp VC Control",
-      lines: [
-        `Owner: <@${input.ownerId}>`,
-        `Voice channel: <#${input.tempVoiceChannelId}>`,
-        "Control buttons will be added in a later issue."
-      ]
-    })
-  );
+  await channel.send(createTempVoiceControlMessage(input));
 }
 
 async function transferOwnerIfNeeded(db: DbClient, channelId: string) {

@@ -7,6 +7,7 @@ import {
 import { createDiscordLogWriter } from "./log-writer.js";
 import { handleRecruitmentButtonInteraction } from "./recruitment-interactions.js";
 import { handleForceJoinButtonInteraction } from "../commands/tts.js";
+import { handleTempVoiceControlInteraction } from "./temp-voice-controls.js";
 
 export function installInteractionRouter(client: Client, context: CommandContext) {
   const commandContext: CommandContext = {
@@ -20,6 +21,11 @@ export function installInteractionRouter(client: Client, context: CommandContext
         .then((handled) =>
           handled
             ? undefined
+            : handleTempVoiceControlInteraction(interaction, commandContext)
+        )
+        .then((handled) =>
+          handled
+            ? undefined
             : handleRecruitmentButtonInteraction(interaction, commandContext)
         )
         .catch((error: unknown) => {
@@ -29,6 +35,32 @@ export function installInteractionRouter(client: Client, context: CommandContext
             error
           });
         });
+      return;
+    }
+
+    if (interaction.isModalSubmit()) {
+      void handleTempVoiceControlInteraction(interaction, commandContext).catch(
+        (error: unknown) => {
+          console.error("modal interaction handler failed", {
+            customId: interaction.customId,
+            guildId: interaction.guildId,
+            error
+          });
+        }
+      );
+      return;
+    }
+
+    if (interaction.isUserSelectMenu()) {
+      void handleTempVoiceControlInteraction(interaction, commandContext).catch(
+        (error: unknown) => {
+          console.error("user select interaction handler failed", {
+            customId: interaction.customId,
+            guildId: interaction.guildId,
+            error
+          });
+        }
+      );
       return;
     }
 
