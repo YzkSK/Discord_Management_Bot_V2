@@ -3,8 +3,10 @@ import {
   createCallSession,
   endCallSession,
   getActiveCallSessionByChannelId,
+  getCallSessionById,
   listActiveCallSessionMembers,
   markCallSessionMemberLeft,
+  updateCallSessionStatusMessage,
   upsertCallSessionMember
 } from "@discord-bot/db";
 import type { NormalizedEvent } from "@discord-bot/shared";
@@ -15,12 +17,19 @@ import {
   installVoiceStateHandlers,
   type VoiceStateTransition
 } from "./voice-state.js";
+import {
+  findMarkedVoiceStatusChannel,
+  createVoiceStatusMessage,
+  type VoiceStatusDisplayState
+} from "./voice-status-channel.js";
 
 export interface VoiceActivitySession {
   channelId: string;
   guildId: string;
   id: string;
+  startedAt: Date;
   status: string;
+  statusMessageId: string | null;
 }
 
 export interface VoiceActivityMember {
@@ -51,6 +60,10 @@ export interface VoiceActivityRepository {
     leftAt: Date;
     userId: string;
   }) => Promise<VoiceActivityMember | null>;
+  updateStatusMessage: (input: {
+    callSessionId: string;
+    statusMessageId: string;
+  }) => Promise<VoiceActivitySession | null>;
   upsertMember: (input: {
     callSessionId: string;
     joinedAt: Date;
@@ -61,6 +74,16 @@ export interface VoiceActivityRepository {
 export interface VoiceActivityContext {
   now?: () => Date;
   repository: VoiceActivityRepository;
+  scheduleActiveStatusUpdate?: (
+    sessionId: string,
+    delayMs: number
+  ) => void | Promise<void>;
+  updateVoiceStatus?: (input: {
+    activeMemberCount: number;
+    endedAt?: Date | null;
+    session: VoiceActivitySession;
+    state: VoiceStatusDisplayState;
+  }) => Promise<string | null>;
   writeLog: (event: NormalizedEvent) => Promise<void>;
 }
 
@@ -77,6 +100,28 @@ export function installVoiceActivityHandlers(
     onTransition: (transition) =>
       handleVoiceActivityTransition(transition, {
         repository: createDbVoiceActivityRepository(options.db),
+        scheduleActiveStatusUpdate: (sessionId, delayMs) => {
+          setTimeout(() => {
+            void refreshActiveVoiceStatus(client, options, sessionId).catch(
+              (error: unknown) => {
+                void options.logWriter.recordHandlerError({
+                  error,
+                  event: createVoiceActivityEvent("voice.status.update_failed", {
+                    actorId: null,
+                    channelId: null,
+                    guildId: null,
+                    payload: { sessionId },
+                    timestamp: new Date()
+                  }),
+                  handlerName: "voice-status-channel",
+                  receivedAt: new Date()
+                });
+              }
+            );
+          }, delayMs);
+        },
+        updateVoiceStatus: (input) =>
+          updateDiscordVoiceStatusMessage(client, input),
         writeLog: (event) => options.logWriter.write(event)
       })
   });
@@ -155,6 +200,7 @@ function createDbVoiceActivityRepository(
     listActiveMembers: (callSessionId) =>
       listActiveCallSessionMembers(db, callSessionId),
     markMemberLeft: (input) => markCallSessionMemberLeft(db, input),
+    updateStatusMessage: (input) => updateCallSessionStatusMessage(db, input),
     upsertMember: (input) => upsertCallSessionMember(db, input)
   };
 }
@@ -188,6 +234,21 @@ async function handleVoiceJoin(
         startedAt: now
       })
     );
+    const statusMessageId = await context.updateVoiceStatus?.({
+      activeMemberCount: 1,
+      session,
+      state: "started"
+    });
+
+    if (statusMessageId) {
+      session =
+        (await context.repository.updateStatusMessage({
+          callSessionId: session.id,
+          statusMessageId
+        })) ?? { ...session, statusMessageId };
+    }
+
+    await context.scheduleActiveStatusUpdate?.(session.id, 60_000);
   }
 
   await context.repository.upsertMember({
@@ -231,6 +292,12 @@ async function handleVoiceLeave(
     callSessionId: session.id,
     endedAt: now
   });
+  await context.updateVoiceStatus?.({
+    activeMemberCount: 0,
+    endedAt: now,
+    session,
+    state: "ended"
+  });
   await context.writeLog(
     createVoiceActivityEndedEvent({
       actorId: transition.userId,
@@ -245,9 +312,9 @@ async function handleVoiceLeave(
 function createVoiceActivityEvent(
   eventName: string,
   input: {
-    actorId: string;
-    channelId: string;
-    guildId: string;
+    actorId: string | null;
+    channelId: string | null;
+    guildId: string | null;
     payload: NormalizedEvent["payload"];
     timestamp: Date;
   }
@@ -266,4 +333,74 @@ function createVoiceActivityEvent(
 
 function resolveNow(context: VoiceActivityContext) {
   return context.now?.() ?? new Date();
+}
+
+async function refreshActiveVoiceStatus(
+  client: Client,
+  options: InstallVoiceActivityHandlersOptions,
+  sessionId: string
+) {
+  const repository = createDbVoiceActivityRepository(options.db);
+  const session = await getCallSessionById(options.db, sessionId);
+
+  if (!session || session.status !== "active") {
+    return;
+  }
+
+  const activeMembers = await repository.listActiveMembers(session.id);
+
+  if (activeMembers.length === 0) {
+    return;
+  }
+
+  await updateDiscordVoiceStatusMessage(client, {
+    activeMemberCount: activeMembers.length,
+    session,
+    state: "active"
+  });
+}
+
+async function updateDiscordVoiceStatusMessage(
+  client: Client,
+  input: {
+    activeMemberCount: number;
+    endedAt?: Date | null;
+    session: VoiceActivitySession;
+    state: VoiceStatusDisplayState;
+  }
+) {
+  const guild = client.guilds.cache.get(input.session.guildId);
+
+  if (!guild) {
+    return null;
+  }
+
+  const channel = await findMarkedVoiceStatusChannel(guild);
+
+  if (!channel) {
+    return null;
+  }
+
+  const message = createVoiceStatusMessage({
+    channelId: input.session.channelId,
+    endedAt: input.endedAt ?? null,
+    memberCount: input.activeMemberCount,
+    now: input.endedAt ?? new Date(),
+    sessionId: input.session.id,
+    startedAt: input.session.startedAt
+  });
+
+  if (input.session.statusMessageId) {
+    const existingMessage = await channel.messages
+      .fetch(input.session.statusMessageId)
+      .catch(() => null);
+
+    if (existingMessage) {
+      await existingMessage.edit(message);
+      return existingMessage.id;
+    }
+  }
+
+  const sentMessage = await channel.send(message);
+  return sentMessage.id;
 }

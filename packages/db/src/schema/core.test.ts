@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { guildConfigs, ttsDictionaryEntries, ttsSpeakerSettings } from "./core.js";
+import {
+  callSessions,
+  guildConfigs,
+  ttsDictionaryEntries,
+  ttsSpeakerSettings
+} from "./core.js";
 
 describe("guildConfigs schema", () => {
   it("exposes a persistent TTS text channel column", () => {
@@ -12,6 +17,14 @@ describe("guildConfigs schema", () => {
   it("exposes a language column", () => {
     const columns = guildConfigs as unknown as Record<string, unknown>;
     assert.notEqual(columns.language, undefined);
+  });
+});
+
+describe("callSessions schema", () => {
+  it("exposes a status message id column for voice status rendering", () => {
+    const columns = callSessions as unknown as Record<string, unknown>;
+
+    assert.notEqual(columns.statusMessageId, undefined);
   });
 });
 

@@ -20,6 +20,10 @@ import {
   markRecruitmentChannel,
   recruitmentChannelTopicMarker
 } from "../discord/recruitment-channel.js";
+import {
+  markVoiceStatusChannel,
+  voiceStatusChannelTopicMarker
+} from "../discord/voice-status-channel.js";
 
 type Loc = ReturnType<typeof getLocale>;
 
@@ -97,6 +101,21 @@ export const setupCommand = new SlashCommandBuilder()
           .addChannelTypes(ChannelType.GuildText)
           .setRequired(true)
       )
+  )
+  .addSubcommand((subcommand) =>
+    subcommand
+      .setName("voice-status")
+      .setDescription("Configure the voice status display channel.")
+      .setDescriptionLocalization("ja", "通話状態表示チャンネルを設定します。")
+      .addChannelOption((option) =>
+        option
+          .setName("channel")
+          .setNameLocalization("ja", "チャンネル")
+          .setDescription("Text channel where voice session status is displayed.")
+          .setDescriptionLocalization("ja", "通話状態を表示するテキストチャンネル。")
+          .addChannelTypes(ChannelType.GuildText)
+          .setRequired(true)
+      )
   );
 
 export interface SetupCommandContext {
@@ -160,6 +179,9 @@ export async function handleSetupCommand(
       return;
     case "tts":
       await handleTtsSetup(interaction, context, guildId, loc);
+      return;
+    case "voice-status":
+      await handleVoiceStatusSetup(interaction, context, guildId, loc);
       return;
     default:
       await interaction.reply({
@@ -339,6 +361,44 @@ async function handleTtsSetup(
       lines: [
         loc.ttsTtsChannel({ id: channel.id }),
         loc.ttsChannelDescription
+      ],
+      privateResponse: true
+    })
+  });
+}
+
+async function handleVoiceStatusSetup(
+  interaction: ChatInputCommandInteraction,
+  context: SetupCommandContext,
+  guildId: string,
+  loc: Loc
+) {
+  const channel = interaction.options.getChannel("channel", true);
+
+  if (channel.type !== ChannelType.GuildText) {
+    await interaction.reply({
+      ...createComponentsV2TextMessage({
+        title: loc.voiceStatusSetupFailed,
+        lines: [loc.voiceStatusChannelMustBeText],
+        privateResponse: true
+      })
+    });
+    return;
+  }
+
+  await ensureGuildSetup(context.db, {
+    guildId,
+    name: interaction.guild?.name ?? null
+  });
+
+  await markVoiceStatusChannel(channel as TextChannel);
+
+  await interaction.reply({
+    ...createComponentsV2TextMessage({
+      title: loc.voiceStatusSetupComplete,
+      lines: [
+        loc.voiceStatusChannel({ id: channel.id }),
+        loc.voiceStatusMarker({ marker: voiceStatusChannelTopicMarker })
       ],
       privateResponse: true
     })

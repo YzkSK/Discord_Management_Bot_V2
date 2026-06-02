@@ -138,6 +138,7 @@ export const callSessions = pgTable(
     guildId: text("guild_id").notNull(),
     channelId: text("channel_id").notNull(),
     status: text("status").notNull().default("active"),
+    statusMessageId: text("status_message_id"),
     startedAt: timestamp("started_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
