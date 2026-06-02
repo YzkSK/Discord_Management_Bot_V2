@@ -80,7 +80,7 @@ docker compose --profile app down
 - Phase8: production Compose, nginx reverse proxy, and SSH deploy workflow foundation.
 - Phase9: Dashboard RBAC management, feature-domain Settings API, Settings UI expansion, and verification docs.
 - Phase10: TTS dictionary, safety guardrails, speaker settings, queue/retry foundation, and verification docs.
-- Phase11: Temp VC controls, ownership transfer, and voice activity session foundation.
+- Phase11: Temp VC owner controls, ownership transfer, voice activity sessions, and voice status channel rendering.
 
 ## Phase0 Completion Criteria
 
@@ -142,6 +142,7 @@ Phase10 TTS dictionary, safety, speaker settings, queue, and verification notes 
 
 - `docs/tts.md`
 
-Phase11 voice activity session notes are documented in:
+Phase11 Temp VC controls and voice status notes are documented in:
 
+- `docs/temp-vc.md`
 - `docs/voice-activity.md`

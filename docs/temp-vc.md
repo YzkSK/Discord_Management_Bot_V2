@@ -94,6 +94,8 @@ The bot needs permissions that allow it to:
 - Send messages.
 - Read message history.
 - Connect to voice channels.
+- View audit log, if Temp VC related generic channel changes should be enriched
+  when they are not suppressed.
 
 Temp VC controls also depend on `Manage Channels` because lock/unlock,
 hide/show, rename, user limit, and bitrate all mutate generated channel
@@ -119,6 +121,21 @@ After a Temp VC is created, use the private control text channel:
    disconnected only when they are currently in the Temp VC.
 10. Have a non-owner try a control interaction and confirm it is rejected with a
     private response.
+
+## Ownership Transfer Verification
+
+Use at least three non-bot users when possible.
+
+1. User A joins the configured creation VC and becomes the Temp VC owner.
+2. User B joins the generated Temp VC.
+3. User C joins the generated Temp VC after User B.
+4. Confirm the control channel is visible to User A only.
+5. Have User A leave the generated Temp VC.
+6. Confirm User B becomes the next owner because they joined before User C.
+7. Confirm the private control channel permission moves from User A to User B.
+8. Confirm User B can use owner controls.
+9. Confirm User C cannot use owner controls.
+10. Confirm the log stream contains `voice.temp.owner_transferred`.
 
 ## Docker Verification
 
@@ -152,8 +169,9 @@ docker compose --profile app logs -f bot
 8. Confirm the private control text channel is created with a Components V2
    control message.
 9. Run the control channel verification steps above.
-10. Leave the generated VC.
-11. Confirm both generated channels are deleted after about 5 seconds.
+10. Run the ownership transfer verification steps above.
+11. Leave the generated VC.
+12. Confirm both generated channels are deleted after about 5 seconds.
 
 ## Verification Commands
 
