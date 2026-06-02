@@ -1,4 +1,10 @@
-import { getGuildConfigByGuildId, listDashboardAccessGrants, type DbClient } from "@discord-bot/db";
+import {
+  getGuildConfigByGuildId,
+  listDashboardAccessGrants,
+  setGuildDefaultTtsSpeaker,
+  setUserTtsSpeaker,
+  type DbClient
+} from "@discord-bot/db";
 import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/shared";
 import {
   ActionRowBuilder,
@@ -44,9 +50,44 @@ export const leaveCommand = new SlashCommandBuilder()
   .setDescription("Stop TTS and leave the current voice channel.")
   .setDescriptionLocalization("ja", "TTSを停止し、現在のボイスチャンネルから退出します。");
 
+export const speakerCommand = new SlashCommandBuilder()
+  .setName("speaker")
+  .setDescription("Configure TTS speaker settings.")
+  .setDescriptionLocalization("ja", "TTSの話者設定を変更します。")
+  .addSubcommand((subcommand) =>
+    subcommand
+      .setName("set")
+      .setDescription("Set your TTS speaker.")
+      .setDescriptionLocalization("ja", "自分のTTS話者を変更します。")
+      .addIntegerOption((option) =>
+        option
+          .setName("speaker_id")
+          .setDescription("VOICEVOX speaker id.")
+          .setDescriptionLocalization("ja", "VOICEVOXの話者ID。")
+          .setMinValue(0)
+          .setRequired(true)
+      )
+  )
+  .addSubcommand((subcommand) =>
+    subcommand
+      .setName("server-default")
+      .setDescription("Set the server default TTS speaker.")
+      .setDescriptionLocalization("ja", "サーバー既定のTTS話者を変更します。")
+      .addIntegerOption((option) =>
+        option
+          .setName("speaker_id")
+          .setDescription("VOICEVOX speaker id.")
+          .setDescriptionLocalization("ja", "VOICEVOXの話者ID。")
+          .setMinValue(0)
+          .setRequired(true)
+      )
+  );
+
 export interface TtsCommandContext {
   db: DbClient;
   logWriter?: DiscordLogWriter;
+  setGuildDefaultSpeaker?: typeof setGuildDefaultTtsSpeaker;
+  setUserSpeaker?: typeof setUserTtsSpeaker;
   ttsSessionManager: TtsSessionManager;
 }
 
@@ -241,6 +282,65 @@ export async function handleLeaveCommand(
   }
 }
 
+export async function handleSpeakerCommand(
+  interaction: ChatInputCommandInteraction,
+  context: TtsCommandContext
+) {
+  const guildId = interaction.guildId;
+  const loc = guildId
+    ? await resolveGuildLocale(context.db, guildId)
+    : getLocale("en");
+
+  if (!guildId) {
+    await replyPrivate(interaction, loc.ttsSpeakerFailed, [
+      loc.ttsLeaveNotInGuild
+    ]);
+    return;
+  }
+
+  const speakerId = parseSpeakerIdOption(
+    interaction.options.getInteger("speaker_id")
+  );
+  const subcommand = interaction.options.getSubcommand();
+
+  if (subcommand === "set") {
+    const setUserSpeaker = context.setUserSpeaker ?? setUserTtsSpeaker;
+    await setUserSpeaker(context.db, {
+      guildId,
+      speakerId,
+      userId: interaction.user.id
+    });
+    await replyPrivate(interaction, loc.ttsSpeakerUpdated, [
+      loc.ttsSpeakerUser({ id: speakerId })
+    ]);
+    return;
+  }
+
+  if (subcommand === "server-default") {
+    if (!(await canUseDashboardAdminCommand(interaction, context))) {
+      await replyPrivate(interaction, loc.ttsSpeakerFailed, [
+        loc.ttsForceJoinAdminRequired
+      ]);
+      return;
+    }
+
+    const setGuildDefaultSpeaker =
+      context.setGuildDefaultSpeaker ?? setGuildDefaultTtsSpeaker;
+    await setGuildDefaultSpeaker(context.db, {
+      guildId,
+      speakerId
+    });
+    await replyPrivate(interaction, loc.ttsSpeakerUpdated, [
+      loc.ttsSpeakerServerDefault({ id: speakerId })
+    ]);
+    return;
+  }
+
+  await replyPrivate(interaction, loc.ttsSpeakerFailed, [
+    loc.unknownSetupTarget({ target: subcommand })
+  ]);
+}
+
 export async function handleForceJoinButtonInteraction(
   interaction: ButtonInteraction,
   context: TtsCommandContext
@@ -338,6 +438,13 @@ async function canUseForceJoin(
   interaction: ChatInputCommandInteraction,
   context: TtsCommandContext
 ) {
+  return canUseDashboardAdminCommand(interaction, context);
+}
+
+async function canUseDashboardAdminCommand(
+  interaction: ChatInputCommandInteraction,
+  context: TtsCommandContext
+) {
   if (!interaction.guild || !interaction.guildId) {
     return false;
   }
@@ -355,6 +462,18 @@ async function canUseForceJoin(
   });
 
   return hasDashboardAdminCommandAccess(role);
+}
+
+export function parseSpeakerIdOption(value: number | null) {
+  if (value === null) {
+    throw new Error("speaker id is required.");
+  }
+
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error("speaker id must be a non-negative integer.");
+  }
+
+  return value;
 }
 
 function getMemberRoleIds(member: GuildMember) {

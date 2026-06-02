@@ -50,6 +50,19 @@ type DashboardLocale = {
   saveTtsSettings: string;
   tempVcSettingsSaved: string;
   ttsSettingsSaved: string;
+  ttsDictionary: string;
+  ttsDictionarySaved: string;
+  ttsDictionaryDeleted: string;
+  ttsEnabled: string;
+  ttsFromText: string;
+  ttsPriority: string;
+  ttsScope: string;
+  ttsSpeakerDefault: string;
+  ttsSpeakerDeleted: string;
+  ttsSpeakerId: string;
+  ttsSpeakerSaved: string;
+  ttsToText: string;
+  ttsUserSpeakers: string;
   accessGrantTarget: string;
   accessGrantUser: string;
   accessGrantRole: string;
@@ -136,6 +149,19 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     saveTtsSettings: "Save TTS",
     tempVcSettingsSaved: "Temp VC settings saved.",
     ttsSettingsSaved: "TTS settings saved.",
+    ttsDictionary: "Dictionary",
+    ttsDictionarySaved: "TTS dictionary entry saved.",
+    ttsDictionaryDeleted: "TTS dictionary entry deleted.",
+    ttsEnabled: "Enabled",
+    ttsFromText: "From Text",
+    ttsPriority: "Priority",
+    ttsScope: "Scope",
+    ttsSpeakerDefault: "Default Speaker ID",
+    ttsSpeakerDeleted: "TTS speaker deleted.",
+    ttsSpeakerId: "Speaker ID",
+    ttsSpeakerSaved: "TTS speaker saved.",
+    ttsToText: "To Text",
+    ttsUserSpeakers: "User Speakers",
     accessGrantTarget: "Target",
     accessGrantUser: "User",
     accessGrantRole: "Role",
@@ -219,6 +245,19 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     saveTtsSettings: "TTSを保存",
     tempVcSettingsSaved: "一時VC設定を保存しました。",
     ttsSettingsSaved: "TTS設定を保存しました。",
+    ttsDictionary: "辞書",
+    ttsDictionarySaved: "TTS辞書を保存しました。",
+    ttsDictionaryDeleted: "TTS辞書を削除しました。",
+    ttsEnabled: "有効",
+    ttsFromText: "置換前",
+    ttsPriority: "優先度",
+    ttsScope: "範囲",
+    ttsSpeakerDefault: "デフォルト話者ID",
+    ttsSpeakerDeleted: "TTS話者を削除しました。",
+    ttsSpeakerId: "話者ID",
+    ttsSpeakerSaved: "TTS話者を保存しました。",
+    ttsToText: "置換後",
+    ttsUserSpeakers: "ユーザー別話者",
     accessGrantTarget: "対象",
     accessGrantUser: "ユーザー",
     accessGrantRole: "ロール",
