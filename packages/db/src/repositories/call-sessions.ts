@@ -66,6 +66,32 @@ export async function endCallSession(
   return callSession ?? null;
 }
 
+export async function getCallSessionById(db: DbClient, callSessionId: string) {
+  const [callSession] = await db
+    .select()
+    .from(callSessions)
+    .where(eq(callSessions.id, callSessionId))
+    .limit(1);
+
+  return callSession ?? null;
+}
+
+export async function updateCallSessionStatusMessage(
+  db: DbClient,
+  input: { callSessionId: string; statusMessageId: string }
+) {
+  const [callSession] = await db
+    .update(callSessions)
+    .set({
+      statusMessageId: input.statusMessageId,
+      updatedAt: sql`now()`
+    })
+    .where(eq(callSessions.id, input.callSessionId))
+    .returning();
+
+  return callSession ?? null;
+}
+
 export async function upsertCallSessionMember(
   db: DbClient,
   input: { callSessionId: string; joinedAt?: Date; userId: string }

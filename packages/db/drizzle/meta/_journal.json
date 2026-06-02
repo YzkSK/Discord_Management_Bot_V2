@@ -64,6 +64,13 @@
       "when": 1780055199867,
       "tag": "0008_ancient_karnak",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1780426312668,
+      "tag": "0009_gigantic_tana_nile",
+      "breakpoints": true
     }
   ]
 }

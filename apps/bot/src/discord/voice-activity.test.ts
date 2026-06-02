@@ -169,6 +169,88 @@ describe("voice activity sessions", () => {
     assert.equal(started.payload.sessionId, "session-1");
     assert.equal(ended.payload.sessionId, "session-1");
   });
+
+  it("publishes started status and schedules active update for a new session", async () => {
+    const repository = createMemoryRepository();
+    const statusUpdates: string[] = [];
+    const scheduled: number[] = [];
+
+    await handleVoiceActivityTransition(
+      {
+        guildId: "guild-1",
+        memberIsBot: false,
+        newChannelId: "voice-1",
+        oldChannelId: null,
+        type: "join",
+        userId: "user-1"
+      },
+      {
+        now: () => new Date("2026-06-03T00:00:00.000Z"),
+        repository,
+        scheduleActiveStatusUpdate: async (sessionId, delayMs) => {
+          scheduled.push(delayMs);
+          statusUpdates.push(`scheduled:${sessionId}`);
+        },
+        updateVoiceStatus: async (input) => {
+          statusUpdates.push(`${input.state}:${input.session.id}`);
+          return "message-1";
+        },
+        writeLog: async () => undefined
+      }
+    );
+
+    assert.equal(repository.sessions[0]?.statusMessageId, "message-1");
+    assert.deepEqual(statusUpdates, [
+      "started:session-1",
+      "scheduled:session-1"
+    ]);
+    assert.deepEqual(scheduled, [60_000]);
+  });
+
+  it("updates the existing status message to ended when the session finishes", async () => {
+    const repository = createMemoryRepository();
+    const statusUpdates: string[] = [];
+    const context = {
+      now: () => new Date("2026-06-03T00:00:30.000Z"),
+      repository,
+      updateVoiceStatus: async (input: {
+        state: string;
+        session: { id: string };
+      }) => {
+        statusUpdates.push(`${input.state}:${input.session.id}`);
+        return "message-1";
+      },
+      writeLog: async () => undefined
+    };
+
+    await handleVoiceActivityTransition(
+      {
+        guildId: "guild-1",
+        memberIsBot: false,
+        newChannelId: "voice-1",
+        oldChannelId: null,
+        type: "join",
+        userId: "user-1"
+      },
+      context
+    );
+    await handleVoiceActivityTransition(
+      {
+        guildId: "guild-1",
+        memberIsBot: false,
+        newChannelId: null,
+        oldChannelId: "voice-1",
+        type: "leave",
+        userId: "user-1"
+      },
+      context
+    );
+
+    assert.deepEqual(statusUpdates, [
+      "started:session-1",
+      "ended:session-1"
+    ]);
+  });
 });
 
 function createMemoryRepository() {
@@ -176,7 +258,9 @@ function createMemoryRepository() {
     channelId: string;
     guildId: string;
     id: string;
+    startedAt: Date;
     status: "active" | "ended";
+    statusMessageId: string | null;
   }> = [];
   const members: Array<{
     callSessionId: string;
@@ -195,7 +279,9 @@ function createMemoryRepository() {
         channelId: input.channelId,
         guildId: input.guildId,
         id: `session-${sessions.length + 1}`,
-        status: "active" as const
+        startedAt: input.startedAt,
+        status: "active" as const,
+        statusMessageId: null
       };
       sessions.push(session);
       return session;
@@ -231,6 +317,13 @@ function createMemoryRepository() {
         member.leftAt = input.leftAt;
       }
       return member ?? null;
+    },
+    async updateStatusMessage(input) {
+      const session = sessions.find((item) => item.id === input.callSessionId);
+      if (session) {
+        session.statusMessageId = input.statusMessageId;
+      }
+      return session ?? null;
     },
     async upsertMember(input) {
       const existing = members.find(

@@ -10,4 +10,11 @@ describe("setupCommand", () => {
 
     assert.ok(subcommandNames?.includes("tts"));
   });
+
+  it("includes voice status setup subcommand", () => {
+    const payload = setupCommand.toJSON();
+    const subcommandNames = payload.options?.map((option) => option.name);
+
+    assert.ok(subcommandNames?.includes("voice-status"));
+  });
 });
