@@ -43,6 +43,11 @@ type Locale = {
   ttsSetupComplete: string;
   ttsTtsChannel: (vars: { id: string }) => string;
   ttsChannelDescription: string;
+  voiceStatusSetupFailed: string;
+  voiceStatusChannelMustBeText: string;
+  voiceStatusSetupComplete: string;
+  voiceStatusChannel: (vars: { id: string }) => string;
+  voiceStatusMarker: (vars: { marker: string }) => string;
   recruitmentFailed: string;
   recruitmentSetupRequired: string;
   recruitmentSetupRequiredMessage: string;
@@ -120,6 +125,11 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsTtsChannel: ({ id }) => `TTS text channel: <#${id}>`,
     ttsChannelDescription:
       "Messages in this channel will be read while the bot is connected to voice.",
+    voiceStatusSetupFailed: "Voice status setup failed",
+    voiceStatusChannelMustBeText: "Voice status channel must be a text channel.",
+    voiceStatusSetupComplete: "Voice status setup complete",
+    voiceStatusChannel: ({ id }) => `Voice status channel: <#${id}>`,
+    voiceStatusMarker: ({ marker }) => `Marker: ${marker}`,
     recruitmentFailed: "Recruitment failed",
     recruitmentSetupRequired: "Recruitment setup required",
     recruitmentSetupRequiredMessage:
@@ -246,6 +256,13 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsSpeakerUpdated: "TTS話者を更新しました",
     ttsSpeakerUser: ({ id }) => `あなたのTTS話者: ${id}`,
     ttsSpeakerServerDefault: ({ id }) => `サーバーデフォルトTTS話者: ${id}`
+    ,
+    voiceStatusSetupFailed: "通話状態セットアップ失敗",
+    voiceStatusChannelMustBeText:
+      "通話状態チャンネルはテキストチャンネルにしてください。",
+    voiceStatusSetupComplete: "通話状態セットアップ完了",
+    voiceStatusChannel: ({ id }) => `通話状態チャンネル: <#${id}>`,
+    voiceStatusMarker: ({ marker }) => `マーカー: ${marker}`
   }
 };
 

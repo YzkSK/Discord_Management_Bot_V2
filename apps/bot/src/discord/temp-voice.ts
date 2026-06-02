@@ -2,6 +2,7 @@ import {
   ChannelType,
   type Client,
   DiscordAPIError,
+  type Guild,
   type GuildBasedChannel,
   PermissionFlagsBits,
   RESTJSONErrorCodes,
@@ -30,7 +31,7 @@ import {
   type VoiceStateTransition,
   type VoiceStateTransitionContext
 } from "./voice-state.js";
-import { createComponentsV2TextMessage } from "./components-v2.js";
+import { createTempVoiceControlMessage } from "./temp-voice-controls.js";
 import {
   createDiscordLogWriter,
   type DiscordLogWriter
@@ -145,7 +146,10 @@ async function handleLeftChannel(
     callSessionId: tempVoiceChannel.callSessionId,
     userId: transition.userId
   });
-  await transferOwnerIfNeeded(db, tempVoiceChannel.channelId);
+  await transferOwnerIfNeeded(db, logWriter, context.oldState.guild, {
+    channelId: tempVoiceChannel.channelId,
+    tempVoiceChannelName: context.oldState.channel?.name ?? null
+  });
 
   if (isEmptyVoiceChannel(context.oldState.channel)) {
     await scheduleTempVoiceChannelDelete(db, {
@@ -288,22 +292,62 @@ async function sendControlChannelMessage(
   channel: TextChannel,
   input: { ownerId: string; tempVoiceChannelId: string }
 ) {
-  await channel.send(
-    createComponentsV2TextMessage({
-      title: "Temp VC Control",
-      lines: [
-        `Owner: <@${input.ownerId}>`,
-        `Voice channel: <#${input.tempVoiceChannelId}>`,
-        "Control buttons will be added in a later issue."
-      ]
-    })
-  );
+  await channel.send(createTempVoiceControlMessage(input));
 }
 
-async function transferOwnerIfNeeded(db: DbClient, channelId: string) {
+export interface TempVoiceOwnerCandidate {
+  joinOrder: number;
+  joinedAt: Date;
+  userId: string;
+}
+
+export function selectNextTempVoiceOwner(
+  activeMembers: readonly TempVoiceOwnerCandidate[],
+  currentOwnerId: string
+) {
+  return [...activeMembers]
+    .filter((member) => member.userId !== currentOwnerId)
+    .sort(
+      (left, right) =>
+        left.joinedAt.getTime() - right.joinedAt.getTime() ||
+        left.joinOrder - right.joinOrder
+    )[0] ?? null;
+}
+
+export function createTempVoiceOwnerTransferredEvent(input: {
+  callSessionId: string | null;
+  channelId: string;
+  controlChannelId: string | null;
+  guildId: string;
+  nextOwnerId: string;
+  previousOwnerId: string;
+  tempVoiceChannelName: string | null;
+}) {
+  return {
+    eventName: "voice.temp.owner_transferred",
+    guildId: input.guildId,
+    actorId: input.nextOwnerId,
+    channelId: input.channelId,
+    payload: {
+      callSessionId: input.callSessionId,
+      controlChannelId: input.controlChannelId,
+      nextOwnerId: input.nextOwnerId,
+      previousOwnerId: input.previousOwnerId,
+      tempVoiceChannelId: input.channelId,
+      tempVoiceChannelName: input.tempVoiceChannelName
+    }
+  };
+}
+
+async function transferOwnerIfNeeded(
+  db: DbClient,
+  logWriter: DiscordLogWriter,
+  guild: Guild,
+  input: { channelId: string; tempVoiceChannelName: string | null }
+) {
   const tempVoiceChannel = await getActiveTempVoiceChannelByChannelId(
     db,
-    channelId
+    input.channelId
   );
 
   if (!tempVoiceChannel?.callSessionId) {
@@ -314,15 +358,69 @@ async function transferOwnerIfNeeded(db: DbClient, channelId: string) {
     db,
     tempVoiceChannel.callSessionId
   );
-  const nextOwner = activeMembers[0];
+  const nextOwner = selectNextTempVoiceOwner(
+    activeMembers,
+    tempVoiceChannel.ownerId
+  );
 
-  if (!nextOwner || nextOwner.userId === tempVoiceChannel.ownerId) {
+  if (!nextOwner) {
     return;
   }
 
   await transferTempVoiceChannelOwner(db, {
-    channelId,
+    channelId: input.channelId,
     ownerId: nextOwner.userId
+  });
+  await updateControlChannelOwnerPermissions(guild, {
+    controlChannelId: tempVoiceChannel.controlChannelId,
+    nextOwnerId: nextOwner.userId,
+    previousOwnerId: tempVoiceChannel.ownerId
+  });
+  await writeTempVoiceLog(
+    logWriter,
+    createTempVoiceOwnerTransferredEvent({
+      callSessionId: tempVoiceChannel.callSessionId,
+      channelId: tempVoiceChannel.channelId,
+      controlChannelId: tempVoiceChannel.controlChannelId,
+      guildId: tempVoiceChannel.guildId,
+      nextOwnerId: nextOwner.userId,
+      previousOwnerId: tempVoiceChannel.ownerId,
+      tempVoiceChannelName: input.tempVoiceChannelName
+    })
+  );
+}
+
+async function updateControlChannelOwnerPermissions(
+  guild: Guild,
+  input: {
+    controlChannelId: string | null;
+    nextOwnerId: string;
+    previousOwnerId: string;
+  }
+) {
+  if (!input.controlChannelId) {
+    return;
+  }
+
+  const controlChannel = await guild.channels
+    .fetch(input.controlChannelId)
+    .catch(() => null);
+
+  if (!controlChannel || !("permissionOverwrites" in controlChannel)) {
+    return;
+  }
+
+  await controlChannel.permissionOverwrites
+    .edit(input.previousOwnerId, {
+      ReadMessageHistory: null,
+      SendMessages: null,
+      ViewChannel: null
+    })
+    .catch(() => undefined);
+  await controlChannel.permissionOverwrites.edit(input.nextOwnerId, {
+    ReadMessageHistory: true,
+    SendMessages: true,
+    ViewChannel: true
   });
 }
 

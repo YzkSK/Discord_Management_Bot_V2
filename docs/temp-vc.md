@@ -12,8 +12,16 @@ Phase4 adds the first Temp VC foundation.
   the generated voice channel.
 - The control text channel is visible to the Temp VC owner and hidden from
   everyone else.
-- The control text channel posts its initial owner/channel summary with
-  Discord Components V2.
+- The control text channel posts its owner/channel summary and owner controls
+  with Discord Components V2.
+- Only the current Temp VC owner can use the control interactions.
+- The control surface supports:
+  - rename
+  - lock / unlock
+  - hide / show
+  - user limit
+  - bitrate
+  - kick
 - Generated Temp VCs are tracked in `temp_voice_channels`.
 - Call state is tracked in `call_sessions` and `call_session_members`.
 - Temp VC creation is logged as one `voice.temp.created` event. The internal
@@ -24,6 +32,9 @@ Phase4 adds the first Temp VC foundation.
 - When a member leaves a Temp VC, membership is updated.
 - If the owner leaves, the next active member is recalculated from
   `joined_at` / `join_order`.
+- When ownership changes, the private control channel permission is moved from
+  the previous owner to the next owner.
+- Temp VC ownership transfer is logged as `voice.temp.owner_transferred`.
 - If the Temp VC becomes empty, it is scheduled for deletion after 5 seconds.
 - When the generated voice channel is deleted, the control text channel is also
   deleted.
@@ -34,9 +45,7 @@ Phase4 adds the first Temp VC foundation.
 
 Not included in Phase4:
 
-- Button controls.
 - Rename sync.
-- Lock/unlock, hide/show, user limit, bitrate, and kick controls.
 - Dashboard UI for Temp VC setup.
 
 ## Database
@@ -82,7 +91,51 @@ The bot needs permissions that allow it to:
 - View channels.
 - Manage channels.
 - Move members.
+- Send messages.
+- Read message history.
 - Connect to voice channels.
+- View audit log, if Temp VC related generic channel changes should be enriched
+  when they are not suppressed.
+
+Temp VC controls also depend on `Manage Channels` because lock/unlock,
+hide/show, rename, user limit, and bitrate all mutate generated channel
+settings.
+
+## Control Channel Verification
+
+After a Temp VC is created, use the private control text channel:
+
+1. Confirm the control message uses Components V2 and shows the owner and voice
+   channel.
+2. Press `Rename`, submit a new name, and confirm the generated voice channel is
+   renamed.
+3. Press `Lock` and confirm new users cannot connect.
+4. Press `Unlock` and confirm connection is allowed again.
+5. Press `Hide` and confirm the channel is hidden from everyone.
+6. Press `Show` and confirm the channel is visible again.
+7. Press `User limit`, submit a number from 0 to 99, and confirm the channel
+   limit changes.
+8. Press `Bitrate`, submit a kbps value from 8 to 384, and confirm the channel
+   bitrate changes.
+9. Select a member in the kick selector and confirm the selected member is
+   disconnected only when they are currently in the Temp VC.
+10. Have a non-owner try a control interaction and confirm it is rejected with a
+    private response.
+
+## Ownership Transfer Verification
+
+Use at least three non-bot users when possible.
+
+1. User A joins the configured creation VC and becomes the Temp VC owner.
+2. User B joins the generated Temp VC.
+3. User C joins the generated Temp VC after User B.
+4. Confirm the control channel is visible to User A only.
+5. Have User A leave the generated Temp VC.
+6. Confirm User B becomes the next owner because they joined before User C.
+7. Confirm the private control channel permission moves from User A to User B.
+8. Confirm User B can use owner controls.
+9. Confirm User C cannot use owner controls.
+10. Confirm the log stream contains `voice.temp.owner_transferred`.
 
 ## Docker Verification
 
@@ -114,9 +167,11 @@ docker compose --profile app logs -f bot
 6. Confirm a `U+1F3AE {username}` voice channel is created.
 7. Confirm you are moved into the generated VC.
 8. Confirm the private control text channel is created with a Components V2
-   message.
-9. Leave the generated VC.
-10. Confirm both generated channels are deleted after about 5 seconds.
+   control message.
+9. Run the control channel verification steps above.
+10. Run the ownership transfer verification steps above.
+11. Leave the generated VC.
+12. Confirm both generated channels are deleted after about 5 seconds.
 
 ## Verification Commands
 
