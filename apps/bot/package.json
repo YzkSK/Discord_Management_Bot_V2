@@ -9,7 +9,7 @@
     "dev": "tsx src/index.ts",
     "lint": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/index.js",
-    "test": "tsc -p tsconfig.json && node --test dist/commands/setup.test.js dist/commands/tts.test.js dist/discord/audit-log.test.js dist/discord/components-v2.test.js dist/discord/dashboard-access.test.js dist/discord/gateway-logs.test.js dist/discord/log-channel.test.js dist/discord/message-logs.test.js dist/discord/recruitment-channel.test.js dist/discord/recruitment-logs.test.js dist/discord/temp-voice-controls.test.js dist/discord/temp-voice.test.js dist/discord/tts-auto-leave.test.js dist/discord/tts-logs.test.js dist/discord/tts-message-reader.test.js dist/discord/tts-queue.test.js dist/discord/tts-session.test.js dist/discord/voice-state.test.js dist/discord/voicevox.test.js",
+    "test": "tsc -p tsconfig.json && node --test dist/commands/setup.test.js dist/commands/tts.test.js dist/discord/audit-log.test.js dist/discord/components-v2.test.js dist/discord/dashboard-access.test.js dist/discord/gateway-logs.test.js dist/discord/log-channel.test.js dist/discord/message-logs.test.js dist/discord/recruitment-channel.test.js dist/discord/recruitment-logs.test.js dist/discord/temp-voice-controls.test.js dist/discord/temp-voice.test.js dist/discord/tts-auto-leave.test.js dist/discord/tts-logs.test.js dist/discord/tts-message-reader.test.js dist/discord/tts-queue.test.js dist/discord/tts-session.test.js dist/discord/voice-activity.test.js dist/discord/voice-state.test.js dist/discord/voicevox.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

@@ -34,6 +34,8 @@ Implemented in Phase2:
     create/update/delete, invite create/delete, emoji create/update/delete,
     sticker create/update/delete, reaction add/remove, message bulk delete,
     voice join/leave/move/state update, and webhook update events.
+  - Aggregates human voice activity into `call.started` and `call.ended`
+    session logs for voice status visualization.
   - Uses Discord Audit Log lookup for moderation and server-management events
     when the bot has `View Audit Log`, filling `actorId` and
     `payload.auditLog`.
