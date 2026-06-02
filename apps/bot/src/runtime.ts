@@ -19,6 +19,7 @@ import { createDiscordLogWriter } from "./discord/log-writer.js";
 import { installTtsMessageReader } from "./discord/tts-message-reader.js";
 import { installTtsAutoLeaveHandler } from "./discord/tts-auto-leave.js";
 import { TtsSessionManager } from "./discord/tts-session.js";
+import { installVoiceActivityHandlers } from "./discord/voice-activity.js";
 import { createVoicevoxClient } from "./discord/voicevox.js";
 
 export interface BotRuntime {
@@ -75,6 +76,10 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
       installTempVoiceHandlers(discordClient, {
         db: dbConnection.db,
         redis: redisConnection.client
+      });
+      installVoiceActivityHandlers(discordClient, {
+        db: dbConnection.db,
+        logWriter
       });
       installTtsAutoLeaveHandler(discordClient, {
         logWriter,
