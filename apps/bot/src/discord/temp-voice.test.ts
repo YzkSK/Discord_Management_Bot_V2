@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  createTempVoiceOwnerTransferredEvent,
   formatTempVoiceChannelName,
-  formatTempVoiceControlChannelName
+  formatTempVoiceControlChannelName,
+  selectNextTempVoiceOwner
 } from "./temp-voice.js";
 import {
   isTempVoiceAuditReason,
@@ -44,5 +46,53 @@ describe("formatTempVoiceChannelName", () => {
     suppressTempVoiceChannelLog("channel-2", -1);
 
     assert.equal(shouldSuppressTempVoiceChannelLog("channel-2"), false);
+  });
+
+  it("selects the earliest active non-current owner as next Temp VC owner", () => {
+    const nextOwner = selectNextTempVoiceOwner(
+      [
+        {
+          joinOrder: 0,
+          joinedAt: new Date("2026-06-02T00:00:00.000Z"),
+          userId: "owner-1"
+        },
+        {
+          joinOrder: 1,
+          joinedAt: new Date("2026-06-02T00:00:01.000Z"),
+          userId: "user-2"
+        },
+        {
+          joinOrder: 2,
+          joinedAt: new Date("2026-06-02T00:00:01.000Z"),
+          userId: "user-3"
+        }
+      ],
+      "owner-1"
+    );
+
+    assert.equal(nextOwner?.userId, "user-2");
+  });
+
+  it("creates a Temp VC owner transferred log event", () => {
+    const event = createTempVoiceOwnerTransferredEvent({
+      callSessionId: "call-1",
+      channelId: "voice-1",
+      controlChannelId: "control-1",
+      guildId: "guild-1",
+      nextOwnerId: "user-2",
+      previousOwnerId: "owner-1",
+      tempVoiceChannelName: "Room"
+    });
+
+    assert.equal(event.eventName, "voice.temp.owner_transferred");
+    assert.equal(event.actorId, "user-2");
+    assert.deepEqual(event.payload, {
+      callSessionId: "call-1",
+      controlChannelId: "control-1",
+      nextOwnerId: "user-2",
+      previousOwnerId: "owner-1",
+      tempVoiceChannelId: "voice-1",
+      tempVoiceChannelName: "Room"
+    });
   });
 });

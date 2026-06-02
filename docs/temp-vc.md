@@ -32,6 +32,9 @@ Phase4 adds the first Temp VC foundation.
 - When a member leaves a Temp VC, membership is updated.
 - If the owner leaves, the next active member is recalculated from
   `joined_at` / `join_order`.
+- When ownership changes, the private control channel permission is moved from
+  the previous owner to the next owner.
+- Temp VC ownership transfer is logged as `voice.temp.owner_transferred`.
 - If the Temp VC becomes empty, it is scheduled for deletion after 5 seconds.
 - When the generated voice channel is deleted, the control text channel is also
   deleted.
