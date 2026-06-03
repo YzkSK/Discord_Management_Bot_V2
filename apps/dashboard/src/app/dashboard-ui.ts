@@ -26,6 +26,11 @@ const dashboardNavItems: DashboardNavItem[] = [
     label: "Overview"
   },
   {
+    description: "Current calls and temporary voice channels",
+    href: "/voice",
+    label: "Voice"
+  },
+  {
     description: "Search Discord and feature events",
     href: "/logs",
     label: "Logs"

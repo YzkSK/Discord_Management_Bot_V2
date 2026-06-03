@@ -24,6 +24,8 @@
     "src/app/api/dashboard-access/validation.test.ts",
     "src/app/api/settings/validation.ts",
     "src/app/api/settings/validation.test.ts",
+    "src/app/api/voice/summary.ts",
+    "src/app/api/voice/summary.test.ts",
     "src/app/api/tts-settings/validation.test.ts"
   ]
 }
