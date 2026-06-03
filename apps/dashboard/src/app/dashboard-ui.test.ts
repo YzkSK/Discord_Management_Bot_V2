@@ -34,6 +34,7 @@ describe("dashboard ui helpers", () => {
       getDashboardNavItems().map((item) => [item.href, item.label]),
       [
         ["/", "Overview"],
+        ["/voice", "Voice"],
         ["/logs", "Logs"],
         ["/settings", "Settings"]
       ]

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { CheckSquare, ChevronRight, ScrollText, Settings } from "lucide-react";
+import { CheckSquare, ChevronRight, Headphones, ScrollText, Settings } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { getDashboardSession } from "../auth";
@@ -65,6 +65,12 @@ export default async function HomePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2">
+            <QuickAction
+              body="Review current calls, Temp VC ownership, and voice setup shortcuts."
+              href="/voice"
+              icon={<Headphones className="h-4 w-4" />}
+              title="Voice"
+            />
             <QuickAction
               body="Search events, switch presets, and inspect payload summaries."
               href="/logs"

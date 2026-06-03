@@ -100,6 +100,21 @@ type DashboardLocale = {
   hide: string;
   view: string;
   loadingLogs: string;
+  voiceActiveCalls: string;
+  voiceChannelId: string;
+  voiceControlChannelId: string;
+  voiceDuration: string;
+  voiceFailedToLoad: string;
+  voiceMembers: string;
+  voiceNoActiveCalls: string;
+  voiceNoRecentCalls: string;
+  voiceNoTempVcChannels: string;
+  voiceOwnerId: string;
+  voiceRecentCalls: string;
+  voiceSetupShortcuts: string;
+  voiceStatusSetup: string;
+  voiceTempVc: string;
+  voiceTempVcChannels: string;
 };
 
 const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
@@ -197,7 +212,22 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     raw: "Raw",
     hide: "Hide",
     view: "View",
-    loadingLogs: "Loading logs"
+    loadingLogs: "Loading logs",
+    voiceActiveCalls: "Active Calls",
+    voiceChannelId: "Channel ID",
+    voiceControlChannelId: "Control Channel ID",
+    voiceDuration: "Duration",
+    voiceFailedToLoad: "Failed to load voice state.",
+    voiceMembers: "Members",
+    voiceNoActiveCalls: "No active calls.",
+    voiceNoRecentCalls: "No recent calls.",
+    voiceNoTempVcChannels: "No active Temp VC channels.",
+    voiceOwnerId: "Owner ID",
+    voiceRecentCalls: "Recent Calls",
+    voiceSetupShortcuts: "Setup Shortcuts",
+    voiceStatusSetup: "Voice Status Setup",
+    voiceTempVc: "Temp VC",
+    voiceTempVcChannels: "Temp VC Channels"
   },
   ja: {
     loadGuild: "Guildを読み込む",
@@ -293,7 +323,22 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     raw: "生データ",
     hide: "非表示",
     view: "表示",
-    loadingLogs: "ログ読み込み中"
+    loadingLogs: "ログ読み込み中",
+    voiceActiveCalls: "通話中",
+    voiceChannelId: "チャンネルID",
+    voiceControlChannelId: "操作チャンネルID",
+    voiceDuration: "通話時間",
+    voiceFailedToLoad: "通話状態の読み込みに失敗しました。",
+    voiceMembers: "参加人数",
+    voiceNoActiveCalls: "現在通話中のVCはありません。",
+    voiceNoRecentCalls: "最近の通話はありません。",
+    voiceNoTempVcChannels: "有効な一時VCはありません。",
+    voiceOwnerId: "所有者ID",
+    voiceRecentCalls: "最近の通話",
+    voiceSetupShortcuts: "セットアップ導線",
+    voiceStatusSetup: "通話状態表示の設定",
+    voiceTempVc: "一時VC",
+    voiceTempVcChannels: "一時VC"
   }
 };
 
