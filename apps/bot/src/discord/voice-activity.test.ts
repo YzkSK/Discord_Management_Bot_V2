@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  createVoiceActivityStatusScheduler,
   createVoiceActivityEndedEvent,
   createVoiceActivityStartedEvent,
   handleVoiceActivityTransition,
@@ -343,6 +344,40 @@ describe("voice activity sessions", () => {
       "started:session-1",
       "ended:session-1"
     ]);
+  });
+
+  it("keeps refreshing active voice status while the session remains active", async () => {
+    const delays: number[] = [];
+    const refreshes: string[] = [];
+    const timers: Array<() => void> = [];
+
+    const scheduleActiveStatusUpdate = createVoiceActivityStatusScheduler({
+      refresh: async (sessionId) => {
+        refreshes.push(sessionId);
+        return refreshes.length < 2;
+      },
+      setTimeout: (handler, delayMs) => {
+        delays.push(delayMs);
+        timers.push(handler);
+      }
+    });
+
+    await scheduleActiveStatusUpdate("session-1", 60_000);
+    assert.deepEqual(delays, [60_000]);
+
+    timers[0]?.();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.deepEqual(refreshes, ["session-1"]);
+    assert.deepEqual(delays, [60_000, 60_000]);
+
+    timers[1]?.();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.deepEqual(refreshes, ["session-1", "session-1"]);
+    assert.deepEqual(delays, [60_000, 60_000]);
   });
 });
 
