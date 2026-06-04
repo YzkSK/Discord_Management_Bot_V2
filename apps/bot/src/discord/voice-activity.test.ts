@@ -207,6 +207,40 @@ describe("voice activity sessions", () => {
     assert.deepEqual(scheduled, [60_000]);
   });
 
+  it("does not publish call status for ignored creation voice channels", async () => {
+    const repository = createMemoryRepository();
+    const events: string[] = [];
+    const statusUpdates: string[] = [];
+
+    await handleVoiceActivityTransition(
+      {
+        guildId: "guild-1",
+        memberIsBot: false,
+        newChannelId: "temp-vc-create",
+        oldChannelId: null,
+        type: "join",
+        userId: "user-1"
+      },
+      {
+        ignoredChannelIds: new Set(["temp-vc-create"]),
+        now: () => new Date("2026-06-03T00:00:00.000Z"),
+        repository,
+        updateVoiceStatus: async (input) => {
+          statusUpdates.push(`${input.state}:${input.session.id}`);
+          return "message-1";
+        },
+        writeLog: async (event) => {
+          events.push(event.eventName);
+        }
+      }
+    );
+
+    assert.equal(repository.sessions.length, 0);
+    assert.equal(repository.members.length, 0);
+    assert.deepEqual(events, []);
+    assert.deepEqual(statusUpdates, []);
+  });
+
   it("updates the existing status message to ended when the session finishes", async () => {
     const repository = createMemoryRepository();
     const statusUpdates: string[] = [];
