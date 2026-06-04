@@ -228,6 +228,8 @@ async function handleVoiceJoin(
     transition.guildId,
     transition.newChannelId
   );
+  let activeMembersBeforeJoin: readonly VoiceActivityMember[] = [];
+  let shouldPublishStarted = false;
 
   if (!session) {
     session = await context.repository.createSession({
@@ -235,6 +237,19 @@ async function handleVoiceJoin(
       guildId: transition.guildId,
       startedAt: now
     });
+    shouldPublishStarted = true;
+  } else {
+    activeMembersBeforeJoin = await context.repository.listActiveMembers(
+      session.id
+    );
+    shouldPublishStarted = shouldPublishStartedForExistingSession({
+      activeMembers: activeMembersBeforeJoin,
+      session,
+      userId: transition.userId
+    });
+  }
+
+  if (shouldPublishStarted) {
     await context.writeLog(
       createVoiceActivityStartedEvent({
         actorId: transition.userId,
@@ -245,7 +260,7 @@ async function handleVoiceJoin(
       })
     );
     const statusMessageId = await context.updateVoiceStatus?.({
-      activeMemberCount: 1,
+      activeMemberCount: Math.max(activeMembersBeforeJoin.length, 1),
       session,
       state: "started"
     });
@@ -266,6 +281,18 @@ async function handleVoiceJoin(
     joinedAt: now,
     userId: transition.userId
   });
+}
+
+function shouldPublishStartedForExistingSession(input: {
+  activeMembers: readonly VoiceActivityMember[];
+  session: VoiceActivitySession;
+  userId: string;
+}) {
+  return (
+    input.session.statusMessageId === null &&
+    input.activeMembers.length <= 1 &&
+    input.activeMembers.some((member) => member.userId === input.userId)
+  );
 }
 
 async function resolveIgnoredVoiceActivityChannelIds(
