@@ -4,6 +4,7 @@ import {
   endCallSession,
   getActiveCallSessionByChannelId,
   getCallSessionById,
+  getGuildConfigByGuildId,
   listActiveCallSessionMembers,
   markCallSessionMemberLeft,
   updateCallSessionStatusMessage,
@@ -72,6 +73,7 @@ export interface VoiceActivityRepository {
 }
 
 export interface VoiceActivityContext {
+  ignoredChannelIds?: ReadonlySet<string>;
   now?: () => Date;
   repository: VoiceActivityRepository;
   scheduleActiveStatusUpdate?: (
@@ -97,8 +99,12 @@ export function installVoiceActivityHandlers(
   options: InstallVoiceActivityHandlersOptions
 ) {
   installVoiceStateHandlers(client, {
-    onTransition: (transition) =>
+    onTransition: async (transition) =>
       handleVoiceActivityTransition(transition, {
+        ignoredChannelIds: await resolveIgnoredVoiceActivityChannelIds(
+          options.db,
+          transition.guildId
+        ),
         repository: createDbVoiceActivityRepository(options.db),
         scheduleActiveStatusUpdate: (sessionId, delayMs) => {
           setTimeout(() => {
@@ -213,6 +219,10 @@ async function handleVoiceJoin(
     return;
   }
 
+  if (context.ignoredChannelIds?.has(transition.newChannelId)) {
+    return;
+  }
+
   const now = resolveNow(context);
   let session = await context.repository.findActiveSessionByChannelId(
     transition.guildId,
@@ -256,6 +266,22 @@ async function handleVoiceJoin(
     joinedAt: now,
     userId: transition.userId
   });
+}
+
+async function resolveIgnoredVoiceActivityChannelIds(
+  db: DbClient,
+  guildId: string
+) {
+  const config = await getGuildConfigByGuildId(db, guildId).catch(
+    (error: unknown) => {
+      console.warn("failed to resolve ignored voice activity channels", error);
+      return null;
+    }
+  );
+
+  return new Set(
+    config?.tempVoiceCreateChannelId ? [config.tempVoiceCreateChannelId] : []
+  );
 }
 
 async function handleVoiceLeave(
