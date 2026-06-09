@@ -53,16 +53,26 @@ type DashboardLocale = {
   ttsDictionary: string;
   ttsDictionarySaved: string;
   ttsDictionaryDeleted: string;
+  ttsDictionaryEntries: string;
+  ttsConfiguredStatus: string;
+  ttsDisabledDictionaryEntries: string;
   ttsEnabled: string;
+  ttsEnabledDictionaryEntries: string;
   ttsFromText: string;
+  ttsNotConfiguredStatus: string;
+  ttsPageTitle: string;
   ttsPriority: string;
   ttsScope: string;
   ttsSpeakerDefault: string;
   ttsSpeakerDeleted: string;
   ttsSpeakerId: string;
   ttsSpeakerSaved: string;
+  ttsSetupCommand: string;
+  ttsSourceChannel: string;
+  ttsStatus: string;
   ttsToText: string;
   ttsUserSpeakers: string;
+  ttsVoiceCommands: string;
   accessGrantTarget: string;
   accessGrantUser: string;
   accessGrantRole: string;
@@ -185,16 +195,26 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     ttsDictionary: "Dictionary",
     ttsDictionarySaved: "TTS dictionary entry saved.",
     ttsDictionaryDeleted: "TTS dictionary entry deleted.",
+    ttsDictionaryEntries: "Dictionary Entries",
+    ttsConfiguredStatus: "Configured",
+    ttsDisabledDictionaryEntries: "Disabled Entries",
     ttsEnabled: "Enabled",
+    ttsEnabledDictionaryEntries: "Enabled Entries",
     ttsFromText: "From Text",
+    ttsNotConfiguredStatus: "Not configured",
+    ttsPageTitle: "TTS",
     ttsPriority: "Priority",
     ttsScope: "Scope",
     ttsSpeakerDefault: "Default Speaker ID",
     ttsSpeakerDeleted: "TTS speaker deleted.",
     ttsSpeakerId: "Speaker ID",
     ttsSpeakerSaved: "TTS speaker saved.",
+    ttsSetupCommand: "Setup from Discord with /setup tts",
+    ttsSourceChannel: "Text Channel",
+    ttsStatus: "TTS Status",
     ttsToText: "To Text",
     ttsUserSpeakers: "User Speakers",
+    ttsVoiceCommands: "Voice Commands",
     accessGrantTarget: "Target",
     accessGrantUser: "User",
     accessGrantRole: "Role",
@@ -314,16 +334,26 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     ttsDictionary: "辞書",
     ttsDictionarySaved: "TTS辞書を保存しました。",
     ttsDictionaryDeleted: "TTS辞書を削除しました。",
+    ttsDictionaryEntries: "辞書エントリ",
+    ttsConfiguredStatus: "設定済み",
+    ttsDisabledDictionaryEntries: "無効な辞書",
     ttsEnabled: "有効",
+    ttsEnabledDictionaryEntries: "有効な辞書",
     ttsFromText: "置換前",
+    ttsNotConfiguredStatus: "未設定",
+    ttsPageTitle: "TTS",
     ttsPriority: "優先度",
     ttsScope: "範囲",
     ttsSpeakerDefault: "デフォルト話者ID",
     ttsSpeakerDeleted: "TTS話者を削除しました。",
     ttsSpeakerId: "話者ID",
     ttsSpeakerSaved: "TTS話者を保存しました。",
+    ttsSetupCommand: "Discordで /setup tts から設定",
+    ttsSourceChannel: "テキストチャンネル",
+    ttsStatus: "TTS状態",
     ttsToText: "置換後",
     ttsUserSpeakers: "ユーザー別話者",
+    ttsVoiceCommands: "通話コマンド",
     accessGrantTarget: "対象",
     accessGrantUser: "ユーザー",
     accessGrantRole: "ロール",

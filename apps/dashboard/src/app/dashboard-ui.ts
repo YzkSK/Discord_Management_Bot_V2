@@ -36,6 +36,11 @@ const dashboardNavItems: DashboardNavItem[] = [
     label: "Recruitment"
   },
   {
+    description: "TTS setup, dictionary, and speaker state",
+    href: "/tts",
+    label: "TTS"
+  },
+  {
     description: "Search Discord and feature events",
     href: "/logs",
     label: "Logs"

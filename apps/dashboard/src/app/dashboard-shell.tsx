@@ -4,6 +4,7 @@ import {
   ClipboardList,
   Headphones,
   LayoutDashboard,
+  Mic2,
   ScrollText,
   Settings
 } from "lucide-react";
@@ -37,6 +38,7 @@ export function DashboardShell({
     "/": <LayoutDashboard className="h-4 w-4" />,
     "/voice": <Headphones className="h-4 w-4" />,
     "/recruitment": <ClipboardList className="h-4 w-4" />,
+    "/tts": <Mic2 className="h-4 w-4" />,
     "/logs": <ScrollText className="h-4 w-4" />,
     "/settings": <Settings className="h-4 w-4" />
   };
