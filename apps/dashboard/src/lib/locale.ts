@@ -115,6 +115,24 @@ type DashboardLocale = {
   voiceStatusSetup: string;
   voiceTempVc: string;
   voiceTempVcChannels: string;
+  recruitmentAutoClose: string;
+  recruitmentCapacity: string;
+  recruitmentClosed: string;
+  recruitmentCreateCommand: string;
+  recruitmentCreatorId: string;
+  recruitmentFailedToLoad: string;
+  recruitmentFull: string;
+  recruitmentGenre: string;
+  recruitmentNoItems: string;
+  recruitmentOpen: string;
+  recruitmentPageTitle: string;
+  recruitmentParticipants: string;
+  recruitmentPost: string;
+  recruitmentSetupShortcut: string;
+  recruitmentStatus: string;
+  recruitmentTableTitle: string;
+  recruitmentUpdated: string;
+  recruitmentVoiceChannelId: string;
 };
 
 const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
@@ -227,7 +245,25 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     voiceSetupShortcuts: "Setup Shortcuts",
     voiceStatusSetup: "Voice Status Setup",
     voiceTempVc: "Temp VC",
-    voiceTempVcChannels: "Temp VC Channels"
+    voiceTempVcChannels: "Temp VC Channels",
+    recruitmentAutoClose: "Auto Close",
+    recruitmentCapacity: "Capacity",
+    recruitmentClosed: "Closed",
+    recruitmentCreateCommand: "Create from Discord with /recruitment create",
+    recruitmentCreatorId: "Creator ID",
+    recruitmentFailedToLoad: "Failed to load recruitments.",
+    recruitmentFull: "Full",
+    recruitmentGenre: "Genre",
+    recruitmentNoItems: "No recruitments found for this guild.",
+    recruitmentOpen: "Open",
+    recruitmentPageTitle: "Recruitment",
+    recruitmentParticipants: "Participants",
+    recruitmentPost: "Post",
+    recruitmentSetupShortcut: "Setup recruitment channel",
+    recruitmentStatus: "Status",
+    recruitmentTableTitle: "Recruitment Posts",
+    recruitmentUpdated: "Updated",
+    recruitmentVoiceChannelId: "Voice Channel ID"
   },
   ja: {
     loadGuild: "Guildを読み込む",
@@ -338,7 +374,25 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     voiceSetupShortcuts: "セットアップ導線",
     voiceStatusSetup: "通話状態表示の設定",
     voiceTempVc: "一時VC",
-    voiceTempVcChannels: "一時VC"
+    voiceTempVcChannels: "一時VC",
+    recruitmentAutoClose: "自動締切",
+    recruitmentCapacity: "定員",
+    recruitmentClosed: "締切",
+    recruitmentCreateCommand: "Discordで /recruitment create から作成",
+    recruitmentCreatorId: "作成者ID",
+    recruitmentFailedToLoad: "募集の読み込みに失敗しました。",
+    recruitmentFull: "満員",
+    recruitmentGenre: "ジャンル",
+    recruitmentNoItems: "このGuildの募集はありません。",
+    recruitmentOpen: "募集中",
+    recruitmentPageTitle: "募集",
+    recruitmentParticipants: "参加者",
+    recruitmentPost: "投稿",
+    recruitmentSetupShortcut: "募集チャンネル設定",
+    recruitmentStatus: "状態",
+    recruitmentTableTitle: "募集一覧",
+    recruitmentUpdated: "更新",
+    recruitmentVoiceChannelId: "VC ID"
   }
 };
 

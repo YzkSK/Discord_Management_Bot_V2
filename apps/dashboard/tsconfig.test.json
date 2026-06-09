@@ -16,6 +16,7 @@
     "src/app/dashboard-style-policy.test.ts",
     "src/lib/locale.ts",
     "src/lib/locale.test.ts",
+    "src/lib/locale-recruitment.test.ts",
     "src/lib/utils.ts",
     "src/lib/utils.test.ts",
     "src/app/api/guilds/guild-filter.ts",
@@ -26,6 +27,8 @@
     "src/app/api/settings/validation.test.ts",
     "src/app/api/voice/summary.ts",
     "src/app/api/voice/summary.test.ts",
+    "src/app/api/recruitments/summary.ts",
+    "src/app/api/recruitments/summary.test.ts",
     "src/app/api/tts-settings/validation.test.ts"
   ]
 }
