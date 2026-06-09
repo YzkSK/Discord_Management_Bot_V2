@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, sql } from "drizzle-orm";
 
 import type { DbClient } from "../client.js";
 import { recruitmentParticipants, recruitments } from "../schema/index.js";
@@ -81,6 +81,47 @@ export async function getRecruitmentByMessageId(
     .limit(1);
 
   return recruitment ?? null;
+}
+
+export async function listRecruitmentDashboardState(
+  db: DbClient,
+  input: { guildId: string; limit?: number }
+) {
+  const activeCounts = db
+    .select({
+      activeParticipantCount: count(recruitmentParticipants.id).as(
+        "active_participant_count"
+      ),
+      recruitmentId: recruitmentParticipants.recruitmentId
+    })
+    .from(recruitmentParticipants)
+    .where(isNull(recruitmentParticipants.leftAt))
+    .groupBy(recruitmentParticipants.recruitmentId)
+    .as("active_counts");
+
+  return db
+    .select({
+      activeParticipantCount: sql<number>`coalesce(${activeCounts.activeParticipantCount}, 0)`,
+      autoClose: recruitments.autoClose,
+      autoClosed: recruitments.autoClosed,
+      capacity: recruitments.capacity,
+      channelId: recruitments.channelId,
+      closedAt: recruitments.closedAt,
+      content: recruitments.content,
+      createdAt: recruitments.createdAt,
+      creatorId: recruitments.creatorId,
+      genre: recruitments.genre,
+      id: recruitments.id,
+      messageId: recruitments.messageId,
+      status: sql<RecruitmentStatus>`${recruitments.status}`,
+      updatedAt: recruitments.updatedAt,
+      voiceChannelId: recruitments.voiceChannelId
+    })
+    .from(recruitments)
+    .leftJoin(activeCounts, eq(recruitments.id, activeCounts.recruitmentId))
+    .where(eq(recruitments.guildId, input.guildId))
+    .orderBy(desc(recruitments.createdAt))
+    .limit(input.limit ?? 50);
 }
 
 export async function listActiveRecruitmentParticipants(

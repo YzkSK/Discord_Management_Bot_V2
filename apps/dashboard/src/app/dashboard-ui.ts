@@ -31,6 +31,11 @@ const dashboardNavItems: DashboardNavItem[] = [
     label: "Voice"
   },
   {
+    description: "Recruitment posts, status, and participant counts",
+    href: "/recruitment",
+    label: "Recruitment"
+  },
+  {
     description: "Search Discord and feature events",
     href: "/logs",
     label: "Logs"

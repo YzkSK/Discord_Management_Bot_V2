@@ -35,6 +35,7 @@ describe("dashboard ui helpers", () => {
       [
         ["/", "Overview"],
         ["/voice", "Voice"],
+        ["/recruitment", "Recruitment"],
         ["/logs", "Logs"],
         ["/settings", "Settings"]
       ]
