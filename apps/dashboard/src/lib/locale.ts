@@ -107,6 +107,9 @@ type DashboardLocale = {
   received: string;
   summary: string;
   raw: string;
+  humanView: string;
+  logCategoryTabs: string;
+  rawJsonRestricted: string;
   hide: string;
   view: string;
   loadingLogs: string;
@@ -262,6 +265,9 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     received: "Received",
     summary: "Summary",
     raw: "Raw",
+    humanView: "Human View",
+    logCategoryTabs: "Categories",
+    rawJsonRestricted: "Raw JSON is available to admins only.",
     hide: "Hide",
     view: "View",
     loadingLogs: "Loading logs",
@@ -415,6 +421,9 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     received: "受信時刻",
     summary: "概要",
     raw: "生データ",
+    humanView: "見やすい表示",
+    logCategoryTabs: "カテゴリ",
+    rawJsonRestricted: "Raw JSONはadmin以上のみ表示できます。",
     hide: "非表示",
     view: "表示",
     loadingLogs: "ログ読み込み中",
