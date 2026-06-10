@@ -81,6 +81,7 @@ docker compose --profile app down
 - Phase9: Dashboard RBAC management, feature-domain Settings API, Settings UI expansion, and verification docs.
 - Phase10: TTS dictionary, safety guardrails, speaker settings, queue/retry foundation, and verification docs.
 - Phase11: Temp VC owner controls, ownership transfer, voice activity sessions, and voice status channel rendering.
+- Phase12: Dashboard Voice, Recruitment, TTS, System Health pages, Logs UX completion, and verification docs.
 
 ## Phase0 Completion Criteria
 
@@ -146,3 +147,7 @@ Phase11 Temp VC controls and voice status notes are documented in:
 
 - `docs/temp-vc.md`
 - `docs/voice-activity.md`
+
+Phase12 Dashboard feature pages and Logs UX verification notes are documented in:
+
+- `docs/phase12-dashboard-feature-pages.md`
