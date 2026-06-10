@@ -13,7 +13,7 @@ import {
 } from "@discord-bot/db";
 import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/shared";
 
-import { createComponentsV2TextMessage } from "../discord/components-v2.js";
+import { createComponentsV2TextMessage, EVENT_COLORS } from "../discord/components-v2.js";
 import {
   createRecruitmentPostMessage,
   findMarkedRecruitmentChannel
@@ -107,6 +107,7 @@ export async function handleRecruitmentCommand(
       ...createComponentsV2TextMessage({
         title: loc.recruitmentFailed,
         lines: [loc.notInGuild],
+        accentColor: EVENT_COLORS.red,
         privateResponse: true
       })
     });
@@ -121,6 +122,7 @@ export async function handleRecruitmentCommand(
       ...createComponentsV2TextMessage({
         title: loc.recruitmentFailed,
         lines: [loc.unknownSetupTarget({ target: subcommand })],
+        accentColor: EVENT_COLORS.red,
         privateResponse: true
       })
     });
@@ -148,6 +150,7 @@ async function handleRecruitmentCreate(
       ...createComponentsV2TextMessage({
         title: loc.recruitmentSetupRequired,
         lines: [loc.recruitmentSetupRequiredMessage],
+        accentColor: EVENT_COLORS.yellow,
         privateResponse: true
       })
     });
@@ -190,6 +193,7 @@ async function handleRecruitmentCreate(
     ...createComponentsV2TextMessage({
       title: loc.recruitmentCreated,
       lines: [loc.recruitmentPostLink({ url: message.url })],
+      accentColor: EVENT_COLORS.teal,
       privateResponse: true
     })
   });

@@ -8,6 +8,7 @@ import {
   MessageFlags,
   type TextChannel
 } from "discord.js";
+import { EVENT_COLORS } from "./components-v2.js";
 import type { createRecruitment } from "@discord-bot/db";
 
 export const recruitmentChannelTopicMarker =
@@ -92,6 +93,7 @@ export function createRecruitmentPostMessage(
     components: [
       {
         type: ComponentType.Container,
+        accent_color: EVENT_COLORS.teal,
         components: [
           {
             type: ComponentType.TextDisplay,
