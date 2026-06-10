@@ -41,6 +41,11 @@ const dashboardNavItems: DashboardNavItem[] = [
     label: "TTS"
   },
   {
+    description: "Dependency status, latency, and errors",
+    href: "/health",
+    label: "Health"
+  },
+  {
     description: "Search Discord and feature events",
     href: "/logs",
     label: "Logs"

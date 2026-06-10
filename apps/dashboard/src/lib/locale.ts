@@ -110,6 +110,20 @@ type DashboardLocale = {
   hide: string;
   view: string;
   loadingLogs: string;
+  healthCheckedAt: string;
+  healthDependencies: string;
+  healthError: string;
+  healthFailedToLoad: string;
+  healthFailingServices: string;
+  healthHealthyServices: string;
+  healthLatency: string;
+  healthMessage: string;
+  healthOk: string;
+  healthOverallStatus: string;
+  healthPageTitle: string;
+  healthRefresh: string;
+  healthService: string;
+  healthStatus: string;
   voiceActiveCalls: string;
   voiceChannelId: string;
   voiceControlChannelId: string;
@@ -251,6 +265,20 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     hide: "Hide",
     view: "View",
     loadingLogs: "Loading logs",
+    healthCheckedAt: "Checked at",
+    healthDependencies: "Dependencies",
+    healthError: "Error",
+    healthFailedToLoad: "Failed to load system health.",
+    healthFailingServices: "Failing Services",
+    healthHealthyServices: "Healthy Services",
+    healthLatency: "Latency",
+    healthMessage: "Message",
+    healthOk: "OK",
+    healthOverallStatus: "Overall Status",
+    healthPageTitle: "System Health",
+    healthRefresh: "Refresh",
+    healthService: "Service",
+    healthStatus: "Status",
     voiceActiveCalls: "Active Calls",
     voiceChannelId: "Channel ID",
     voiceControlChannelId: "Control Channel ID",
@@ -390,6 +418,20 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     hide: "非表示",
     view: "表示",
     loadingLogs: "ログ読み込み中",
+    healthCheckedAt: "確認時刻",
+    healthDependencies: "依存サービス",
+    healthError: "異常",
+    healthFailedToLoad: "システム状態の読み込みに失敗しました。",
+    healthFailingServices: "異常サービス",
+    healthHealthyServices: "正常サービス",
+    healthLatency: "応答時間",
+    healthMessage: "メッセージ",
+    healthOk: "正常",
+    healthOverallStatus: "全体状態",
+    healthPageTitle: "システム状態",
+    healthRefresh: "再読み込み",
+    healthService: "サービス",
+    healthStatus: "状態",
     voiceActiveCalls: "通話中",
     voiceChannelId: "チャンネルID",
     voiceControlChannelId: "操作チャンネルID",
