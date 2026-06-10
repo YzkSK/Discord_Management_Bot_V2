@@ -40,3 +40,19 @@ The page uses the feature-domain Settings API to show configured status and
 keeps Dashboard labels localized in English and Japanese. Recruitment remains
 read-only in Phase9 because it is still marker-based rather than persisted as a
 `guild_configs` setting.
+
+## Phase12 Feature Pages
+
+Phase12 adds dedicated Dashboard pages for repeated feature checks:
+
+- `/voice`
+- `/recruitment`
+- `/tts`
+- `/health`
+- `/logs`
+
+The Logs page now uses category tabs, clearer realtime status, Human View
+summaries, and Raw JSON visibility controlled by Dashboard role. Raw JSON is
+available to `owner` and `admin`; `viewer` keeps Human View only.
+
+See `docs/phase12-dashboard-feature-pages.md` for the verification flow.

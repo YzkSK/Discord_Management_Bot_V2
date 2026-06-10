@@ -1,6 +1,14 @@
 import type { ReactNode } from "react";
 import type { Session } from "next-auth";
-import { LayoutDashboard, ScrollText, Settings } from "lucide-react";
+import {
+  ClipboardList,
+  Activity,
+  Headphones,
+  LayoutDashboard,
+  Mic2,
+  ScrollText,
+  Settings
+} from "lucide-react";
 
 import { AuthStatus } from "./auth-status";
 import { getDashboardNavItems } from "./dashboard-ui";
@@ -29,6 +37,10 @@ export function DashboardShell({
   const navItems = getDashboardNavItems();
   const icons: Record<string, ReactNode> = {
     "/": <LayoutDashboard className="h-4 w-4" />,
+    "/voice": <Headphones className="h-4 w-4" />,
+    "/recruitment": <ClipboardList className="h-4 w-4" />,
+    "/tts": <Mic2 className="h-4 w-4" />,
+    "/health": <Activity className="h-4 w-4" />,
     "/logs": <ScrollText className="h-4 w-4" />,
     "/settings": <Settings className="h-4 w-4" />
   };

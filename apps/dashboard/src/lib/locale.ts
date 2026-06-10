@@ -53,16 +53,26 @@ type DashboardLocale = {
   ttsDictionary: string;
   ttsDictionarySaved: string;
   ttsDictionaryDeleted: string;
+  ttsDictionaryEntries: string;
+  ttsConfiguredStatus: string;
+  ttsDisabledDictionaryEntries: string;
   ttsEnabled: string;
+  ttsEnabledDictionaryEntries: string;
   ttsFromText: string;
+  ttsNotConfiguredStatus: string;
+  ttsPageTitle: string;
   ttsPriority: string;
   ttsScope: string;
   ttsSpeakerDefault: string;
   ttsSpeakerDeleted: string;
   ttsSpeakerId: string;
   ttsSpeakerSaved: string;
+  ttsSetupCommand: string;
+  ttsSourceChannel: string;
+  ttsStatus: string;
   ttsToText: string;
   ttsUserSpeakers: string;
+  ttsVoiceCommands: string;
   accessGrantTarget: string;
   accessGrantUser: string;
   accessGrantRole: string;
@@ -97,9 +107,59 @@ type DashboardLocale = {
   received: string;
   summary: string;
   raw: string;
+  humanView: string;
+  logCategoryTabs: string;
+  rawJsonRestricted: string;
   hide: string;
   view: string;
   loadingLogs: string;
+  healthCheckedAt: string;
+  healthDependencies: string;
+  healthError: string;
+  healthFailedToLoad: string;
+  healthFailingServices: string;
+  healthHealthyServices: string;
+  healthLatency: string;
+  healthMessage: string;
+  healthOk: string;
+  healthOverallStatus: string;
+  healthPageTitle: string;
+  healthRefresh: string;
+  healthService: string;
+  healthStatus: string;
+  voiceActiveCalls: string;
+  voiceChannelId: string;
+  voiceControlChannelId: string;
+  voiceDuration: string;
+  voiceFailedToLoad: string;
+  voiceMembers: string;
+  voiceNoActiveCalls: string;
+  voiceNoRecentCalls: string;
+  voiceNoTempVcChannels: string;
+  voiceOwnerId: string;
+  voiceRecentCalls: string;
+  voiceSetupShortcuts: string;
+  voiceStatusSetup: string;
+  voiceTempVc: string;
+  voiceTempVcChannels: string;
+  recruitmentAutoClose: string;
+  recruitmentCapacity: string;
+  recruitmentClosed: string;
+  recruitmentCreateCommand: string;
+  recruitmentCreatorId: string;
+  recruitmentFailedToLoad: string;
+  recruitmentFull: string;
+  recruitmentGenre: string;
+  recruitmentNoItems: string;
+  recruitmentOpen: string;
+  recruitmentPageTitle: string;
+  recruitmentParticipants: string;
+  recruitmentPost: string;
+  recruitmentSetupShortcut: string;
+  recruitmentStatus: string;
+  recruitmentTableTitle: string;
+  recruitmentUpdated: string;
+  recruitmentVoiceChannelId: string;
 };
 
 const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
@@ -152,16 +212,26 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     ttsDictionary: "Dictionary",
     ttsDictionarySaved: "TTS dictionary entry saved.",
     ttsDictionaryDeleted: "TTS dictionary entry deleted.",
+    ttsDictionaryEntries: "Dictionary Entries",
+    ttsConfiguredStatus: "Configured",
+    ttsDisabledDictionaryEntries: "Disabled Entries",
     ttsEnabled: "Enabled",
+    ttsEnabledDictionaryEntries: "Enabled Entries",
     ttsFromText: "From Text",
+    ttsNotConfiguredStatus: "Not configured",
+    ttsPageTitle: "TTS",
     ttsPriority: "Priority",
     ttsScope: "Scope",
     ttsSpeakerDefault: "Default Speaker ID",
     ttsSpeakerDeleted: "TTS speaker deleted.",
     ttsSpeakerId: "Speaker ID",
     ttsSpeakerSaved: "TTS speaker saved.",
+    ttsSetupCommand: "Setup from Discord with /setup tts",
+    ttsSourceChannel: "Text Channel",
+    ttsStatus: "TTS Status",
     ttsToText: "To Text",
     ttsUserSpeakers: "User Speakers",
+    ttsVoiceCommands: "Voice Commands",
     accessGrantTarget: "Target",
     accessGrantUser: "User",
     accessGrantRole: "Role",
@@ -195,9 +265,59 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     received: "Received",
     summary: "Summary",
     raw: "Raw",
+    humanView: "Human View",
+    logCategoryTabs: "Categories",
+    rawJsonRestricted: "Raw JSON is available to admins only.",
     hide: "Hide",
     view: "View",
-    loadingLogs: "Loading logs"
+    loadingLogs: "Loading logs",
+    healthCheckedAt: "Checked at",
+    healthDependencies: "Dependencies",
+    healthError: "Error",
+    healthFailedToLoad: "Failed to load system health.",
+    healthFailingServices: "Failing Services",
+    healthHealthyServices: "Healthy Services",
+    healthLatency: "Latency",
+    healthMessage: "Message",
+    healthOk: "OK",
+    healthOverallStatus: "Overall Status",
+    healthPageTitle: "System Health",
+    healthRefresh: "Refresh",
+    healthService: "Service",
+    healthStatus: "Status",
+    voiceActiveCalls: "Active Calls",
+    voiceChannelId: "Channel ID",
+    voiceControlChannelId: "Control Channel ID",
+    voiceDuration: "Duration",
+    voiceFailedToLoad: "Failed to load voice state.",
+    voiceMembers: "Members",
+    voiceNoActiveCalls: "No active calls.",
+    voiceNoRecentCalls: "No recent calls.",
+    voiceNoTempVcChannels: "No active Temp VC channels.",
+    voiceOwnerId: "Owner ID",
+    voiceRecentCalls: "Recent Calls",
+    voiceSetupShortcuts: "Setup Shortcuts",
+    voiceStatusSetup: "Voice Status Setup",
+    voiceTempVc: "Temp VC",
+    voiceTempVcChannels: "Temp VC Channels",
+    recruitmentAutoClose: "Auto Close",
+    recruitmentCapacity: "Capacity",
+    recruitmentClosed: "Closed",
+    recruitmentCreateCommand: "Create from Discord with /recruitment create",
+    recruitmentCreatorId: "Creator ID",
+    recruitmentFailedToLoad: "Failed to load recruitments.",
+    recruitmentFull: "Full",
+    recruitmentGenre: "Genre",
+    recruitmentNoItems: "No recruitments found for this guild.",
+    recruitmentOpen: "Open",
+    recruitmentPageTitle: "Recruitment",
+    recruitmentParticipants: "Participants",
+    recruitmentPost: "Post",
+    recruitmentSetupShortcut: "Setup recruitment channel",
+    recruitmentStatus: "Status",
+    recruitmentTableTitle: "Recruitment Posts",
+    recruitmentUpdated: "Updated",
+    recruitmentVoiceChannelId: "Voice Channel ID"
   },
   ja: {
     loadGuild: "Guildを読み込む",
@@ -248,16 +368,26 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     ttsDictionary: "辞書",
     ttsDictionarySaved: "TTS辞書を保存しました。",
     ttsDictionaryDeleted: "TTS辞書を削除しました。",
+    ttsDictionaryEntries: "辞書エントリ",
+    ttsConfiguredStatus: "設定済み",
+    ttsDisabledDictionaryEntries: "無効な辞書",
     ttsEnabled: "有効",
+    ttsEnabledDictionaryEntries: "有効な辞書",
     ttsFromText: "置換前",
+    ttsNotConfiguredStatus: "未設定",
+    ttsPageTitle: "TTS",
     ttsPriority: "優先度",
     ttsScope: "範囲",
     ttsSpeakerDefault: "デフォルト話者ID",
     ttsSpeakerDeleted: "TTS話者を削除しました。",
     ttsSpeakerId: "話者ID",
     ttsSpeakerSaved: "TTS話者を保存しました。",
+    ttsSetupCommand: "Discordで /setup tts から設定",
+    ttsSourceChannel: "テキストチャンネル",
+    ttsStatus: "TTS状態",
     ttsToText: "置換後",
     ttsUserSpeakers: "ユーザー別話者",
+    ttsVoiceCommands: "通話コマンド",
     accessGrantTarget: "対象",
     accessGrantUser: "ユーザー",
     accessGrantRole: "ロール",
@@ -291,9 +421,59 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     received: "受信時刻",
     summary: "概要",
     raw: "生データ",
+    humanView: "見やすい表示",
+    logCategoryTabs: "カテゴリ",
+    rawJsonRestricted: "Raw JSONはadmin以上のみ表示できます。",
     hide: "非表示",
     view: "表示",
-    loadingLogs: "ログ読み込み中"
+    loadingLogs: "ログ読み込み中",
+    healthCheckedAt: "確認時刻",
+    healthDependencies: "依存サービス",
+    healthError: "異常",
+    healthFailedToLoad: "システム状態の読み込みに失敗しました。",
+    healthFailingServices: "異常サービス",
+    healthHealthyServices: "正常サービス",
+    healthLatency: "応答時間",
+    healthMessage: "メッセージ",
+    healthOk: "正常",
+    healthOverallStatus: "全体状態",
+    healthPageTitle: "システム状態",
+    healthRefresh: "再読み込み",
+    healthService: "サービス",
+    healthStatus: "状態",
+    voiceActiveCalls: "通話中",
+    voiceChannelId: "チャンネルID",
+    voiceControlChannelId: "操作チャンネルID",
+    voiceDuration: "通話時間",
+    voiceFailedToLoad: "通話状態の読み込みに失敗しました。",
+    voiceMembers: "参加人数",
+    voiceNoActiveCalls: "現在通話中のVCはありません。",
+    voiceNoRecentCalls: "最近の通話はありません。",
+    voiceNoTempVcChannels: "有効な一時VCはありません。",
+    voiceOwnerId: "所有者ID",
+    voiceRecentCalls: "最近の通話",
+    voiceSetupShortcuts: "セットアップ導線",
+    voiceStatusSetup: "通話状態表示の設定",
+    voiceTempVc: "一時VC",
+    voiceTempVcChannels: "一時VC",
+    recruitmentAutoClose: "自動締切",
+    recruitmentCapacity: "定員",
+    recruitmentClosed: "締切",
+    recruitmentCreateCommand: "Discordで /recruitment create から作成",
+    recruitmentCreatorId: "作成者ID",
+    recruitmentFailedToLoad: "募集の読み込みに失敗しました。",
+    recruitmentFull: "満員",
+    recruitmentGenre: "ジャンル",
+    recruitmentNoItems: "このGuildの募集はありません。",
+    recruitmentOpen: "募集中",
+    recruitmentPageTitle: "募集",
+    recruitmentParticipants: "参加者",
+    recruitmentPost: "投稿",
+    recruitmentSetupShortcut: "募集チャンネル設定",
+    recruitmentStatus: "状態",
+    recruitmentTableTitle: "募集一覧",
+    recruitmentUpdated: "更新",
+    recruitmentVoiceChannelId: "VC ID"
   }
 };
 

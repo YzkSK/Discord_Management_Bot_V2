@@ -26,6 +26,26 @@ const dashboardNavItems: DashboardNavItem[] = [
     label: "Overview"
   },
   {
+    description: "Current calls and temporary voice channels",
+    href: "/voice",
+    label: "Voice"
+  },
+  {
+    description: "Recruitment posts, status, and participant counts",
+    href: "/recruitment",
+    label: "Recruitment"
+  },
+  {
+    description: "TTS setup, dictionary, and speaker state",
+    href: "/tts",
+    label: "TTS"
+  },
+  {
+    description: "Dependency status, latency, and errors",
+    href: "/health",
+    label: "Health"
+  },
+  {
     description: "Search Discord and feature events",
     href: "/logs",
     label: "Logs"

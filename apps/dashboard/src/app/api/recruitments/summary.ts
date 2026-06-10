@@ -1,0 +1,97 @@
+import type { RecruitmentStatus } from "@discord-bot/db";
+
+export interface RecruitmentSummaryInput {
+  guildId: string;
+  recruitments: RecruitmentSummaryItemInput[];
+}
+
+export interface RecruitmentSummaryItemInput {
+  activeParticipantCount: number;
+  autoClose: boolean;
+  autoClosed: boolean;
+  capacity: number;
+  channelId: string;
+  closedAt: Date | null;
+  content: string;
+  createdAt: Date;
+  creatorId: string;
+  genre: string;
+  id: string;
+  messageId: string | null;
+  status: RecruitmentStatus;
+  updatedAt: Date;
+  voiceChannelId: string | null;
+}
+
+export interface RecruitmentSummaryItem {
+  activeParticipantCount: number;
+  autoClose: boolean;
+  autoClosed: boolean;
+  availableSlots: number;
+  capacity: number;
+  channelId: string;
+  closedAt: string | null;
+  content: string;
+  createdAt: string;
+  creatorId: string;
+  genre: string;
+  id: string;
+  messageId: string | null;
+  postUrl: string | null;
+  status: RecruitmentStatus;
+  updatedAt: string;
+  voiceChannelId: string | null;
+}
+
+export interface RecruitmentSummary {
+  closedCount: number;
+  fullCount: number;
+  openCount: number;
+  recruitments: RecruitmentSummaryItem[];
+  totalCount: number;
+}
+
+export function buildRecruitmentSummary(
+  input: RecruitmentSummaryInput
+): RecruitmentSummary {
+  const recruitments = input.recruitments.map((recruitment) => ({
+    activeParticipantCount: recruitment.activeParticipantCount,
+    autoClose: recruitment.autoClose,
+    autoClosed: recruitment.autoClosed,
+    availableSlots: Math.max(
+      0,
+      recruitment.capacity - recruitment.activeParticipantCount
+    ),
+    capacity: recruitment.capacity,
+    channelId: recruitment.channelId,
+    closedAt: recruitment.closedAt?.toISOString() ?? null,
+    content: recruitment.content,
+    createdAt: recruitment.createdAt.toISOString(),
+    creatorId: recruitment.creatorId,
+    genre: recruitment.genre,
+    id: recruitment.id,
+    messageId: recruitment.messageId,
+    postUrl: recruitment.messageId
+      ? `https://discord.com/channels/${input.guildId}/${recruitment.channelId}/${recruitment.messageId}`
+      : null,
+    status: recruitment.status,
+    updatedAt: recruitment.updatedAt.toISOString(),
+    voiceChannelId: recruitment.voiceChannelId
+  }));
+
+  return {
+    closedCount: countStatus(recruitments, "closed"),
+    fullCount: countStatus(recruitments, "full"),
+    openCount: countStatus(recruitments, "open"),
+    recruitments,
+    totalCount: recruitments.length
+  };
+}
+
+function countStatus(
+  recruitments: readonly RecruitmentSummaryItem[],
+  status: RecruitmentStatus
+) {
+  return recruitments.filter((recruitment) => recruitment.status === status)
+    .length;
+}

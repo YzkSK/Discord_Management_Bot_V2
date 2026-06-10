@@ -4,6 +4,7 @@ import {
   endCallSession,
   getActiveCallSessionByChannelId,
   getCallSessionById,
+  getGuildConfigByGuildId,
   listActiveCallSessionMembers,
   markCallSessionMemberLeft,
   updateCallSessionStatusMessage,
@@ -72,6 +73,7 @@ export interface VoiceActivityRepository {
 }
 
 export interface VoiceActivityContext {
+  ignoredChannelIds?: ReadonlySet<string>;
   now?: () => Date;
   repository: VoiceActivityRepository;
   scheduleActiveStatusUpdate?: (
@@ -92,39 +94,71 @@ export interface InstallVoiceActivityHandlersOptions {
   logWriter: DiscordLogWriter;
 }
 
+export interface VoiceActivityStatusSchedulerOptions {
+  delayMs?: number;
+  onError?: (error: unknown, sessionId: string) => void | Promise<void>;
+  refresh: (sessionId: string) => Promise<boolean>;
+  setTimeout?: (handler: () => void, delayMs: number) => void;
+}
+
 export function installVoiceActivityHandlers(
   client: Client,
   options: InstallVoiceActivityHandlersOptions
 ) {
+  const scheduleActiveStatusUpdate = createVoiceActivityStatusScheduler({
+    onError: (error, sessionId) =>
+      options.logWriter.recordHandlerError({
+        error,
+        event: createVoiceActivityEvent("voice.status.update_failed", {
+          actorId: null,
+          channelId: null,
+          guildId: null,
+          payload: { sessionId },
+          timestamp: new Date()
+        }),
+        handlerName: "voice-status-channel",
+        receivedAt: new Date()
+      }),
+    refresh: (sessionId) => refreshActiveVoiceStatus(client, options, sessionId)
+  });
+
   installVoiceStateHandlers(client, {
-    onTransition: (transition) =>
+    onTransition: async (transition) =>
       handleVoiceActivityTransition(transition, {
+        ignoredChannelIds: await resolveIgnoredVoiceActivityChannelIds(
+          options.db,
+          transition.guildId
+        ),
         repository: createDbVoiceActivityRepository(options.db),
-        scheduleActiveStatusUpdate: (sessionId, delayMs) => {
-          setTimeout(() => {
-            void refreshActiveVoiceStatus(client, options, sessionId).catch(
-              (error: unknown) => {
-                void options.logWriter.recordHandlerError({
-                  error,
-                  event: createVoiceActivityEvent("voice.status.update_failed", {
-                    actorId: null,
-                    channelId: null,
-                    guildId: null,
-                    payload: { sessionId },
-                    timestamp: new Date()
-                  }),
-                  handlerName: "voice-status-channel",
-                  receivedAt: new Date()
-                });
-              }
-            );
-          }, delayMs);
-        },
+        scheduleActiveStatusUpdate,
         updateVoiceStatus: (input) =>
           updateDiscordVoiceStatusMessage(client, input),
         writeLog: (event) => options.logWriter.write(event)
       })
   });
+}
+
+export function createVoiceActivityStatusScheduler(
+  options: VoiceActivityStatusSchedulerOptions
+) {
+  const delayMs = options.delayMs ?? 60_000;
+  const runTimer = options.setTimeout ?? ((handler, ms) => setTimeout(handler, ms));
+
+  return async function scheduleActiveStatusUpdate(
+    sessionId: string,
+    nextDelayMs = delayMs
+  ) {
+    runTimer(() => {
+      void options
+        .refresh(sessionId)
+        .then((shouldContinue) => {
+          if (shouldContinue) {
+            void scheduleActiveStatusUpdate(sessionId, delayMs);
+          }
+        })
+        .catch((error: unknown) => options.onError?.(error, sessionId));
+    }, nextDelayMs);
+  };
 }
 
 export async function handleVoiceActivityTransition(
@@ -213,11 +247,17 @@ async function handleVoiceJoin(
     return;
   }
 
+  if (context.ignoredChannelIds?.has(transition.newChannelId)) {
+    return;
+  }
+
   const now = resolveNow(context);
   let session = await context.repository.findActiveSessionByChannelId(
     transition.guildId,
     transition.newChannelId
   );
+  let activeMembersBeforeJoin: readonly VoiceActivityMember[] = [];
+  let shouldPublishStarted = false;
 
   if (!session) {
     session = await context.repository.createSession({
@@ -225,6 +265,19 @@ async function handleVoiceJoin(
       guildId: transition.guildId,
       startedAt: now
     });
+    shouldPublishStarted = true;
+  } else {
+    activeMembersBeforeJoin = await context.repository.listActiveMembers(
+      session.id
+    );
+    shouldPublishStarted = shouldPublishStartedForExistingSession({
+      activeMembers: activeMembersBeforeJoin,
+      session,
+      userId: transition.userId
+    });
+  }
+
+  if (shouldPublishStarted) {
     await context.writeLog(
       createVoiceActivityStartedEvent({
         actorId: transition.userId,
@@ -235,7 +288,7 @@ async function handleVoiceJoin(
       })
     );
     const statusMessageId = await context.updateVoiceStatus?.({
-      activeMemberCount: 1,
+      activeMemberCount: Math.max(activeMembersBeforeJoin.length, 1),
       session,
       state: "started"
     });
@@ -256,6 +309,34 @@ async function handleVoiceJoin(
     joinedAt: now,
     userId: transition.userId
   });
+}
+
+function shouldPublishStartedForExistingSession(input: {
+  activeMembers: readonly VoiceActivityMember[];
+  session: VoiceActivitySession;
+  userId: string;
+}) {
+  return (
+    input.session.statusMessageId === null &&
+    input.activeMembers.length <= 1 &&
+    input.activeMembers.some((member) => member.userId === input.userId)
+  );
+}
+
+async function resolveIgnoredVoiceActivityChannelIds(
+  db: DbClient,
+  guildId: string
+) {
+  const config = await getGuildConfigByGuildId(db, guildId).catch(
+    (error: unknown) => {
+      console.warn("failed to resolve ignored voice activity channels", error);
+      return null;
+    }
+  );
+
+  return new Set(
+    config?.tempVoiceCreateChannelId ? [config.tempVoiceCreateChannelId] : []
+  );
 }
 
 async function handleVoiceLeave(
@@ -344,13 +425,13 @@ async function refreshActiveVoiceStatus(
   const session = await getCallSessionById(options.db, sessionId);
 
   if (!session || session.status !== "active") {
-    return;
+    return false;
   }
 
   const activeMembers = await repository.listActiveMembers(session.id);
 
   if (activeMembers.length === 0) {
-    return;
+    return false;
   }
 
   await updateDiscordVoiceStatusMessage(client, {
@@ -358,6 +439,7 @@ async function refreshActiveVoiceStatus(
     session,
     state: "active"
   });
+  return true;
 }
 
 async function updateDiscordVoiceStatusMessage(

@@ -1,9 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Search, X } from "lucide-react";
-import type { GuildLanguage } from "@discord-bot/shared";
-import { getDashboardLocale, detectBrowserLanguage } from "../../lib/locale";
+import type { DashboardAccessRole, GuildLanguage } from "@discord-bot/shared";
+import { Radio, Search, X } from "lucide-react";
 import { io } from "socket.io-client";
 
 import { Button } from "../../components/ui/button";
@@ -16,6 +15,7 @@ import {
   TableHeader,
   TableRow
 } from "../../components/ui/table";
+import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import {
   realtimeErrorEventName,
   realtimeLogsEventName,
@@ -24,46 +24,72 @@ import {
 import {
   countActiveFilters,
   dashboardGuildStorageKey,
-  getDashboardEventPresets,
   normalizeGuildId
 } from "../dashboard-ui";
+import {
+  canViewRawLogPayload,
+  getLogCategoryTabs,
+  getRealtimeStatusMeta,
+  type RealtimeLogsStatus,
+  type RealtimeStatusTone
+} from "./logs-ui";
 
 interface LogItem {
-  id: string;
-  eventName: string;
-  guildId: string | null;
   actorId: string | null;
   channelId: string | null;
-  messageId: string | null;
+  eventName: string;
   eventTimestamp: string;
-  receivedAt: string;
-  realtimeEnabled: boolean;
+  guildId: string | null;
+  id: string;
+  messageId: string | null;
   payload: unknown;
+  realtimeEnabled: boolean;
+  receivedAt: string;
 }
 
 interface LogsResponse {
+  accessRole: DashboardAccessRole;
   items: LogItem[];
   nextCursor: string | null;
 }
 
 interface LogFilters {
-  search: string;
-  guildId: string;
-  eventName: string;
   actorId: string;
+  eventName: string;
+  guildId: string;
+  search: string;
 }
 
-const initialFilters: LogFilters = { actorId: "", eventName: "", guildId: "", search: "" };
-const eventPresets = getDashboardEventPresets();
-
-
+const initialFilters: LogFilters = {
+  actorId: "",
+  eventName: "",
+  guildId: "",
+  search: ""
+};
+const categoryTabs = getLogCategoryTabs();
 
 function eventBadgeClass(name: string) {
-  if (name.startsWith("message")) return "border border-blue-500/20 bg-blue-500/10 text-blue-400";
-  if (name.startsWith("voice")) return "border border-purple-500/20 bg-purple-500/10 text-purple-400";
-  if (name.startsWith("temp_vc")) return "border border-teal-500/20 bg-teal-500/10 text-teal-400";
-  if (name.startsWith("recruitment")) return "border border-green-500/20 bg-green-500/10 text-green-400";
-  if (name.startsWith("audit")) return "border border-orange-500/20 bg-orange-500/10 text-orange-400";
+  if (name.startsWith("message")) {
+    return "border border-blue-500/20 bg-blue-500/10 text-blue-400";
+  }
+  if (name.startsWith("voice")) {
+    return "border border-purple-500/20 bg-purple-500/10 text-purple-400";
+  }
+  if (name.startsWith("temp_vc")) {
+    return "border border-teal-500/20 bg-teal-500/10 text-teal-400";
+  }
+  if (name.startsWith("recruitment")) {
+    return "border border-green-500/20 bg-green-500/10 text-green-400";
+  }
+  if (name.startsWith("audit")) {
+    return "border border-orange-500/20 bg-orange-500/10 text-orange-400";
+  }
+  if (name.startsWith("tts")) {
+    return "border border-sky-500/20 bg-sky-500/10 text-sky-400";
+  }
+  if (name.startsWith("system")) {
+    return "border border-red-500/20 bg-red-500/10 text-red-400";
+  }
   return "border border-zinc-700 bg-zinc-800 text-zinc-400";
 }
 
@@ -78,7 +104,9 @@ export function LogsExplorer() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [realtimeStatus, setRealtimeStatus] = useState("idle");
+  const [realtimeStatus, setRealtimeStatus] =
+    useState<RealtimeLogsStatus>("idle");
+  const [accessRole, setAccessRole] = useState<DashboardAccessRole | null>(null);
 
   useEffect(() => {
     const storedGuildId = window.localStorage.getItem(dashboardGuildStorageKey);
@@ -97,7 +125,10 @@ export function LogsExplorer() {
 
   useEffect(() => {
     const guildId = normalizeGuildId(appliedFilters.guildId);
-    if (!guildId) { setRealtimeStatus("idle"); return; }
+    if (!guildId) {
+      setRealtimeStatus("idle");
+      return;
+    }
 
     const socket = io({ path: "/socket.io" });
     setRealtimeStatus("connecting");
@@ -118,31 +149,59 @@ export function LogsExplorer() {
     });
     socket.on("disconnect", () => setRealtimeStatus("offline"));
 
-    return () => { socket.disconnect(); };
+    return () => {
+      socket.disconnect();
+    };
   }, [appliedFilters.guildId]);
 
-  const activeFilterCount = useMemo(() => countActiveFilters(appliedFilters), [appliedFilters]);
+  const activeFilterCount = useMemo(
+    () => countActiveFilters(appliedFilters),
+    [appliedFilters]
+  );
+  const realtimeMeta = getRealtimeStatusMeta(realtimeStatus);
+  const canViewRaw = canViewRawLogPayload(accessRole);
 
   async function loadLogs(next: LogFilters) {
     if (!normalizeGuildId(next.guildId)) {
-      setLogs([]); setNextCursor(null); setError(loc.enterGuildIdToLoadLogs); setLoading(false);
+      setLogs([]);
+      setNextCursor(null);
+      setError(loc.enterGuildIdToLoadLogs);
+      setLoading(false);
       return;
     }
-    setLoading(true); setError(null); setExpandedId(null);
-    window.localStorage.setItem(dashboardGuildStorageKey, normalizeGuildId(next.guildId));
+    setLoading(true);
+    setError(null);
+    setExpandedId(null);
+    window.localStorage.setItem(
+      dashboardGuildStorageKey,
+      normalizeGuildId(next.guildId)
+    );
     try {
       const data = await fetchLogs(next);
-      setLogs(data.items); setNextCursor(data.nextCursor);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setLoading(false); }
+      setAccessRole(data.accessRole);
+      setLogs(data.items);
+      setNextCursor(data.nextCursor);
+    } catch (e) {
+      setError(toErrorMessage(e));
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function loadMore() {
     if (!nextCursor) return;
-    setLoadingMore(true); setError(null);
+    setLoadingMore(true);
+    setError(null);
     try {
       const data = await fetchLogs(appliedFilters, nextCursor);
-      setLogs((cur) => [...cur, ...data.items]); setNextCursor(data.nextCursor);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setLoadingMore(false); }
+      setAccessRole(data.accessRole);
+      setLogs((cur) => [...cur, ...data.items]);
+      setNextCursor(data.nextCursor);
+    } catch (e) {
+      setError(toErrorMessage(e));
+    } finally {
+      setLoadingMore(false);
+    }
   }
 
   function submitFilters(e: FormEvent<HTMLFormElement>) {
@@ -152,7 +211,8 @@ export function LogsExplorer() {
 
   function resetFilters() {
     const next = { ...initialFilters, guildId: filters.guildId };
-    setFilters(next); setAppliedFilters(next);
+    setFilters(next);
+    setAppliedFilters(next);
   }
 
   function applyPreset(eventName: string) {
@@ -160,8 +220,6 @@ export function LogsExplorer() {
     setFilters(next);
     setAppliedFilters({ ...next, guildId: normalizeGuildId(next.guildId) });
   }
-
-  const isLive = realtimeStatus === "live";
 
   return (
     <section className="flex max-w-7xl flex-col gap-3">
@@ -202,32 +260,57 @@ export function LogsExplorer() {
           </div>
         </form>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-zinc-800 pt-3">
-          {eventPresets.map((preset) => (
-            <button
-              className={
-                filters.eventName === preset.eventName
-                  ? "rounded px-2.5 py-1 text-xs font-medium border border-green-500/30 bg-green-500/10 text-green-400"
-                  : "rounded px-2.5 py-1 text-xs font-medium border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
-              }
-              key={preset.label}
-              onClick={() => applyPreset(preset.eventName)}
-              title={preset.description}
-              type="button"
-            >
-              {preset.label}
-            </button>
-          ))}
+        <div className="mt-3 border-t border-zinc-800 pt-3">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+            {loc.logCategoryTabs}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {categoryTabs.map((tab) => (
+              <button
+                className={
+                  filters.eventName === tab.eventName
+                    ? "rounded border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-400"
+                    : "rounded border border-zinc-700 px-2.5 py-1 text-xs font-medium text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                }
+                key={tab.label}
+                onClick={() => applyPreset(tab.eventName)}
+                title={tab.description}
+                type="button"
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-          <div className="ml-auto flex items-center gap-3">
-            <span className="text-xs text-zinc-500">{loc.shown({ count: logs.length })}</span>
+          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
+            <span className="text-xs text-zinc-500">
+              {loc.shown({ count: logs.length })}
+            </span>
             {activeFilterCount > 0 && (
-              <span className="text-xs text-zinc-500">{loc.filters({ count: activeFilterCount })}</span>
+              <span className="text-xs text-zinc-500">
+                {loc.filters({ count: activeFilterCount })}
+              </span>
             )}
-            <div className={`flex items-center gap-1.5 text-xs ${isLive ? "text-green-400" : "text-zinc-500"}`}>
-              <span className={`inline-block h-1.5 w-1.5 rounded ${isLive ? "bg-green-400 animate-pulse" : "bg-zinc-600"}`} />
-              {realtimeStatus}
+            <div
+              className={`flex items-center gap-1.5 text-xs ${realtimeStatusClass(
+                realtimeMeta.tone
+              )}`}
+            >
+              <Radio className="h-3.5 w-3.5" />
+              <span
+                className={`inline-block h-1.5 w-1.5 rounded ${
+                  realtimeStatus === "live"
+                    ? "animate-pulse bg-green-400"
+                    : "bg-zinc-600"
+                }`}
+              />
+              {realtimeMeta.label}
             </div>
+            {!canViewRaw && accessRole && (
+              <span className="text-xs text-zinc-600">
+                {loc.rawJsonRestricted}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -246,16 +329,21 @@ export function LogsExplorer() {
                 <TableHead className="w-36">{loc.received}</TableHead>
                 <TableHead className="w-52">{loc.event}</TableHead>
                 <TableHead className="w-40">{loc.actor}</TableHead>
-                <TableHead>{loc.summary}</TableHead>
-                <TableHead className="w-20">{loc.raw}</TableHead>
+                <TableHead>{loc.humanView}</TableHead>
+                {canViewRaw && <TableHead className="w-24">{loc.raw}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading && <LoadingRows label={loc.loadingLogs} />}
-              {!loading && logs.length === 0 && <EmptyRow label={loc.noLogsFound} />}
+              {loading && (
+                <LoadingRows canViewRaw={canViewRaw} label={loc.loadingLogs} />
+              )}
+              {!loading && logs.length === 0 && (
+                <EmptyRow canViewRaw={canViewRaw} label={loc.noLogsFound} />
+              )}
               {!loading &&
                 logs.map((log) => (
                   <LogRow
+                    canViewRaw={canViewRaw}
                     expanded={expandedId === log.id}
                     hideLabel={loc.hide}
                     key={log.id}
@@ -312,12 +400,14 @@ function FilterInput({
 }
 
 function LogRow({
+  canViewRaw,
   expanded,
   hideLabel,
   log,
   onToggle,
   viewLabel
 }: {
+  canViewRaw: boolean;
   expanded: boolean;
   hideLabel: string;
   log: LogItem;
@@ -327,25 +417,37 @@ function LogRow({
   return (
     <>
       <TableRow>
-        <TableCell className="text-xs text-zinc-500">{formatDate(log.receivedAt)}</TableCell>
+        <TableCell className="text-xs text-zinc-500">
+          {formatDate(log.receivedAt)}
+        </TableCell>
         <TableCell>
-          <span className={`inline-flex items-center rounded px-2 py-0.5 font-mono text-xs ${eventBadgeClass(log.eventName)}`}>
+          <span
+            className={`inline-flex items-center rounded px-2 py-0.5 font-mono text-xs ${eventBadgeClass(
+              log.eventName
+            )}`}
+          >
             {log.eventName}
           </span>
         </TableCell>
-        <TableCell className="font-mono text-xs text-zinc-500">{log.actorId ?? "—"}</TableCell>
-        <TableCell className="text-xs text-zinc-400">{formatPayloadSummary(log)}</TableCell>
-        <TableCell>
-          <button
-            className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
-            onClick={onToggle}
-            type="button"
-          >
-            {expanded ? hideLabel : viewLabel}
-          </button>
+        <TableCell className="font-mono text-xs text-zinc-500">
+          {log.actorId ?? "-"}
         </TableCell>
+        <TableCell className="text-xs text-zinc-400">
+          {formatPayloadSummary(log)}
+        </TableCell>
+        {canViewRaw && (
+          <TableCell>
+            <button
+              className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+              onClick={onToggle}
+              type="button"
+            >
+              {expanded ? hideLabel : viewLabel}
+            </button>
+          </TableCell>
+        )}
       </TableRow>
-      {expanded && (
+      {canViewRaw && expanded && (
         <TableRow className="bg-zinc-950">
           <TableCell colSpan={5}>
             <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-md border border-zinc-800 bg-zinc-900 p-3 text-xs leading-5 text-zinc-300">
@@ -358,18 +460,35 @@ function LogRow({
   );
 }
 
-function LoadingRows({ label }: { label: string }) {
+function LoadingRows({
+  canViewRaw,
+  label
+}: {
+  canViewRaw: boolean;
+  label: string;
+}) {
   return Array.from({ length: 5 }, (_, i) => (
     <TableRow key={i}>
-      <TableCell className="text-zinc-600" colSpan={5}>{label}</TableCell>
+      <TableCell className="text-zinc-600" colSpan={canViewRaw ? 5 : 4}>
+        {label}
+      </TableCell>
     </TableRow>
   ));
 }
 
-function EmptyRow({ label }: { label: string }) {
+function EmptyRow({
+  canViewRaw,
+  label
+}: {
+  canViewRaw: boolean;
+  label: string;
+}) {
   return (
     <TableRow>
-      <TableCell className="py-10 text-center text-zinc-600" colSpan={5}>
+      <TableCell
+        className="py-10 text-center text-zinc-600"
+        colSpan={canViewRaw ? 5 : 4}
+      >
         {label}
       </TableCell>
     </TableRow>
@@ -402,7 +521,7 @@ function formatPayloadSummary(log: LogItem) {
     log.messageId ? `message ${log.messageId}` : null,
     log.channelId ? `channel ${log.channelId}` : null
   ].filter(Boolean);
-  return parts.slice(0, 3).join(" / ") || "—";
+  return parts.slice(0, 3).join(" / ") || "-";
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -415,11 +534,19 @@ function pickString(src: Record<string, unknown>, key: string) {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("ja-JP", { dateStyle: "short", timeStyle: "medium" }).format(
-    new Date(value)
-  );
+  return new Intl.DateTimeFormat("ja-JP", {
+    dateStyle: "short",
+    timeStyle: "medium"
+  }).format(new Date(value));
 }
 
 function toErrorMessage(e: unknown) {
   return e instanceof Error ? e.message : "Failed to load logs";
+}
+
+function realtimeStatusClass(tone: RealtimeStatusTone) {
+  if (tone === "success") return "text-green-400";
+  if (tone === "danger") return "text-red-400";
+  if (tone === "pending") return "text-yellow-400";
+  return "text-zinc-500";
 }

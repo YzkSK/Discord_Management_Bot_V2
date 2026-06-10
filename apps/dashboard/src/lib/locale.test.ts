@@ -40,4 +40,14 @@ describe("dashboard access locale", () => {
     assert.equal(ja.ttsSpeakerDefault, "デフォルト話者ID");
     assert.equal(ja.ttsUserSpeakers, "ユーザー別話者");
   });
+
+  it("provides English and Japanese labels for voice dashboard", () => {
+    const en = getDashboardLocale("en");
+    const ja = getDashboardLocale("ja");
+
+    assert.equal(en.voiceActiveCalls, "Active Calls");
+    assert.equal(en.voiceStatusSetup, "Voice Status Setup");
+    assert.equal(ja.voiceActiveCalls, "通話中");
+    assert.equal(ja.voiceStatusSetup, "通話状態表示の設定");
+  });
 });

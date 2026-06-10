@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  createVoiceActivityStatusScheduler,
   createVoiceActivityEndedEvent,
   createVoiceActivityStartedEvent,
   handleVoiceActivityTransition,
@@ -207,6 +208,99 @@ describe("voice activity sessions", () => {
     assert.deepEqual(scheduled, [60_000]);
   });
 
+  it("does not publish call status for ignored creation voice channels", async () => {
+    const repository = createMemoryRepository();
+    const events: string[] = [];
+    const statusUpdates: string[] = [];
+
+    await handleVoiceActivityTransition(
+      {
+        guildId: "guild-1",
+        memberIsBot: false,
+        newChannelId: "temp-vc-create",
+        oldChannelId: null,
+        type: "join",
+        userId: "user-1"
+      },
+      {
+        ignoredChannelIds: new Set(["temp-vc-create"]),
+        now: () => new Date("2026-06-03T00:00:00.000Z"),
+        repository,
+        updateVoiceStatus: async (input) => {
+          statusUpdates.push(`${input.state}:${input.session.id}`);
+          return "message-1";
+        },
+        writeLog: async (event) => {
+          events.push(event.eventName);
+        }
+      }
+    );
+
+    assert.equal(repository.sessions.length, 0);
+    assert.equal(repository.members.length, 0);
+    assert.deepEqual(events, []);
+    assert.deepEqual(statusUpdates, []);
+  });
+
+  it("publishes started status for pre-created Temp VC sessions when the owner moves in", async () => {
+    const repository = createMemoryRepository();
+    const events: string[] = [];
+    const scheduled: number[] = [];
+    const statusUpdates: string[] = [];
+
+    repository.sessions.push({
+      channelId: "temp-voice-1",
+      guildId: "guild-1",
+      id: "session-1",
+      startedAt: new Date("2026-06-03T00:00:00.000Z"),
+      status: "active",
+      statusMessageId: null
+    });
+    repository.members.push({
+      callSessionId: "session-1",
+      leftAt: null,
+      userId: "user-1"
+    });
+
+    await handleVoiceActivityTransition(
+      {
+        guildId: "guild-1",
+        memberIsBot: false,
+        newChannelId: "temp-voice-1",
+        oldChannelId: "temp-vc-create",
+        type: "move",
+        userId: "user-1"
+      },
+      {
+        ignoredChannelIds: new Set(["temp-vc-create"]),
+        now: () => new Date("2026-06-03T00:00:05.000Z"),
+        repository,
+        scheduleActiveStatusUpdate: async (sessionId, delayMs) => {
+          scheduled.push(delayMs);
+          statusUpdates.push(`scheduled:${sessionId}`);
+        },
+        updateVoiceStatus: async (input) => {
+          statusUpdates.push(
+            `${input.state}:${input.session.id}:${input.activeMemberCount}`
+          );
+          return "message-1";
+        },
+        writeLog: async (event) => {
+          events.push(`${event.eventName}:${event.channelId}`);
+        }
+      }
+    );
+
+    assert.equal(repository.sessions.length, 1);
+    assert.equal(repository.sessions[0]?.statusMessageId, "message-1");
+    assert.deepEqual(events, ["call.started:temp-voice-1"]);
+    assert.deepEqual(statusUpdates, [
+      "started:session-1:1",
+      "scheduled:session-1"
+    ]);
+    assert.deepEqual(scheduled, [60_000]);
+  });
+
   it("updates the existing status message to ended when the session finishes", async () => {
     const repository = createMemoryRepository();
     const statusUpdates: string[] = [];
@@ -250,6 +344,40 @@ describe("voice activity sessions", () => {
       "started:session-1",
       "ended:session-1"
     ]);
+  });
+
+  it("keeps refreshing active voice status while the session remains active", async () => {
+    const delays: number[] = [];
+    const refreshes: string[] = [];
+    const timers: Array<() => void> = [];
+
+    const scheduleActiveStatusUpdate = createVoiceActivityStatusScheduler({
+      refresh: async (sessionId) => {
+        refreshes.push(sessionId);
+        return refreshes.length < 2;
+      },
+      setTimeout: (handler, delayMs) => {
+        delays.push(delayMs);
+        timers.push(handler);
+      }
+    });
+
+    await scheduleActiveStatusUpdate("session-1", 60_000);
+    assert.deepEqual(delays, [60_000]);
+
+    timers[0]?.();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.deepEqual(refreshes, ["session-1"]);
+    assert.deepEqual(delays, [60_000, 60_000]);
+
+    timers[1]?.();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.deepEqual(refreshes, ["session-1", "session-1"]);
+    assert.deepEqual(delays, [60_000, 60_000]);
   });
 });
 
