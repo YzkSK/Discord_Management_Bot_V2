@@ -1,37 +1,38 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { DashboardAccessRole, GuildLanguage } from "@discord-bot/shared";
-import { Radio, Search, X } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { io } from "socket.io-client";
-
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "../../components/ui/table";
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import {
   realtimeErrorEventName,
   realtimeLogsEventName,
-  realtimeLogsSubscribeEventName
+  realtimeLogsSubscribeEventName,
 } from "../../realtime-events";
 import {
   countActiveFilters,
   dashboardGuildStorageKey,
-  normalizeGuildId
+  normalizeGuildId,
 } from "../dashboard-ui";
 import {
   canViewRawLogPayload,
+  eventColorClasses,
+  formatEventDescription,
+  formatRelativeTime,
+  getEventColor,
   getLogCategoryTabs,
   getRealtimeStatusMeta,
   type RealtimeLogsStatus,
-  type RealtimeStatusTone
 } from "./logs-ui";
 
 interface LogItem {
@@ -64,34 +65,21 @@ const initialFilters: LogFilters = {
   actorId: "",
   eventName: "",
   guildId: "",
-  search: ""
+  search: "",
 };
-const categoryTabs = getLogCategoryTabs();
 
-function eventBadgeClass(name: string) {
-  if (name.startsWith("message")) {
-    return "border border-blue-500/20 bg-blue-500/10 text-blue-400";
-  }
-  if (name.startsWith("voice")) {
-    return "border border-purple-500/20 bg-purple-500/10 text-purple-400";
-  }
-  if (name.startsWith("temp_vc")) {
-    return "border border-teal-500/20 bg-teal-500/10 text-teal-400";
-  }
-  if (name.startsWith("recruitment")) {
-    return "border border-green-500/20 bg-green-500/10 text-green-400";
-  }
-  if (name.startsWith("audit")) {
-    return "border border-orange-500/20 bg-orange-500/10 text-orange-400";
-  }
-  if (name.startsWith("tts")) {
-    return "border border-sky-500/20 bg-sky-500/10 text-sky-400";
-  }
-  if (name.startsWith("system")) {
-    return "border border-red-500/20 bg-red-500/10 text-red-400";
-  }
-  return "border border-zinc-700 bg-zinc-800 text-zinc-400";
-}
+const CHART_COLORS: Record<string, string> = {
+  blue: "#3B82F6",
+  purple: "#8B5CF6",
+  teal: "#14B8A6",
+  green: "#10B981",
+  red: "#EF4444",
+  orange: "#F59E0B",
+  sky: "#0EA5E9",
+  gray: "#71717A",
+};
+
+const categoryTabs = getLogCategoryTabs();
 
 export function LogsExplorer() {
   const [uiLang] = useState<GuildLanguage>(detectBrowserLanguage);
@@ -106,7 +94,9 @@ export function LogsExplorer() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [realtimeStatus, setRealtimeStatus] =
     useState<RealtimeLogsStatus>("idle");
-  const [accessRole, setAccessRole] = useState<DashboardAccessRole | null>(null);
+  const [accessRole, setAccessRole] = useState<DashboardAccessRole | null>(
+    null
+  );
 
   useEffect(() => {
     const storedGuildId = window.localStorage.getItem(dashboardGuildStorageKey);
@@ -140,7 +130,7 @@ export function LogsExplorer() {
     socket.on(realtimeLogsEventName, (event: LogItem) => {
       setLogs((cur) => {
         if (cur.some((l) => l.id === event.id)) return cur;
-        return [event, ...cur].slice(0, 100);
+        return [event, ...cur].slice(0, 200);
       });
     });
     socket.on(realtimeErrorEventName, (payload: { error?: string }) => {
@@ -154,12 +144,50 @@ export function LogsExplorer() {
     };
   }, [appliedFilters.guildId]);
 
-  const activeFilterCount = useMemo(
-    () => countActiveFilters(appliedFilters),
-    [appliedFilters]
-  );
   const realtimeMeta = getRealtimeStatusMeta(realtimeStatus);
   const canViewRaw = canViewRawLogPayload(accessRole);
+
+  // 24時間頻度チャートデータ
+  const chartData = useMemo(() => {
+    const now = Date.now();
+    const bins: Record<string, Record<string, number>> = {};
+    for (let h = 23; h >= 0; h--) {
+      const label = `${new Date(now - h * 3600_000).getHours()}時`;
+      bins[label] = {};
+    }
+    logs.forEach((log) => {
+      const d = new Date(log.receivedAt);
+      if (now - d.getTime() > 24 * 3600_000) return;
+      const label = `${d.getHours()}時`;
+      const colorKey = getEventColor(log.eventName);
+      bins[label] = bins[label] ?? {};
+      bins[label][colorKey] = (bins[label][colorKey] ?? 0) + 1;
+    });
+    return Object.entries(bins).map(([hour, counts]) => ({
+      hour,
+      ...counts,
+    }));
+  }, [logs]);
+
+  // フィルタリング（カテゴリ pill + テキスト検索）
+  const filtered = useMemo(() => {
+    return logs.filter((log) => {
+      if (
+        appliedFilters.eventName &&
+        !log.eventName.startsWith(appliedFilters.eventName)
+      )
+        return false;
+      if (appliedFilters.search) {
+        const q = appliedFilters.search.toLowerCase();
+        const desc = formatEventDescription(log.eventName, {
+          actorId: log.actorId,
+          channelId: log.channelId,
+        }).toLowerCase();
+        if (!desc.includes(q) && !log.eventName.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [logs, appliedFilters.eventName, appliedFilters.search]);
 
   async function loadLogs(next: LogFilters) {
     if (!normalizeGuildId(next.guildId)) {
@@ -204,112 +232,110 @@ export function LogsExplorer() {
     }
   }
 
-  function submitFilters(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setAppliedFilters({ ...filters, guildId: normalizeGuildId(filters.guildId) });
-  }
-
-  function resetFilters() {
-    const next = { ...initialFilters, guildId: filters.guildId };
-    setFilters(next);
+  function applyCategory(eventName: string) {
+    const next = {
+      ...appliedFilters,
+      eventName,
+      guildId: normalizeGuildId(appliedFilters.guildId),
+    };
     setAppliedFilters(next);
-  }
-
-  function applyPreset(eventName: string) {
-    const next = { ...filters, eventName };
     setFilters(next);
-    setAppliedFilters({ ...next, guildId: normalizeGuildId(next.guildId) });
   }
 
   return (
-    <section className="flex max-w-7xl flex-col gap-3">
+    <div className="flex max-w-7xl flex-col gap-4">
+      {/* 24時間頻度チャート */}
       <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-        <form onSubmit={submitFilters}>
-          <div className="grid gap-3 lg:grid-cols-[1.2fr_1fr_1fr_auto_auto]">
-            <FilterInput
-              label={loc.search}
-              onChange={(v) => setFilters({ ...filters, search: v })}
-              placeholder="content, channel, payload text"
-              value={filters.search}
+        <p className="mb-3 text-xs font-medium text-zinc-500">
+          直近24時間のイベント頻度
+        </p>
+        <ResponsiveContainer width="100%" height={80}>
+          <BarChart
+            data={chartData}
+            margin={{ top: 0, right: 0, bottom: 0, left: -20 }}
+          >
+            <XAxis
+              dataKey="hour"
+              tick={{ fontSize: 10, fill: "#71717A" }}
+              tickLine={false}
+              axisLine={false}
+              interval={3}
             />
-            <FilterInput
-              label={loc.event}
-              onChange={(v) => setFilters({ ...filters, eventName: v })}
-              placeholder="event prefix"
-              value={filters.eventName}
+            <YAxis
+              tick={{ fontSize: 10, fill: "#71717A" }}
+              tickLine={false}
+              axisLine={false}
             />
-            <FilterInput
-              label={loc.actor}
-              onChange={(v) => setFilters({ ...filters, actorId: v })}
-              placeholder="actor id"
-              value={filters.actorId}
+            <Tooltip
+              contentStyle={{
+                background: "#18181B",
+                border: "1px solid #3F3F46",
+                fontSize: 12,
+              }}
+              labelStyle={{ color: "#A1A1AA" }}
             />
-            <Button className="h-9 self-end" type="submit">
-              <Search className="h-3.5 w-3.5" />
-              {loc.search}
-            </Button>
-            <Button
-              className="h-9 self-end"
-              onClick={resetFilters}
-              type="button"
-              variant="outline"
-            >
-              <X className="h-3.5 w-3.5" />
-              {loc.reset}
-            </Button>
-          </div>
-        </form>
-
-        <div className="mt-3 border-t border-zinc-800 pt-3">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-            {loc.logCategoryTabs}
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            {categoryTabs.map((tab) => (
-              <button
-                className={
-                  filters.eventName === tab.eventName
-                    ? "rounded border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-400"
-                    : "rounded border border-zinc-700 px-2.5 py-1 text-xs font-medium text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
-                }
-                key={tab.label}
-                onClick={() => applyPreset(tab.eventName)}
-                title={tab.description}
-                type="button"
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
-            <span className="text-xs text-zinc-500">
-              {loc.shown({ count: logs.length })}
-            </span>
-            {activeFilterCount > 0 && (
-              <span className="text-xs text-zinc-500">
-                {loc.filters({ count: activeFilterCount })}
-              </span>
-            )}
-            <div
-              className={`flex items-center gap-1.5 text-xs ${realtimeStatusClass(
-                realtimeMeta.tone
-              )}`}
-            >
-              <Radio className="h-3.5 w-3.5" />
-              <span
-                className={`inline-block h-1.5 w-1.5 rounded ${
-                  realtimeStatus === "live"
-                    ? "animate-pulse bg-green-400"
-                    : "bg-zinc-600"
-                }`}
+            {Object.entries(CHART_COLORS).map(([key, color]) => (
+              <Bar
+                key={key}
+                dataKey={key}
+                stackId="a"
+                fill={color}
+                radius={[2, 2, 0, 0]}
               />
-              {realtimeMeta.label}
-            </div>
-            {!canViewRaw && accessRole && (
-              <span className="text-xs text-zinc-600">
-                {loc.rawJsonRestricted}
-              </span>
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* フィルター + リアルタイムインジケーター */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-1.5">
+          {categoryTabs.map((tab) => (
+            <button
+              key={tab.eventName}
+              onClick={() => applyCategory(tab.eventName)}
+              type="button"
+              className={
+                appliedFilters.eventName === tab.eventName
+                  ? "rounded-md border border-green-500/40 bg-green-500/10 px-3 py-1 text-xs font-medium text-green-400"
+                  : "rounded-md border border-zinc-700 px-3 py-1 text-xs font-medium text-zinc-400 hover:border-zinc-600 hover:text-zinc-200"
+              }
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="イベントを検索..."
+            value={filters.search}
+            onChange={(e) => {
+              const v = e.target.value;
+              setFilters((f) => ({ ...f, search: v }));
+              setAppliedFilters((f) => ({ ...f, search: v }));
+            }}
+            className="w-48 rounded-md border border-zinc-700 bg-zinc-800/50 px-3 py-1.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none"
+          />
+
+          {/* リアルタイムインジケーター */}
+          <div className="flex items-center gap-1.5">
+            {realtimeStatus === "live" ? (
+              <>
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-[50%] bg-green-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-[50%] bg-green-500" />
+                </span>
+                <span className="text-xs text-green-400">ライブ</span>
+              </>
+            ) : (
+              <>
+                <span className="h-2 w-2 rounded-[50%] bg-zinc-600" />
+                <span className="text-xs text-zinc-500">
+                  {realtimeMeta.label}
+                </span>
+              </>
             )}
           </div>
         </div>
@@ -321,177 +347,136 @@ export function LogsExplorer() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-zinc-800">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-36">{loc.received}</TableHead>
-                <TableHead className="w-52">{loc.event}</TableHead>
-                <TableHead className="w-40">{loc.actor}</TableHead>
-                <TableHead>{loc.humanView}</TableHead>
-                {canViewRaw && <TableHead className="w-24">{loc.raw}</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading && (
-                <LoadingRows canViewRaw={canViewRaw} label={loc.loadingLogs} />
-              )}
-              {!loading && logs.length === 0 && (
-                <EmptyRow canViewRaw={canViewRaw} label={loc.noLogsFound} />
-              )}
-              {!loading &&
-                logs.map((log) => (
-                  <LogRow
-                    canViewRaw={canViewRaw}
-                    expanded={expandedId === log.id}
-                    hideLabel={loc.hide}
-                    key={log.id}
-                    log={log}
-                    onToggle={() =>
-                      setExpandedId(expandedId === log.id ? null : log.id)
+      {/* アクティビティ feed */}
+      <div className="rounded-lg border border-zinc-800 bg-zinc-900">
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-sm text-zinc-600">
+            読み込み中...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex items-center justify-center py-16 text-sm text-zinc-600">
+            表示するイベントがありません
+          </div>
+        ) : (
+          <ul className="divide-y divide-zinc-800/60">
+            {filtered.map((log) => {
+              const color = getEventColor(log.eventName);
+              const cls = eventColorClasses[color];
+              const isExpanded = expandedId === log.id;
+              const description = formatEventDescription(log.eventName, {
+                actorId: log.actorId,
+                channelId: log.channelId,
+              });
+              const payload = isRecord(log.payload) ? log.payload : {};
+
+              return (
+                <li key={log.id}>
+                  <button
+                    className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-zinc-800/40"
+                    onClick={() =>
+                      setExpandedId(isExpanded ? null : log.id)
                     }
-                    viewLabel={loc.view}
-                  />
-                ))}
-            </TableBody>
-          </Table>
-        </div>
+                    type="button"
+                  >
+                    <span
+                      className={`mt-1.5 h-2 w-2 shrink-0 rounded-[50%] ${cls.dot}`}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-zinc-200">{description}</p>
+                      <p className="mt-0.5 text-xs text-zinc-600">
+                        {log.eventName}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-xs text-zinc-600">
+                        {formatRelativeTime(new Date(log.receivedAt))}
+                      </span>
+                      {isExpanded ? (
+                        <ChevronDown className="h-3 w-3 text-zinc-600" />
+                      ) : (
+                        <ChevronRight className="h-3 w-3 text-zinc-600" />
+                      )}
+                    </div>
+                  </button>
+
+                  {isExpanded && (
+                    <div className="border-t border-zinc-800/60 bg-zinc-950/50 px-4 py-3">
+                      <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs sm:grid-cols-3">
+                        <div>
+                          <dt className="text-zinc-600">イベント時刻</dt>
+                          <dd className="text-zinc-300">
+                            {new Date(log.eventTimestamp).toLocaleString(
+                              "ja-JP"
+                            )}
+                          </dd>
+                        </div>
+                        {log.actorId && (
+                          <div>
+                            <dt className="text-zinc-600">アクター ID</dt>
+                            <dd className="font-mono text-zinc-300">
+                              {log.actorId}
+                            </dd>
+                          </div>
+                        )}
+                        {log.channelId && (
+                          <div>
+                            <dt className="text-zinc-600">チャンネル ID</dt>
+                            <dd className="font-mono text-zinc-300">
+                              {log.channelId}
+                            </dd>
+                          </div>
+                        )}
+                        {Object.entries(payload)
+                          .filter(
+                            ([, v]) =>
+                              v !== null &&
+                              v !== undefined &&
+                              v !== "" &&
+                              typeof v !== "object"
+                          )
+                          .slice(0, 6)
+                          .map(([k, v]) => (
+                            <div key={k}>
+                              <dt className="text-zinc-600">{k}</dt>
+                              <dd className="truncate text-zinc-300">
+                                {String(v)}
+                              </dd>
+                            </div>
+                          ))}
+                      </dl>
+
+                      {canViewRaw && (
+                        <details className="mt-3">
+                          <summary className="cursor-pointer text-xs text-zinc-600 hover:text-zinc-400">
+                            RAW JSON
+                          </summary>
+                          <pre className="mt-1 max-h-64 overflow-auto rounded bg-zinc-900 p-2 text-xs text-zinc-400">
+                            {JSON.stringify(log.payload, null, 2)}
+                          </pre>
+                        </details>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
 
       {nextCursor && (
-        <div className="flex justify-end">
-          <Button
+        <div className="flex justify-center">
+          <button
+            className="rounded-md border border-zinc-700 px-4 py-2 text-sm text-zinc-400 hover:border-zinc-600 hover:text-zinc-200 disabled:opacity-40"
             disabled={loadingMore}
             onClick={loadMore}
             type="button"
-            variant="outline"
           >
-            {loadingMore ? loc.loading : loc.loadMore}
-          </Button>
+            {loadingMore ? "読み込み中..." : loc.loadMore}
+          </button>
         </div>
       )}
-    </section>
-  );
-}
-
-function FilterInput({
-  label,
-  onChange,
-  placeholder,
-  value
-}: {
-  label: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-  value: string;
-}) {
-  return (
-    <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-      {label}
-      <Input
-        className="normal-case"
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        value={value}
-      />
-    </label>
-  );
-}
-
-function LogRow({
-  canViewRaw,
-  expanded,
-  hideLabel,
-  log,
-  onToggle,
-  viewLabel
-}: {
-  canViewRaw: boolean;
-  expanded: boolean;
-  hideLabel: string;
-  log: LogItem;
-  onToggle: () => void;
-  viewLabel: string;
-}) {
-  return (
-    <>
-      <TableRow>
-        <TableCell className="text-xs text-zinc-500">
-          {formatDate(log.receivedAt)}
-        </TableCell>
-        <TableCell>
-          <span
-            className={`inline-flex items-center rounded px-2 py-0.5 font-mono text-xs ${eventBadgeClass(
-              log.eventName
-            )}`}
-          >
-            {log.eventName}
-          </span>
-        </TableCell>
-        <TableCell className="font-mono text-xs text-zinc-500">
-          {log.actorId ?? "-"}
-        </TableCell>
-        <TableCell className="text-xs text-zinc-400">
-          {formatPayloadSummary(log)}
-        </TableCell>
-        {canViewRaw && (
-          <TableCell>
-            <button
-              className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
-              onClick={onToggle}
-              type="button"
-            >
-              {expanded ? hideLabel : viewLabel}
-            </button>
-          </TableCell>
-        )}
-      </TableRow>
-      {canViewRaw && expanded && (
-        <TableRow className="bg-zinc-950">
-          <TableCell colSpan={5}>
-            <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-md border border-zinc-800 bg-zinc-900 p-3 text-xs leading-5 text-zinc-300">
-              {JSON.stringify(log.payload, null, 2)}
-            </pre>
-          </TableCell>
-        </TableRow>
-      )}
-    </>
-  );
-}
-
-function LoadingRows({
-  canViewRaw,
-  label
-}: {
-  canViewRaw: boolean;
-  label: string;
-}) {
-  return Array.from({ length: 5 }, (_, i) => (
-    <TableRow key={i}>
-      <TableCell className="text-zinc-600" colSpan={canViewRaw ? 5 : 4}>
-        {label}
-      </TableCell>
-    </TableRow>
-  ));
-}
-
-function EmptyRow({
-  canViewRaw,
-  label
-}: {
-  canViewRaw: boolean;
-  label: string;
-}) {
-  return (
-    <TableRow>
-      <TableCell
-        className="py-10 text-center text-zinc-600"
-        colSpan={canViewRaw ? 5 : 4}
-      >
-        {label}
-      </TableCell>
-    </TableRow>
+    </div>
   );
 }
 
@@ -500,53 +485,22 @@ async function fetchLogs(filters: LogFilters, before?: string) {
   query.set("limit", "50");
   if (filters.search.trim()) query.set("search", filters.search.trim());
   if (filters.guildId.trim()) query.set("guildId", filters.guildId.trim());
-  if (filters.eventName.trim()) query.set("eventName", filters.eventName.trim());
+  if (filters.eventName.trim())
+    query.set("eventName", filters.eventName.trim());
   if (filters.actorId.trim()) query.set("actorId", filters.actorId.trim());
   if (before) query.set("before", before);
 
-  const r = await fetch(`/api/logs?${query.toString()}`, { cache: "no-store" });
+  const r = await fetch(`/api/logs?${query.toString()}`, {
+    cache: "no-store",
+  });
   if (!r.ok) throw new Error(`Failed to load logs (${r.status})`);
   return (await r.json()) as LogsResponse;
-}
-
-function formatPayloadSummary(log: LogItem) {
-  const payload = isRecord(log.payload) ? log.payload : {};
-  const parts = [
-    pickString(payload, "summary"),
-    pickString(payload, "content"),
-    pickString(payload, "channelName"),
-    pickString(payload, "tempVoiceChannelName"),
-    pickString(payload, "stableChannelKey"),
-    pickString(payload, "sessionKey"),
-    log.messageId ? `message ${log.messageId}` : null,
-    log.channelId ? `channel ${log.channelId}` : null
-  ].filter(Boolean);
-  return parts.slice(0, 3).join(" / ") || "-";
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
-function pickString(src: Record<string, unknown>, key: string) {
-  const v = src[key];
-  return typeof v === "string" && v.length > 0 ? v : null;
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("ja-JP", {
-    dateStyle: "short",
-    timeStyle: "medium"
-  }).format(new Date(value));
-}
-
 function toErrorMessage(e: unknown) {
   return e instanceof Error ? e.message : "Failed to load logs";
-}
-
-function realtimeStatusClass(tone: RealtimeStatusTone) {
-  if (tone === "success") return "text-green-400";
-  if (tone === "danger") return "text-red-400";
-  if (tone === "pending") return "text-yellow-400";
-  return "text-zinc-500";
 }

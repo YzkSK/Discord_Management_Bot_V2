@@ -1,5 +1,12 @@
 import type { DashboardAccessRole } from "@discord-bot/shared";
 
+export {
+  formatRelativeTime,
+  formatEventDescription,
+  getEventColor,
+  eventColorClasses,
+} from "../../lib/event-display.js";
+
 export type RealtimeLogsStatus = "idle" | "connecting" | "live" | "offline" | "error";
 export type RealtimeStatusTone = "danger" | "muted" | "pending" | "success";
 
