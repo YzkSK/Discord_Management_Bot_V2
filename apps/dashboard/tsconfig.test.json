@@ -40,6 +40,8 @@
     "src/app/api/health/summary.ts",
     "src/app/api/health/summary.test.ts",
     "src/lib/locale-health.test.ts",
-    "src/app/api/tts-settings/validation.test.ts"
+    "src/app/api/tts-settings/validation.test.ts",
+    "src/lib/event-display.ts",
+    "src/lib/event-display.test.ts"
   ]
 }
