@@ -1,28 +1,11 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
-import {
-  ClipboardList,
-  ExternalLink,
-  ListChecks,
-  Plus,
-  UserRound,
-  UsersRound
-} from "lucide-react";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
-import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "../../components/ui/table";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
+import { formatRelativeTime } from "../../lib/event-display";
 
 type RecruitmentStatus = "open" | "full" | "closed";
 
@@ -56,6 +39,64 @@ interface RecruitmentResponse {
   totalCount: number;
 }
 
+const STATUS_LABELS: Record<RecruitmentStatus, string> = {
+  open: "募集中",
+  full: "満員",
+  closed: "締切済み",
+};
+
+const STATUS_COLORS: Record<RecruitmentStatus, string> = {
+  open: "#22C55E",
+  full: "#F59E0B",
+  closed: "#71717A",
+};
+
+const STATUS_DOT: Record<RecruitmentStatus, string> = {
+  open: "bg-green-500",
+  full: "bg-yellow-500",
+  closed: "bg-zinc-500",
+};
+
+const GENRE_EMOJI: Record<string, string> = {
+  FPS: "🎯",
+  RPG: "⚔️",
+  MOBA: "🏆",
+  アクション: "🎮",
+  シミュレーション: "🏗️",
+  スポーツ: "⚽",
+  レーシング: "🏎️",
+};
+
+function genreEmoji(genre: string): string {
+  return GENRE_EMOJI[genre] ?? "🎮";
+}
+
+function CapacityBar({
+  current,
+  max,
+}: {
+  current: number;
+  max: number;
+}) {
+  const pct = max > 0 ? Math.min(100, Math.round((current / max) * 100)) : 0;
+  return (
+    <div className="mt-2">
+      <div className="mb-1 flex justify-between text-xs text-zinc-500">
+        <span>定員</span>
+        <span>
+          {current}/{max}人
+        </span>
+      </div>
+      <div className="h-1.5 w-full rounded-md bg-zinc-800">
+        <div
+          className="h-full rounded-md bg-green-500 transition-all"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function RecruitmentDashboard({ guildId }: { guildId: string }) {
   const [data, setData] = useState<RecruitmentResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,14 +105,50 @@ export function RecruitmentDashboard({ guildId }: { guildId: string }) {
   const loc = getDashboardLocale(uiLang);
 
   useEffect(() => {
-    fetchRecruitments(guildId)
+    const query = new URLSearchParams({ guildId });
+    fetch(`/api/recruitments?${query.toString()}`, { cache: "no-store" })
+      .then(async (r) => {
+        if (!r.ok)
+          throw new Error(`Failed to load recruitments (${r.status})`);
+        return (await r.json()) as RecruitmentResponse;
+      })
       .then(setData)
-      .catch((e: unknown) => setError(toErrorMessage(e)))
+      .catch((e: unknown) =>
+        setError(e instanceof Error ? e.message : "Recruitment request failed")
+      )
       .finally(() => setLoading(false));
   }, [guildId]);
 
+  const grouped = useMemo(() => {
+    const empty: Record<RecruitmentStatus, RecruitmentItem[]> = {
+      open: [],
+      full: [],
+      closed: [],
+    };
+    if (!data) return empty;
+    return data.recruitments.reduce((acc, r) => {
+      acc[r.status] = [...(acc[r.status] ?? []), r];
+      return acc;
+    }, empty);
+  }, [data]);
+
+  const pieData = useMemo(() => {
+    if (!data) return [];
+    return (["open", "full", "closed"] as const)
+      .map((s) => ({
+        name: STATUS_LABELS[s],
+        value: grouped[s].length,
+        color: STATUS_COLORS[s],
+      }))
+      .filter((d) => d.value > 0);
+  }, [data, grouped]);
+
   if (loading) {
-    return <p className="text-sm text-zinc-500">{loc.loading}...</p>;
+    return (
+      <div className="flex items-center justify-center py-16 text-sm text-zinc-600">
+        読み込み中...
+      </div>
+    );
   }
 
   if (!data) {
@@ -83,238 +160,101 @@ export function RecruitmentDashboard({ guildId }: { guildId: string }) {
   }
 
   return (
-    <section className="grid max-w-6xl gap-4">
-      <div className="grid gap-3 md:grid-cols-4">
-        <RecruitmentMetric
-          icon={<ClipboardList className="h-4 w-4 text-green-400" />}
-          label={loc.recruitmentTableTitle}
-          value={data.totalCount.toString()}
-        />
-        <RecruitmentMetric
-          icon={<ListChecks className="h-4 w-4 text-green-400" />}
-          label={loc.recruitmentOpen}
-          value={data.openCount.toString()}
-        />
-        <RecruitmentMetric
-          icon={<UsersRound className="h-4 w-4 text-zinc-400" />}
-          label={loc.recruitmentFull}
-          value={data.fullCount.toString()}
-        />
-        <RecruitmentMetric
-          icon={<ExternalLink className="h-4 w-4 text-zinc-400" />}
-          label={loc.recruitmentClosed}
-          value={data.closedCount.toString()}
-        />
-      </div>
+    <div className="flex max-w-6xl flex-col gap-6">
+      {/* ドーナツチャート + 統計 */}
+      {data.totalCount > 0 && (
+        <div className="flex flex-col items-center gap-4 rounded-lg border border-zinc-800 bg-zinc-900 p-4 sm:flex-row">
+          <div style={{ width: 160, height: 120 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  innerRadius={35}
+                  outerRadius={55}
+                  dataKey="value"
+                  paddingAngle={3}
+                >
+                  {pieData.map((entry) => (
+                    <Cell key={entry.name} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    background: "#18181B",
+                    border: "1px solid #3F3F46",
+                    fontSize: 12,
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex gap-6 text-center">
+            {pieData.map((d) => (
+              <div key={d.name}>
+                <p className="text-xl font-bold text-zinc-100">{d.value}</p>
+                <p className="text-xs text-zinc-500">{d.name}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="h-4 w-4 text-green-400" />
-            {loc.recruitmentTableTitle}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RecruitmentTable
-            emptyText={loc.recruitmentNoItems}
-            loc={loc}
-            recruitments={data.recruitments}
-          />
-        </CardContent>
-      </Card>
+      {/* Kanban カラム */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {(["open", "full", "closed"] as const).map((status) => (
+          <div key={status}>
+            <div className="mb-2 flex items-center gap-2">
+              <span
+                className={`h-2 w-2 rounded-[50%] ${STATUS_DOT[status]}`}
+              />
+              <h3 className="text-sm font-medium text-zinc-400">
+                {STATUS_LABELS[status]}
+              </h3>
+              <span className="ml-auto rounded-md bg-zinc-800 px-2 py-0.5 text-xs text-zinc-500">
+                {grouped[status].length}
+              </span>
+            </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{loc.voiceSetupShortcuts}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-2 sm:grid-cols-2">
-          <RecruitmentShortcut
-            body="/setup recruitment channel:<text channel>"
-            href="/settings"
-            label={loc.recruitmentSetupShortcut}
-          />
-          <RecruitmentShortcut
-            body={loc.recruitmentCreateCommand}
-            href="/logs?eventName=recruitment"
-            label={loc.recruitmentPost}
-          />
-        </CardContent>
-      </Card>
-    </section>
-  );
-}
-
-function RecruitmentMetric({
-  icon,
-  label,
-  value
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-md border border-zinc-800 bg-zinc-900 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-medium text-zinc-500">{label}</p>
-        {icon}
-      </div>
-      <p className="mt-2 text-2xl font-semibold text-zinc-100">{value}</p>
-    </div>
-  );
-}
-
-function RecruitmentTable({
-  emptyText,
-  loc,
-  recruitments
-}: {
-  emptyText: string;
-  loc: ReturnType<typeof getDashboardLocale>;
-  recruitments: RecruitmentItem[];
-}) {
-  return (
-    <div className="overflow-hidden rounded-md border border-zinc-800">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{loc.recruitmentGenre}</TableHead>
-            <TableHead>{loc.recruitmentStatus}</TableHead>
-            <TableHead>{loc.recruitmentParticipants}</TableHead>
-            <TableHead>{loc.recruitmentCreatorId}</TableHead>
-            <TableHead>{loc.recruitmentVoiceChannelId}</TableHead>
-            <TableHead>{loc.recruitmentUpdated}</TableHead>
-            <TableHead>{loc.recruitmentPost}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {recruitments.length === 0 ? (
-            <TableRow>
-              <TableCell className="py-8 text-center text-zinc-600" colSpan={7}>
-                {emptyText}
-              </TableCell>
-            </TableRow>
-          ) : recruitments.map((recruitment) => (
-            <TableRow key={recruitment.id}>
-              <TableCell>
-                <div className="grid gap-1">
-                  <span className="font-medium text-zinc-200">
-                    {recruitment.genre}
-                  </span>
-                  <span className="line-clamp-2 max-w-[260px] text-xs text-zinc-500">
-                    {recruitment.content}
-                  </span>
+            <div className="flex flex-col gap-2">
+              {grouped[status].length === 0 ? (
+                <div className="rounded-lg border border-dashed border-zinc-800/60 py-6 text-center text-xs text-zinc-700">
+                  なし
                 </div>
-              </TableCell>
-              <TableCell>
-                <StatusBadge loc={loc} status={recruitment.status} />
-              </TableCell>
-              <TableCell>
-                <span className="inline-flex items-center gap-1 text-zinc-300">
-                  <UsersRound className="h-3.5 w-3.5 text-zinc-500" />
-                  {recruitment.activeParticipantCount}/{recruitment.capacity}
-                </span>
-              </TableCell>
-              <TableCell className="break-all font-mono text-xs">
-                <span className="inline-flex items-center gap-1">
-                  <UserRound className="h-3.5 w-3.5 text-zinc-500" />
-                  {recruitment.creatorId}
-                </span>
-              </TableCell>
-              <TableCell className="break-all font-mono text-xs">
-                {recruitment.voiceChannelId ?? "-"}
-              </TableCell>
-              <TableCell className="text-xs text-zinc-500">
-                {formatDate(recruitment.updatedAt)}
-              </TableCell>
-              <TableCell>
-                {recruitment.postUrl ? (
-                  <a
-                    className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300"
-                    href={recruitment.postUrl}
-                    rel="noreferrer"
-                    target="_blank"
+              ) : (
+                grouped[status].map((r) => (
+                  <div
+                    key={r.id}
+                    className="rounded-lg border border-zinc-800 bg-zinc-900 p-3"
                   >
-                    {loc.view}
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                ) : (
-                  <span className="text-xs text-zinc-600">-</span>
-                )}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                    <div className="flex items-start gap-2">
+                      <span className="mt-0.5 text-lg leading-none">
+                        {genreEmoji(r.genre)}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate text-sm font-medium text-zinc-200">
+                          {r.genre}
+                        </p>
+                        {r.content && (
+                          <p className="mt-0.5 line-clamp-2 text-xs text-zinc-500">
+                            {r.content}
+                          </p>
+                        )}
+                        <p className="mt-0.5 text-xs text-zinc-600">
+                          {formatRelativeTime(new Date(r.createdAt))} 作成
+                        </p>
+                      </div>
+                    </div>
+                    <CapacityBar
+                      current={r.activeParticipantCount}
+                      max={r.capacity}
+                    />
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
-}
-
-function StatusBadge({
-  loc,
-  status
-}: {
-  loc: ReturnType<typeof getDashboardLocale>;
-  status: RecruitmentStatus;
-}) {
-  const label = {
-    closed: loc.recruitmentClosed,
-    full: loc.recruitmentFull,
-    open: loc.recruitmentOpen
-  }[status];
-
-  return (
-    <Badge variant={status === "open" ? "success" : "outline"}>{label}</Badge>
-  );
-}
-
-function RecruitmentShortcut({
-  body,
-  href,
-  label
-}: {
-  body: string;
-  href: string;
-  label: string;
-}) {
-  return (
-    <a
-      className="flex items-start justify-between gap-3 rounded-md border border-zinc-800 bg-zinc-950 p-3 transition-colors hover:border-zinc-600 hover:bg-zinc-900"
-      href={href}
-    >
-      <div>
-        <p className="text-sm font-medium text-zinc-200">{label}</p>
-        <p className="mt-1 break-all font-mono text-xs text-zinc-500">{body}</p>
-      </div>
-      <Button aria-label={label} size="icon" type="button" variant="ghost">
-        <Plus className="h-3.5 w-3.5" />
-      </Button>
-    </a>
-  );
-}
-
-async function fetchRecruitments(
-  guildId: string
-): Promise<RecruitmentResponse> {
-  const query = new URLSearchParams({ guildId });
-  const response = await fetch(`/api/recruitments?${query.toString()}`, {
-    cache: "no-store"
-  });
-  if (!response.ok) {
-    throw new Error(`Failed to load recruitments (${response.status})`);
-  }
-  return (await response.json()) as RecruitmentResponse;
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "short"
-  }).format(new Date(value));
-}
-
-function toErrorMessage(e: unknown) {
-  return e instanceof Error ? e.message : "Recruitment request failed";
 }
