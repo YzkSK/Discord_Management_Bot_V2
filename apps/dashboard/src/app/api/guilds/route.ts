@@ -4,7 +4,15 @@ import { getToken } from "next-auth/jwt";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { authOptions } from "../../../auth";
-import { fetchCurrentUserGuilds, fetchGuildMemberRoleIds } from "../../../discord-api";
+import {
+  getUsableDiscordAccessToken,
+  toDashboardDiscordToken
+} from "../../../auth-token";
+import {
+  DiscordApiError,
+  fetchCurrentUserGuilds,
+  fetchGuildMemberRoleIds
+} from "../../../discord-api";
 import { hasDirectManagementPermission } from "./guild-filter";
 
 export const dynamic = "force-dynamic";
@@ -17,14 +25,28 @@ export async function GET(request: NextRequest) {
     ...(authOptions.secret ? { secret: authOptions.secret } : {})
   });
 
-  if (!token?.sub || !token.discordAccessToken) {
+  if (!token?.sub || (!token.discordAccessToken && !token.discordRefreshToken)) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  }
+
+  const accessToken = await getUsableDiscordAccessToken({
+    clientId: env.DISCORD_CLIENT_ID,
+    clientSecret: env.DISCORD_CLIENT_SECRET,
+    token: toDashboardDiscordToken(token)
+  });
+
+  if (!accessToken.ok) {
+    return NextResponse.json({ error: accessToken.error }, { status: 401 });
   }
 
   let userGuilds;
   try {
-    userGuilds = await fetchCurrentUserGuilds(token.discordAccessToken);
-  } catch {
+    userGuilds = await fetchCurrentUserGuilds(accessToken.accessToken);
+  } catch (error) {
+    if (error instanceof DiscordApiError && error.status === 401) {
+      return NextResponse.json({ error: "Authentication expired." }, { status: 401 });
+    }
+
     return NextResponse.json({ error: "Failed to fetch Discord guilds." }, { status: 502 });
   }
 
