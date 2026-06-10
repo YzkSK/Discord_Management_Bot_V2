@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { GuildLanguage, HealthStatus } from "@discord-bot/shared";
 import {
-  Activity,
   AlertTriangle,
   CheckCircle2,
   Clock3,
@@ -15,15 +14,6 @@ import {
 
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "../../components/ui/table";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import { buildHealthSummary, type HealthDashboardSummary } from "../api/health/summary";
 
@@ -140,17 +130,16 @@ export function HealthDashboard() {
         />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-green-400" />
-            {loc.healthDependencies}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <HealthServicesTable loc={loc} services={summary.services} />
-        </CardContent>
-      </Card>
+      <div>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          {loc.healthDependencies}
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {summary.services.map((service) => (
+            <ServiceTile key={service.name} service={service} loc={loc} />
+          ))}
+        </div>
+      </div>
     </section>
   );
 }
@@ -175,53 +164,42 @@ function HealthMetric({
   );
 }
 
-function HealthServicesTable({
-  loc,
-  services
+function ServiceTile({
+  service,
+  loc
 }: {
+  service: HealthDashboardSummary["services"][number];
   loc: ReturnType<typeof getDashboardLocale>;
-  services: HealthDashboardSummary["services"];
 }) {
+  const isOk = service.status === "ok";
+  const tileClass = isOk
+    ? "border-green-500/20 bg-green-500/5"
+    : "border-red-500/20 bg-red-500/5";
+  const dotClass = isOk ? "bg-green-500" : "bg-red-500";
+  const statusLabel = isOk ? loc.healthOk : loc.healthError;
+
   return (
-    <div className="overflow-hidden rounded-md border border-zinc-800">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{loc.healthService}</TableHead>
-            <TableHead>{loc.healthStatus}</TableHead>
-            <TableHead>{loc.healthLatency}</TableHead>
-            <TableHead>{loc.healthMessage}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {services.map((service) => (
-            <TableRow key={service.name}>
-              <TableCell>
-                <span className="inline-flex items-center gap-2 text-zinc-200">
-                  {getServiceIcon(service.name)}
-                  {service.name}
-                </span>
-              </TableCell>
-              <TableCell>
-                <Badge
-                  className={service.status === "ok"
-                    ? undefined
-                    : "border-red-500/30 bg-red-500/10 text-red-400"}
-                  variant={service.status === "ok" ? "success" : "outline"}
-                >
-                  {service.status === "ok" ? loc.healthOk : loc.healthError}
-                </Badge>
-              </TableCell>
-              <TableCell className="font-mono text-xs">
-                {service.latencyMs === null ? "-" : `${service.latencyMs}ms`}
-              </TableCell>
-              <TableCell className="break-all text-xs text-zinc-500">
-                {service.message ?? "-"}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <div className={`rounded-lg border p-4 ${tileClass}`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {getServiceIcon(service.name)}
+          <p className="text-sm font-medium text-zinc-200 capitalize">
+            {service.name}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className={`h-2 w-2 rounded-[50%] ${dotClass}`} />
+          <span className="text-xs text-zinc-400">{statusLabel}</span>
+        </div>
+      </div>
+      {service.latencyMs !== null && (
+        <p className="mt-2 font-mono text-xs text-zinc-500">
+          {service.latencyMs}ms
+        </p>
+      )}
+      {service.message && (
+        <p className="mt-1 text-xs text-zinc-600 break-all">{service.message}</p>
+      )}
     </div>
   );
 }

@@ -104,6 +104,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   const [deletingGrantKey, setDeletingGrantKey] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"logs" | "voice" | "tts" | "access">("logs");
 
   const loc = getDashboardLocale(uiLang);
 
@@ -355,8 +356,16 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   const canEditTts = settings.accessRole !== "viewer";
   const summaries = buildSettingsSectionSummaries(settings.features);
 
+  const tabDefs = [
+    { key: "logs",   label: "ログ設定" },
+    { key: "voice",  label: "音声" },
+    { key: "tts",    label: "TTS" },
+    { key: "access", label: "アクセス管理" },
+  ] as const;
+
   return (
     <section className="grid max-w-5xl gap-4">
+      {/* 概要 */}
       <Card>
         <CardHeader>
           <CardTitle>{loc.settingsOverview}</CardTitle>
@@ -379,93 +388,120 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
               />
             ))}
           </div>
-
-          {error && (
-            <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
-              {error}
-            </div>
-          )}
-          {message && (
-            <div className="rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-400">
-              {message}
-            </div>
-          )}
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{loc.logsSettings}</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3">
-          <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-            {loc.logMode}
-            <Select onChange={(e) => setLogMode(e.target.value)} value={logMode}>
-              {logModeOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </Select>
-          </label>
-
-          <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-            {loc.language}
-            <Select
-              onChange={(e) => {
-                const val = e.target.value;
-                setLanguage(val);
-                if (isGuildLanguage(val)) setUiLang(val);
-              }}
-              value={language}
+      {/* タブ + セクション */}
+      <div>
+        {/* タブバー */}
+        <div className="flex gap-0.5 border-b border-zinc-800 mb-4">
+          {tabDefs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className={
+                activeTab === tab.key
+                  ? "border-b-2 border-green-500 px-4 py-2.5 text-sm font-medium text-green-400 -mb-px"
+                  : "px-4 py-2.5 text-sm font-medium text-zinc-500 hover:text-zinc-300"
+              }
             >
-              {languageOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </Select>
-          </label>
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-          <div className="flex justify-end">
-            <Button disabled={saving} onClick={saveLogMode} type="button" size="sm">
-              <Save className="h-3.5 w-3.5" />
-              {saving ? loc.saving : loc.saveChanges}
-            </Button>
+        {error && (
+          <div className="mb-3 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+            {error}
           </div>
-        </CardContent>
-      </Card>
+        )}
+        {message && (
+          <div className="mb-3 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-400">
+            {message}
+          </div>
+        )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{loc.tempVcSettings}</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3">
-            <FeatureStatus
-              configured={settings.features.tempVc.configured}
-              label={loc.tempVcSettings}
-              loc={loc}
-            />
-            <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-              {loc.tempVcCreateChannelId}
-              <Input
-                onChange={(e) => setTempVcCreateChannelId(e.target.value)}
-                value={tempVcCreateChannelId}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-              {loc.tempVcCategoryId}
-              <Input
-                onChange={(e) => setTempVcCategoryId(e.target.value)}
-                value={tempVcCategoryId}
-              />
-            </label>
-            <div className="flex justify-end">
-              <Button disabled={savingTempVc} onClick={saveTempVcSettings} type="button" size="sm">
-                <Save className="h-3.5 w-3.5" />
-                {savingTempVc ? loc.saving : loc.saveTempVcSettings}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {/* ログ設定タブ */}
+        {activeTab === "logs" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>{loc.logsSettings}</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3">
+              <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                {loc.logMode}
+                <Select onChange={(e) => setLogMode(e.target.value)} value={logMode}>
+                  {logModeOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </Select>
+              </label>
 
+              <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                {loc.language}
+                <Select
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setLanguage(val);
+                    if (isGuildLanguage(val)) setUiLang(val);
+                  }}
+                  value={language}
+                >
+                  {languageOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </Select>
+              </label>
+
+              <div className="flex justify-end">
+                <Button disabled={saving} onClick={saveLogMode} type="button" size="sm">
+                  <Save className="h-3.5 w-3.5" />
+                  {saving ? loc.saving : loc.saveChanges}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 音声タブ */}
+        {activeTab === "voice" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>{loc.tempVcSettings}</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3">
+              <FeatureStatus
+                configured={settings.features.tempVc.configured}
+                label={loc.tempVcSettings}
+                loc={loc}
+              />
+              <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                {loc.tempVcCreateChannelId}
+                <Input
+                  onChange={(e) => setTempVcCreateChannelId(e.target.value)}
+                  value={tempVcCreateChannelId}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                {loc.tempVcCategoryId}
+                <Input
+                  onChange={(e) => setTempVcCategoryId(e.target.value)}
+                  value={tempVcCategoryId}
+                />
+              </label>
+              <div className="flex justify-end">
+                <Button disabled={savingTempVc} onClick={saveTempVcSettings} type="button" size="sm">
+                  <Save className="h-3.5 w-3.5" />
+                  {savingTempVc ? loc.saving : loc.saveTempVcSettings}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* TTS タブ */}
+        {activeTab === "tts" && (
         <Card>
           <CardHeader>
             <CardTitle>{loc.ttsSettings}</CardTitle>
@@ -691,28 +727,10 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{loc.recruitmentSettings}</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3">
-            <div className="flex items-center justify-between gap-3">
-              <FeatureStatus
-                configured={settings.features.recruitment.configured}
-                label={loc.recruitmentSettings}
-                loc={loc}
-              />
-              <Badge variant="outline">{loc.readOnly}</Badge>
-            </div>
-            <ReadOnlyValue
-              label={loc.recruitmentMarker}
-              value={settings.features.recruitment.channelMarker}
-            />
-          </CardContent>
-        </Card>
-      </div>
+        )}
 
-      {isOwner && (
+        {/* アクセス管理タブ */}
+        {activeTab === "access" && isOwner && (
         <Card>
           <CardHeader>
             <CardTitle>{loc.dashboardAccess}</CardTitle>
@@ -871,7 +889,8 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
             )}
           </CardContent>
         </Card>
-      )}
+        )}
+      </div>
     </section>
   );
 }
