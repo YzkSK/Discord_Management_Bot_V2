@@ -124,10 +124,30 @@ Response shape:
 
 ```json
 {
+  "accessRole": "viewer",
   "items": [],
   "nextCursor": null
 }
 ```
+
+## Phase12 Logs UX
+
+Phase12 completes the first Dashboard Logs UX pass:
+
+- Category tabs:
+  - All
+  - Messages
+  - Voice
+  - Temp VC
+  - Recruitment
+  - Audit
+  - TTS
+  - System
+- Realtime status display for idle, connecting, live, offline, and error states.
+- Human View summaries remain visible for every Dashboard role.
+- Raw JSON is visible only for `owner` and `admin`.
+- `viewer` users can search, filter, page, and read Human View summaries, but
+  cannot expand raw payloads.
 
 ## Verification
 
