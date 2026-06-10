@@ -71,7 +71,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
     }));
     (data?.recentSessions ?? []).forEach((s) => {
       const h = new Date(s.startedAt).getHours();
-      bins[h].count++;
+      if (bins[h]) bins[h].count++;
     });
     return bins;
   }, [data]);

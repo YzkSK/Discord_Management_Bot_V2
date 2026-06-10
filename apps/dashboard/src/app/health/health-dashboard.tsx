@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import type { GuildLanguage, HealthStatus } from "@discord-bot/shared";
 import {
   AlertTriangle,

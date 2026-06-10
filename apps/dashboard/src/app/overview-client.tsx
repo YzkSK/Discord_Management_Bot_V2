@@ -113,7 +113,7 @@ export function OverviewClient({ guildId }: OverviewClientProps) {
     recentLogs.forEach((log) => {
       const d = new Date(log.receivedAt);
       const key = `${d.getMonth() + 1}/${d.getDate()}`;
-      if (key in days) days[key]++;
+      if (key in days) days[key] = (days[key] ?? 0) + 1;
     });
     return Object.entries(days).map(([date, count]) => ({ date, count }));
   }, [recentLogs]);

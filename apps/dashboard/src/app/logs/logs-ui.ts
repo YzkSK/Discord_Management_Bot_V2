@@ -5,7 +5,7 @@ export {
   formatEventDescription,
   getEventColor,
   eventColorClasses,
-} from "../../lib/event-display.js";
+} from "../../lib/event-display";
 
 export type RealtimeLogsStatus = "idle" | "connecting" | "live" | "offline" | "error";
 export type RealtimeStatusTone = "danger" | "muted" | "pending" | "success";
