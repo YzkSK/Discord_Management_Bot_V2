@@ -3,5 +3,8 @@ import type { JWT as DefaultJWT } from "next-auth/jwt";
 declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
     discordAccessToken?: string;
+    discordAccessTokenExpiresAt?: number;
+    discordRefreshToken?: string;
+    discordTokenError?: "RefreshAccessTokenError";
   }
 }

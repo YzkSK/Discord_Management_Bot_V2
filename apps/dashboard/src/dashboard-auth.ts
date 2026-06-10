@@ -7,6 +7,11 @@ import type { NextRequest } from "next/server";
 import { resolveDashboardAccess } from "./authorization";
 import { authOptions, getDashboardSession } from "./auth";
 import {
+  getUsableDiscordAccessToken,
+  toDashboardDiscordToken
+} from "./auth-token";
+import {
+  DiscordApiError,
   fetchCurrentUserGuildById,
   fetchGuildMemberRoleIds
 } from "./discord-api";
@@ -45,7 +50,7 @@ export async function authorizeDashboardApi(
     ...(authOptions.secret ? { secret: authOptions.secret } : {})
   });
 
-  if (!token?.sub || !token.discordAccessToken) {
+  if (!token?.sub || (!token.discordAccessToken && !token.discordRefreshToken)) {
     return {
       allowed: false,
       status: 401,
@@ -53,13 +58,35 @@ export async function authorizeDashboardApi(
     } as const;
   }
 
+  const accessToken = await getUsableDiscordAccessToken({
+    clientId: env.DISCORD_CLIENT_ID,
+    clientSecret: env.DISCORD_CLIENT_SECRET,
+    token: toDashboardDiscordToken(token)
+  });
+
+  if (!accessToken.ok) {
+    return {
+      allowed: false,
+      status: 401,
+      error: accessToken.error
+    } as const;
+  }
+
   let discordGuild;
   try {
     discordGuild = await fetchCurrentUserGuildById(
-      token.discordAccessToken,
+      accessToken.accessToken,
       input.guildId
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof DiscordApiError && error.status === 401) {
+      return {
+        allowed: false,
+        status: 401,
+        error: "Authentication expired."
+      } as const;
+    }
+
     return {
       allowed: false,
       status: 502,

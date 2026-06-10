@@ -16,6 +16,15 @@ export interface DiscordRole {
 
 const discordApiBaseUrl = "https://discord.com/api/v10";
 
+export class DiscordApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number
+  ) {
+    super(message);
+  }
+}
+
 interface GuildCacheEntry {
   guilds: DiscordOAuthGuild[];
   expiresAt: number;
@@ -38,7 +47,10 @@ export async function fetchCurrentUserGuilds(
     cache: "no-store"
   });
   if (!response.ok) {
-    throw new Error(`Failed to load Discord guilds (${response.status}).`);
+    throw new DiscordApiError(
+      `Failed to load Discord guilds (${response.status}).`,
+      response.status
+    );
   }
   const guilds = (await response.json()) as DiscordOAuthGuild[];
   guildListCache.set(accessToken, { guilds, expiresAt: Date.now() + GUILD_CACHE_TTL_MS });
@@ -67,8 +79,10 @@ export async function fetchGuildMemberRoleIds(
   );
   if (response.status === 404 || response.status === 403) return [];
   if (!response.ok) {
-    throw new Error(
+    throw new DiscordApiError(
       `Failed to load Discord guild member (${response.status}).`
+      ,
+      response.status
     );
   }
   const member = (await response.json()) as DiscordGuildMember;
@@ -87,7 +101,10 @@ export async function fetchGuildRoles(
     }
   );
   if (!response.ok) {
-    throw new Error(`Failed to load guild roles (${response.status}).`);
+    throw new DiscordApiError(
+      `Failed to load guild roles (${response.status}).`,
+      response.status
+    );
   }
   const roles = (await response.json()) as DiscordRole[];
   return roles.filter((r) => r.name !== "@everyone");

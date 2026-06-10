@@ -9,6 +9,8 @@
   "include": [
     "src/app/dashboard-ui.ts",
     "src/app/dashboard-ui.test.ts",
+    "src/auth-token.ts",
+    "src/auth-token.test.ts",
     "src/app/settings/access-grants.ts",
     "src/app/settings/access-grants.test.ts",
     "src/app/settings/settings-sections.ts",

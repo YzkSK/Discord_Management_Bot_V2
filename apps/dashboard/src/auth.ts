@@ -4,6 +4,13 @@ import { getServerSession } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import DiscordProvider from "next-auth/providers/discord";
 
+import {
+  getDiscordTokenExpiry,
+  refreshDiscordAccessToken,
+  toDashboardDiscordToken,
+  isDiscordAccessTokenUsable
+} from "./auth-token";
+
 const env = parseDashboardAuthEnv();
 
 export const authOptions: AuthOptions = {
@@ -26,9 +33,45 @@ export const authOptions: AuthOptions = {
     strategy: "jwt"
   },
   callbacks: {
-    jwt({ account, token }) {
+    async jwt({ account, token }) {
       if (account?.access_token) {
         token.discordAccessToken = account.access_token;
+        const expiresAt = getDiscordTokenExpiry(
+          typeof account.expires_at === "number" ? account.expires_at : undefined,
+          typeof account.expires_in === "number" ? account.expires_in : undefined
+        );
+        if (expiresAt !== undefined) {
+          token.discordAccessTokenExpiresAt = expiresAt;
+        } else {
+          delete token.discordAccessTokenExpiresAt;
+        }
+      }
+
+      if (account?.refresh_token) {
+        token.discordRefreshToken = account.refresh_token;
+        delete token.discordTokenError;
+      }
+
+      if (isDiscordAccessTokenUsable(toDashboardDiscordToken(token))) {
+        return token;
+      }
+
+      if (typeof token.discordRefreshToken === "string") {
+        try {
+          const refreshed = await refreshDiscordAccessToken({
+            clientId: env.DISCORD_CLIENT_ID,
+            clientSecret: env.DISCORD_CLIENT_SECRET,
+            refreshToken: token.discordRefreshToken
+          });
+          token.discordAccessToken = refreshed.discordAccessToken;
+          token.discordAccessTokenExpiresAt = refreshed.discordAccessTokenExpiresAt;
+          token.discordRefreshToken = refreshed.discordRefreshToken;
+          delete token.discordTokenError;
+        } catch {
+          delete token.discordAccessToken;
+          delete token.discordAccessTokenExpiresAt;
+          token.discordTokenError = "RefreshAccessTokenError";
+        }
       }
 
       return token;
