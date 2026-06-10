@@ -83,6 +83,12 @@ type Locale = {
   ttsSpeakerUpdated: string;
   ttsSpeakerUser: (vars: { id: number }) => string;
   ttsSpeakerServerDefault: (vars: { id: number }) => string;
+  logEventTitle: (vars: { eventName: string }) => string;
+  logEventTimeLabel: string;
+  commandSuccess: (vars: { operation: string }) => string;
+  commandError: (vars: { reason: string }) => string;
+  voiceTempCreatedTitle: string;
+  voiceTempDeletedTitle: string;
 };
 
 const locales: Record<GuildLanguage, Locale> = {
@@ -170,7 +176,47 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsSpeakerFailed: "TTS speaker update failed",
     ttsSpeakerUpdated: "TTS speaker updated",
     ttsSpeakerUser: ({ id }) => `Your TTS speaker: ${id}`,
-    ttsSpeakerServerDefault: ({ id }) => `Server default TTS speaker: ${id}`
+    ttsSpeakerServerDefault: ({ id }) => `Server default TTS speaker: ${id}`,
+    logEventTitle: ({ eventName }) => {
+      const titles: Record<string, string> = {
+        "voice.session.join": "🎤 Voice Session Started",
+        "voice.session.leave": "🎤 Voice Session Ended",
+        "voice.session.move": "🎤 Voice Channel Move",
+        "member.join": "👋 Member Joined",
+        "member.leave": "👋 Member Left",
+        "member.kick": "🦶 Member Kicked",
+        "member.ban": "🔨 Member Banned",
+        "member.unban": "🔓 Member Unbanned",
+        "member.timeout": "⏱️ Member Timed Out",
+        "message.delete": "🗑️ Message Deleted",
+        "message.bulk_delete": "🗑️ Messages Bulk Deleted",
+        "message.update": "✏️ Message Edited",
+        "voice.temp.created": "✨ Temp VC Created",
+        "voice.temp.deleted": "🗑️ Temp VC Deleted",
+        "voice.temp.owner_transferred": "👑 Temp VC Ownership Transferred",
+        "voice.temp.user_kicked": "🚫 User Kicked from Temp VC",
+        "call.started": "📞 Call Started",
+        "call.ended": "📞 Call Ended",
+        "recruitment.created": "🎮 Recruitment Created",
+        "recruitment.full": "🎮 Recruitment Full",
+        "recruitment.closed": "🎮 Recruitment Closed",
+        "tts.session.started": "🔊 TTS Session Started",
+        "tts.session.stopped": "🔊 TTS Session Stopped",
+        "system.bot.crashed": "🔴 Bot Crashed",
+        "system.handler.error": "⚠️ Handler Error",
+        "system.database.error": "⚠️ Database Error",
+        "system.redis.error": "⚠️ Redis Error",
+        "system.voicevox.error": "⚠️ VOICEVOX Error",
+        "system.backup.failed": "⚠️ Backup Failed",
+        "system.rate_limit": "⚠️ Rate Limited",
+      };
+      return titles[eventName] ?? `📋 ${eventName}`;
+    },
+    logEventTimeLabel: "Event time",
+    commandSuccess: ({ operation }) => `✅ ${operation} completed`,
+    commandError: ({ reason }) => `❌ ${reason}`,
+    voiceTempCreatedTitle: "✨ Temp VC Created",
+    voiceTempDeletedTitle: "🗑️ Temp VC Deleted",
   },
   ja: {
     logTitle: ({ eventName }) => `ログ: ${eventName}`,
@@ -255,8 +301,47 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsSpeakerFailed: "TTS話者変更失敗",
     ttsSpeakerUpdated: "TTS話者を更新しました",
     ttsSpeakerUser: ({ id }) => `あなたのTTS話者: ${id}`,
-    ttsSpeakerServerDefault: ({ id }) => `サーバーデフォルトTTS話者: ${id}`
-    ,
+    ttsSpeakerServerDefault: ({ id }) => `サーバーデフォルトTTS話者: ${id}`,
+    logEventTitle: ({ eventName }) => {
+      const titles: Record<string, string> = {
+        "voice.session.join": "🎤 ボイスセッション開始",
+        "voice.session.leave": "🎤 ボイスセッション終了",
+        "voice.session.move": "🎤 チャンネル移動",
+        "member.join": "👋 メンバーが参加",
+        "member.leave": "👋 メンバーが退出",
+        "member.kick": "🦶 メンバーをキック",
+        "member.ban": "🔨 メンバーをBAN",
+        "member.unban": "🔓 BANを解除",
+        "member.timeout": "⏱️ タイムアウトを適用",
+        "message.delete": "🗑️ メッセージを削除",
+        "message.bulk_delete": "🗑️ メッセージを一括削除",
+        "message.update": "✏️ メッセージを編集",
+        "voice.temp.created": "✨ 一時VCが作成された",
+        "voice.temp.deleted": "🗑️ 一時VCが削除された",
+        "voice.temp.owner_transferred": "👑 一時VCオーナーを移譲",
+        "voice.temp.user_kicked": "🚫 一時VCからキック",
+        "call.started": "📞 通話が開始",
+        "call.ended": "📞 通話が終了",
+        "recruitment.created": "🎮 募集が作成された",
+        "recruitment.full": "🎮 募集が満員になった",
+        "recruitment.closed": "🎮 募集が締め切られた",
+        "tts.session.started": "🔊 TTSセッション開始",
+        "tts.session.stopped": "🔊 TTSセッション終了",
+        "system.bot.crashed": "🔴 Botが予期せず停止",
+        "system.handler.error": "⚠️ ハンドラーエラー",
+        "system.database.error": "⚠️ データベースエラー",
+        "system.redis.error": "⚠️ Redisエラー",
+        "system.voicevox.error": "⚠️ VOICEVOXエラー",
+        "system.backup.failed": "⚠️ バックアップ失敗",
+        "system.rate_limit": "⚠️ レート制限",
+      };
+      return titles[eventName] ?? `📋 ${eventName}`;
+    },
+    logEventTimeLabel: "イベント時刻",
+    commandSuccess: ({ operation }) => `✅ ${operation}が完了しました`,
+    commandError: ({ reason }) => `❌ ${reason}`,
+    voiceTempCreatedTitle: "✨ 一時VCが作成された",
+    voiceTempDeletedTitle: "🗑️ 一時VCが削除された",
     voiceStatusSetupFailed: "通話状態セットアップ失敗",
     voiceStatusChannelMustBeText:
       "通話状態チャンネルはテキストチャンネルにしてください。",
