@@ -116,7 +116,7 @@ const eventColorPrefixes: Array<[string, EventColorKey]> = [
   ["config.", "gray"],
 ];
 
-export function formatEventDescription(eventName: string, vars: EventVars): string {
+export function formatEventDescription(eventName: string, vars: EventVars = {}): string {
   const fn = eventDescriptions[eventName];
   if (!fn) return eventName;
   return fn(vars);
@@ -134,7 +134,7 @@ export function getEventIcon(eventName: string): string {
   if (!fn) return "📋";
   const text = fn({});
   // First char is the emoji
-  return [...text][0] ?? "📋";
+  return Array.from(text)[0] ?? "📋";
 }
 
 export function formatRelativeTime(date: Date): string {

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   formatEventDescription,
   getEventColor,
+  getEventIcon,
   formatRelativeTime,
 } from "./event-display.js";
 
@@ -40,6 +41,16 @@ describe("getEventColor", () => {
   });
 });
 
+describe("getEventIcon", () => {
+  it("known event → emoji", () => {
+    const icon = getEventIcon("voice.session.join");
+    assert.equal(icon, "🎤");
+  });
+  it("unknown event → 📋", () => {
+    assert.equal(getEventIcon("unknown.xyz"), "📋");
+  });
+});
+
 describe("formatRelativeTime", () => {
   it("1分前", () => {
     const d = new Date(Date.now() - 60 * 1000);
@@ -52,5 +63,36 @@ describe("formatRelativeTime", () => {
   it("30秒前", () => {
     const d = new Date(Date.now() - 30 * 1000);
     assert.equal(formatRelativeTime(d), "30秒前");
+  });
+});
+
+describe("formatRelativeTime boundaries", () => {
+  it("59秒前", () => {
+    const d = new Date(Date.now() - 59 * 1000);
+    assert.equal(formatRelativeTime(d), "59秒前");
+  });
+  it("60秒 → 1分前", () => {
+    const d = new Date(Date.now() - 60 * 1000);
+    assert.equal(formatRelativeTime(d), "1分前");
+  });
+  it("3599秒 → 59分前", () => {
+    const d = new Date(Date.now() - 3599 * 1000);
+    assert.equal(formatRelativeTime(d), "59分前");
+  });
+  it("3600秒 → 1時間前", () => {
+    const d = new Date(Date.now() - 3600 * 1000);
+    assert.equal(formatRelativeTime(d), "1時間前");
+  });
+  it("86400秒 → 1日前", () => {
+    const d = new Date(Date.now() - 86400 * 1000);
+    assert.equal(formatRelativeTime(d), "1日前");
+  });
+});
+
+describe("formatEventDescription — default vars", () => {
+  it("called without vars still works", () => {
+    const result = formatEventDescription("guild.update");
+    assert.ok(typeof result === "string");
+    assert.ok(result.length > 0);
   });
 });
