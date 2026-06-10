@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
     const result = await listLogEvents(dbConnection.db, toListLogEventsInput(query));
 
     return NextResponse.json({
+      accessRole: authorization.role,
       items: result.items.map(toLogResponseItem),
       nextCursor: result.nextCursor
     });
