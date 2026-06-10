@@ -50,12 +50,12 @@ describe("log event formatting (en)", () => {
       payload: { content: "hello" }
     };
 
-    assert.equal(formatLogEventTitle(event.eventName, enLoc), "Log: message.create");
+    assert.equal(formatLogEventTitle(event.eventName, enLoc), "✉️ Message Created");
     assert.deepEqual(formatLogEventLines(event, enLoc), [
       "Actor: <@user-1>",
       "Channel: <#channel-1>",
       "Message ID: message-1",
-      "Event time: 2026-05-12T00:00:00.000Z",
+      "Event time: <t:1778544000:f>",
       "Content: hello"
     ]);
   });
@@ -75,7 +75,7 @@ describe("log event formatting (en)", () => {
     assert.deepEqual(formatLogEventLines(event, enLoc), [
       "Actor: unknown",
       "Channel: unknown",
-      "Event time: 2026-05-12T00:00:00.000Z",
+      "Event time: <t:1778544000:f>",
       'Details: {"role":{"id":"role-1","name":"Admin"}}'
     ]);
   });
@@ -98,7 +98,7 @@ describe("log event formatting (en)", () => {
     assert.deepEqual(formatLogEventLines(event, enLoc), [
       "Actor: <@user-1>",
       "Channel: \u{1F3AE} Yuzuki",
-      "Event time: 2026-05-12T00:00:00.000Z",
+      "Event time: <t:1778544000:f>",
       'Details: {"tempVoiceChannelId":"deleted-channel-1","tempVoiceChannelName":"🎮 Yuzuki"}'
     ]);
   });
@@ -117,12 +117,12 @@ describe("log event formatting (ja)", () => {
       payload: { content: "hello" }
     };
 
-    assert.equal(formatLogEventTitle(event.eventName, jaLoc), "ログ: message.create");
+    assert.equal(formatLogEventTitle(event.eventName, jaLoc), "✉️ メッセージが送信された");
     assert.deepEqual(formatLogEventLines(event, jaLoc), [
       "アクター: <@user-1>",
       "チャンネル: <#channel-1>",
       "メッセージID: message-1",
-      "イベント時刻: 2026-05-12T00:00:00.000Z",
+      "イベント時刻: <t:1778544000:f>",
       "内容: hello"
     ]);
   });
@@ -142,7 +142,7 @@ describe("log event formatting (ja)", () => {
     assert.deepEqual(formatLogEventLines(event, jaLoc), [
       "アクター: 不明",
       "チャンネル: 不明",
-      "イベント時刻: 2026-05-12T00:00:00.000Z",
+      "イベント時刻: <t:1778544000:f>",
       '詳細: {"role":{"id":"role-1","name":"Admin"}}'
     ]);
   });

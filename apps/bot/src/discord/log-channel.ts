@@ -9,9 +9,25 @@ import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/sha
 import type { DbClient } from "@discord-bot/db";
 import { getGuildConfigByGuildId } from "@discord-bot/db";
 
-import { createComponentsV2TextMessage } from "./components-v2.js";
+import {
+  createComponentsV2TextMessage,
+  EVENT_COLORS,
+  discordTimestamp
+} from "./components-v2.js";
 
 export const logChannelTopicMarker = "[discord-management-bot:logs]";
+
+function getEventAccentColor(eventName: string): number {
+  if (eventName.startsWith("voice.session.") || eventName.startsWith("call.")) return EVENT_COLORS.purple;
+  if (eventName.startsWith("voice.temp.")) return EVENT_COLORS.teal;
+  if (eventName.startsWith("message.")) return EVENT_COLORS.blue;
+  if (eventName.startsWith("member.") || eventName.startsWith("guild.")) return EVENT_COLORS.yellow;
+  if (eventName.startsWith("recruitment.")) return EVENT_COLORS.green;
+  if (eventName.startsWith("tts.")) return EVENT_COLORS.blue;
+  if (eventName.startsWith("system.") && (eventName.includes("error") || eventName.includes("crashed") || eventName.includes("failed"))) return EVENT_COLORS.red;
+  if (eventName.startsWith("system.")) return EVENT_COLORS.yellow;
+  return EVENT_COLORS.gray;
+}
 
 type Locale = ReturnType<typeof getLocale>;
 
@@ -74,7 +90,8 @@ export async function sendEventToConfiguredLogChannel(
   await channel.send(
     createComponentsV2TextMessage({
       title: formatLogEventTitle(event.eventName, loc),
-      lines: formatLogEventLines(event, loc)
+      lines: formatLogEventLines(event, loc),
+      accentColor: getEventAccentColor(event.eventName)
     })
   );
 }
@@ -92,7 +109,7 @@ export async function findMarkedLogChannel(guild: Guild) {
 }
 
 export function formatLogEventTitle(eventName: string, loc: Locale) {
-  return loc.logTitle({ eventName });
+  return loc.logEventTitle({ eventName });
 }
 
 export function formatLogEventLines(event: NormalizedEvent, loc: Locale) {
@@ -100,7 +117,7 @@ export function formatLogEventLines(event: NormalizedEvent, loc: Locale) {
     event.actorId ? loc.logActor({ actorId: event.actorId }) : loc.logActorUnknown,
     formatChannelLine(event, loc),
     event.messageId ? loc.logMessageId({ messageId: event.messageId }) : null,
-    loc.logEventTime({ timestamp: event.eventTimestamp.toISOString() }),
+    `${loc.logEventTimeLabel}: ${discordTimestamp(event.eventTimestamp)}`,
     formatLogPayload(event.payload, loc)
   ].filter((line): line is string => line !== null);
 }
