@@ -32,6 +32,9 @@
     "src/app/api/recruitments/summary.test.ts",
     "src/app/api/tts/summary.ts",
     "src/app/api/tts/summary.test.ts",
+    "src/app/api/health/summary.ts",
+    "src/app/api/health/summary.test.ts",
+    "src/lib/locale-health.test.ts",
     "src/app/api/tts-settings/validation.test.ts"
   ]
 }
