@@ -1,17 +1,22 @@
+"use client";
+
 import type { ReactNode } from "react";
+import { useState } from "react";
 import type { Session } from "next-auth";
 import {
-  ClipboardList,
-  Activity,
-  Headphones,
   LayoutDashboard,
   Mic2,
+  ClipboardList,
+  Headphones,
   ScrollText,
-  Settings
+  Settings,
+  Activity,
+  Menu,
+  X,
 } from "lucide-react";
 
 import { AuthStatus } from "./auth-status";
-import { getDashboardNavItems } from "./dashboard-ui";
+import { getDashboardNavGroups } from "./dashboard-ui";
 
 interface DashboardShellProps {
   actions?: ReactNode;
@@ -24,6 +29,16 @@ interface DashboardShellProps {
   title: string;
 }
 
+const icons: Record<string, ReactNode> = {
+  "/": <LayoutDashboard className="h-4 w-4" />,
+  "/voice": <Headphones className="h-4 w-4" />,
+  "/recruitment": <ClipboardList className="h-4 w-4" />,
+  "/tts": <Mic2 className="h-4 w-4" />,
+  "/health": <Activity className="h-4 w-4" />,
+  "/logs": <ScrollText className="h-4 w-4" />,
+  "/settings": <Settings className="h-4 w-4" />,
+};
+
 export function DashboardShell({
   actions,
   children,
@@ -32,84 +47,127 @@ export function DashboardShell({
   guildId,
   guildName,
   session,
-  title
+  title,
 }: DashboardShellProps) {
-  const navItems = getDashboardNavItems();
-  const icons: Record<string, ReactNode> = {
-    "/": <LayoutDashboard className="h-4 w-4" />,
-    "/voice": <Headphones className="h-4 w-4" />,
-    "/recruitment": <ClipboardList className="h-4 w-4" />,
-    "/tts": <Mic2 className="h-4 w-4" />,
-    "/health": <Activity className="h-4 w-4" />,
-    "/logs": <ScrollText className="h-4 w-4" />,
-    "/settings": <Settings className="h-4 w-4" />
-  };
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const groups = getDashboardNavGroups();
 
-  return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto grid min-h-screen max-w-[1600px] lg:grid-cols-[240px_1fr]">
-        <aside className="flex flex-col border-b border-zinc-800 bg-zinc-900 px-4 py-5 lg:border-b-0 lg:border-r">
-          <a className="flex items-center gap-2" href="/">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-green-500/10">
-              <LayoutDashboard className="h-4 w-4 text-green-400" />
-            </div>
-            <span className="text-sm font-semibold text-zinc-100">Discord Bot</span>
-          </a>
-
-          <div className="mt-4 rounded-md border border-zinc-700 bg-zinc-800/40 px-3 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-              Guild
-            </p>
-            <div className="mt-0.5 flex items-center justify-between gap-2">
-              <p className="truncate text-sm font-medium text-zinc-200">
-                {guildName ?? guildId}
-              </p>
-              <a
-                className="shrink-0 text-xs text-zinc-500 hover:text-green-400"
-                href="/guild"
-              >
-                change
-              </a>
-            </div>
+  const sidebarContent = (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between px-4 pt-5">
+        <a className="flex items-center gap-2" href="/">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-green-500/10">
+            <LayoutDashboard className="h-4 w-4 text-green-400" />
           </div>
+          <span className="text-sm font-semibold text-zinc-100">Discord Bot</span>
+        </a>
+        <button
+          className="rounded-md p-1 text-zinc-400 hover:text-zinc-100 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-label="Close menu"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
 
-          <nav className="mt-4 flex flex-col gap-0.5">
-            {navItems.map((item) => {
+      <div className="mx-4 mt-4 rounded-md border border-zinc-700 bg-zinc-800/40 px-3 py-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+          Guild
+        </p>
+        <div className="mt-0.5 flex items-center justify-between gap-2">
+          <p className="truncate text-sm font-medium text-zinc-200">
+            {guildName ?? guildId}
+          </p>
+          <a
+            className="shrink-0 text-xs text-zinc-500 hover:text-green-400"
+            href="/guild"
+          >
+            変更
+          </a>
+        </div>
+      </div>
+
+      <nav className="mt-4 flex-1 overflow-y-auto px-2">
+        {groups.map((group) => (
+          <div key={group.label} className="mb-4">
+            <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
+              {group.label}
+            </p>
+            {group.items.map((item) => {
               const active = item.href === currentPath;
               return (
                 <a
+                  key={item.href}
+                  href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={
                     active
-                      ? "flex items-center gap-2.5 rounded-md border border-green-500/20 bg-green-500/10 px-3 py-2 text-sm font-medium text-green-400"
-                      : "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                      ? "mb-0.5 flex items-center gap-2.5 rounded-md border border-green-500/20 bg-green-500/10 px-3 py-2 text-sm font-medium text-green-400"
+                      : "mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
                   }
-                  href={item.href}
-                  key={item.href}
                 >
                   {icons[item.href]}
                   {item.label}
                 </a>
               );
             })}
-          </nav>
-
-          <div className="mt-auto pt-6">
-            <AuthStatus session={session} />
           </div>
+        ))}
+      </nav>
+
+      <div className="px-4 pb-5 pt-4">
+        <AuthStatus session={session} />
+      </div>
+    </div>
+  );
+
+  return (
+    <main className="min-h-screen bg-zinc-950 text-zinc-100">
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Mobile sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-zinc-800 bg-zinc-900 transition-transform duration-200 lg:hidden ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {sidebarContent}
+      </aside>
+
+      <div className="mx-auto grid min-h-screen max-w-[1600px] lg:grid-cols-[240px_1fr]">
+        {/* Desktop sidebar */}
+        <aside className="hidden border-r border-zinc-800 bg-zinc-900 lg:block">
+          {sidebarContent}
         </aside>
 
         <section className="flex min-w-0 flex-col">
-          <header className="sticky top-0 z-10 flex items-center justify-between border-b border-zinc-800 bg-zinc-950/90 px-6 py-4 backdrop-blur-sm">
-            <div>
-              <h1 className="text-base font-semibold text-zinc-100">{title}</h1>
-              {description && (
-                <p className="text-xs text-zinc-500">{description}</p>
-              )}
+          <header className="sticky top-0 z-10 flex items-center justify-between border-b border-zinc-800 bg-zinc-950/90 px-4 py-4 backdrop-blur-sm md:px-6">
+            <div className="flex items-center gap-3">
+              <button
+                className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 lg:hidden"
+                onClick={() => setMobileOpen(true)}
+                aria-label="Open menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <div>
+                <h1 className="text-base font-semibold text-zinc-100">{title}</h1>
+                {description && (
+                  <p className="text-xs text-zinc-500">{description}</p>
+                )}
+              </div>
             </div>
-            {actions && <div className="flex items-center gap-2">{actions}</div>}
+            {actions && (
+              <div className="flex items-center gap-2">{actions}</div>
+            )}
           </header>
-          <div className="flex-1 px-6 py-6">{children}</div>
+          <div className="flex-1 px-4 py-6 md:px-6">{children}</div>
         </section>
       </div>
     </main>
