@@ -10,44 +10,65 @@ export type EventColorKey =
   | "sky"
   | "gray";
 
-type EventVars = {
+export type EventVars = {
   actorId?: string | null;
+  actorName?: string | null;
   channelId?: string | null;
+  channelName?: string | null;
   targetId?: string | null;
+  targetName?: string | null;
   count?: number | null;
   name?: string | null;
   genre?: string | null;
 };
 
+function actor(v: EventVars, fallback = "不明"): string {
+  if (v.actorName) return `@${v.actorName}`;
+  if (v.actorId) return `@${v.actorId.slice(0, 8)}…`;
+  return fallback;
+}
+
+function ch(v: EventVars): string {
+  if (v.channelName) return `#${v.channelName}`;
+  if (v.channelId) return `#${v.channelId.slice(0, 8)}…`;
+  return "";
+}
+
+function target(v: EventVars): string {
+  if (v.targetName) return `@${v.targetName}`;
+  if (v.targetId) return `@${v.targetId.slice(0, 8)}…`;
+  return "ユーザー";
+}
+
 const eventDescriptions: Record<string, (v: EventVars) => string> = {
   // メッセージ
-  "message.create": (v) => `✉️ ${v.actorId ? `<@${v.actorId}>` : "不明"} がメッセージを送信${v.channelId ? ` in <#${v.channelId}>` : ""}`,
-  "message.update": (v) => `✏️ メッセージを編集${v.channelId ? ` in <#${v.channelId}>` : ""}`,
-  "message.delete": (v) => `🗑️ メッセージを削除${v.channelId ? ` in <#${v.channelId}>` : ""}`,
-  "message.bulk_delete": (v) => `🗑️ メッセージを一括削除${v.channelId ? ` in <#${v.channelId}>` : ""}${v.count ? ` (${v.count}件)` : ""}`,
-  "message.reaction.add": (v) => `😀 ${v.actorId ? `<@${v.actorId}>` : "不明"} がリアクション追加`,
-  "message.reaction.remove": (v) => `😀 ${v.actorId ? `<@${v.actorId}>` : "不明"} がリアクション削除`,
+  "message.create": (v) => `✉️ ${actor(v)} がメッセージを送信${v.channelId || v.channelName ? ` in ${ch(v)}` : ""}`,
+  "message.update": (v) => `✏️ メッセージを編集${v.channelId || v.channelName ? ` in ${ch(v)}` : ""}`,
+  "message.delete": (v) => `🗑️ メッセージを削除${v.channelId || v.channelName ? ` in ${ch(v)}` : ""}`,
+  "message.bulk_delete": (v) => `🗑️ メッセージを一括削除${v.channelId || v.channelName ? ` in ${ch(v)}` : ""}${v.count ? ` (${v.count}件)` : ""}`,
+  "message.reaction.add": (v) => `😀 ${actor(v)} がリアクション追加`,
+  "message.reaction.remove": (v) => `😀 ${actor(v)} がリアクション削除`,
   // 音声
-  "voice.session.join": (v) => `🎤 ${v.actorId ? `<@${v.actorId}>` : "不明"} が${v.channelId ? ` <#${v.channelId}>` : ""} に参加`,
-  "voice.session.leave": (v) => `🎤 ${v.actorId ? `<@${v.actorId}>` : "不明"} が${v.channelId ? ` <#${v.channelId}>` : ""} から退出`,
-  "voice.session.move": (v) => `🎤 ${v.actorId ? `<@${v.actorId}>` : "不明"} が${v.channelId ? ` <#${v.channelId}>` : ""} に移動`,
+  "voice.session.join": (v) => `🎤 ${actor(v)} が${v.channelId || v.channelName ? ` ${ch(v)}` : ""} に参加`,
+  "voice.session.leave": (v) => `🎤 ${actor(v)} が${v.channelId || v.channelName ? ` ${ch(v)}` : ""} から退出`,
+  "voice.session.move": (v) => `🎤 ${actor(v)} が${v.channelId || v.channelName ? ` ${ch(v)}` : ""} に移動`,
   "voice.state.update": (_v) => `🎤 音声状態が更新された`,
-  "call.started": (v) => `📞 通話が開始した${v.channelId ? ` in <#${v.channelId}>` : ""}`,
-  "call.ended": (v) => `📞 通話が終了した${v.channelId ? ` in <#${v.channelId}>` : ""}`,
+  "call.started": (v) => `📞 通話が開始した${v.channelId || v.channelName ? ` in ${ch(v)}` : ""}`,
+  "call.ended": (v) => `📞 通話が終了した${v.channelId || v.channelName ? ` in ${ch(v)}` : ""}`,
   "call.updated": (_v) => `📞 通話が更新された`,
   // Temp VC
   "voice.temp.created": (v) => `✨ 一時VCが作成された${v.name ? `: ${v.name}` : ""}`,
   "voice.temp.deleted": (v) => `🗑️ 一時VCが削除された${v.name ? `: ${v.name}` : ""}`,
-  "voice.temp.owner_transferred": (v) => `👑 一時VCのオーナーが移譲された${v.actorId ? ` → <@${v.actorId}>` : ""}`,
-  "voice.temp.user_kicked": (v) => `🚫 ${v.targetId ? `<@${v.targetId}>` : "ユーザー"} が一時VCからキックされた`,
+  "voice.temp.owner_transferred": (v) => `👑 一時VCのオーナーが移譲された${v.actorId || v.actorName ? ` → ${actor(v, "")}` : ""}`,
+  "voice.temp.user_kicked": (v) => `🚫 ${target(v)} が一時VCからキックされた`,
   // メンバー
-  "member.join": (v) => `👋 ${v.actorId ? `<@${v.actorId}>` : "不明"} がサーバーに参加`,
-  "member.leave": (v) => `👋 ${v.actorId ? `<@${v.actorId}>` : "不明"} がサーバーを退出`,
-  "member.update": (v) => `✏️ ${v.actorId ? `<@${v.actorId}>` : "メンバー"} 情報が更新された`,
-  "member.kick": (v) => `🦶 ${v.actorId ? `<@${v.actorId}>` : "不明"} をキック`,
-  "member.ban": (v) => `🔨 ${v.actorId ? `<@${v.actorId}>` : "不明"} をBAN`,
-  "member.unban": (v) => `🔓 ${v.actorId ? `<@${v.actorId}>` : "不明"} のBANを解除`,
-  "member.timeout": (v) => `⏱️ ${v.actorId ? `<@${v.actorId}>` : "不明"} にタイムアウトを適用`,
+  "member.join": (v) => `👋 ${actor(v)} がサーバーに参加`,
+  "member.leave": (v) => `👋 ${actor(v)} がサーバーを退出`,
+  "member.update": (v) => `✏️ ${actor(v, "メンバー")} 情報が更新された`,
+  "member.kick": (v) => `🦶 ${actor(v)} をキック`,
+  "member.ban": (v) => `🔨 ${actor(v)} をBAN`,
+  "member.unban": (v) => `🔓 ${actor(v)} のBANを解除`,
+  "member.timeout": (v) => `⏱️ ${actor(v)} にタイムアウトを適用`,
   // サーバー構成
   "guild.update": (_v) => `⚙️ サーバー設定が更新された`,
   "role.create": (v) => `🏷️ ロール作成${v.name ? `: ${v.name}` : ""}`,
@@ -56,7 +77,7 @@ const eventDescriptions: Record<string, (v: EventVars) => string> = {
   "channel.create": (v) => `📁 チャンネル作成${v.name ? `: ${v.name}` : ""}`,
   "channel.update": (_v) => `📁 チャンネルが更新された`,
   "channel.delete": (_v) => `📁 チャンネルが削除された`,
-  "channel.permission_update": (v) => `🔐 チャンネル権限が更新された${v.channelId ? ` (<#${v.channelId}>)` : ""}`,
+  "channel.permission_update": (v) => `🔐 チャンネル権限が更新された${v.channelId || v.channelName ? ` (${ch(v)})` : ""}`,
   "thread.create": (_v) => `🧵 スレッドが作成された`,
   "thread.update": (_v) => `🧵 スレッドが更新された`,
   "thread.delete": (_v) => `🧵 スレッドが削除された`,
@@ -74,7 +95,7 @@ const eventDescriptions: Record<string, (v: EventVars) => string> = {
   "recruitment.full": (_v) => `🎮 募集が満員になった`,
   "recruitment.closed": (_v) => `🎮 募集が締め切られた`,
   // TTS
-  "tts.session.started": (v) => `🔊 ${v.actorId ? `<@${v.actorId}>` : ""} TTSセッションが開始`,
+  "tts.session.started": (v) => `🔊 ${actor(v, "")} TTSセッションが開始`.trimStart(),
   "tts.session.stopped": (_v) => `🔊 TTSセッションが終了`,
   "tts.message.skipped": (_v) => `🔊 TTSメッセージがスキップされた`,
   "tts.message.spoken": (_v) => `🔊 TTSメッセージが読み上げられた`,
@@ -89,8 +110,8 @@ const eventDescriptions: Record<string, (v: EventVars) => string> = {
   "system.backup.completed": (_v) => `✅ バックアップが完了`,
   "system.rate_limit": (_v) => `⚠️ レート制限に達した`,
   // ダッシュボード
-  "dashboard.login": (v) => `🔑 ${v.actorId ? `<@${v.actorId}>` : "ユーザー"} がログイン`,
-  "dashboard.logout": (v) => `🔑 ${v.actorId ? `<@${v.actorId}>` : "ユーザー"} がログアウト`,
+  "dashboard.login": (v) => `🔑 ${actor(v, "ユーザー")} がログイン`,
+  "dashboard.logout": (v) => `🔑 ${actor(v, "ユーザー")} がログアウト`,
   "config.updated": (_v) => `⚙️ 設定が更新された`,
 };
 
@@ -132,8 +153,7 @@ export function getEventColor(eventName: string): EventColorKey {
 export function getEventIcon(eventName: string): string {
   const fn = eventDescriptions[eventName];
   if (!fn) return "📋";
-  const text = fn({});
-  // First char is the emoji
+  const text = fn({ actorId: null, channelId: null });
   return Array.from(text)[0] ?? "📋";
 }
 

@@ -18,6 +18,26 @@ import {
   getEventColor,
 } from "../lib/event-display";
 
+function isObj(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+function extractActorName(payload: unknown): string | null {
+  if (!isObj(payload)) return null;
+  const member = payload["member"];
+  if (isObj(member) && typeof member["displayName"] === "string") return member["displayName"];
+  const after = payload["after"];
+  if (isObj(after) && typeof after["displayName"] === "string") return after["displayName"];
+  const user = payload["user"];
+  if (isObj(user) && typeof user["username"] === "string") return user["username"];
+  return null;
+}
+function extractChannelName(payload: unknown): string | null {
+  if (!isObj(payload)) return null;
+  const channel = payload["channel"];
+  if (isObj(channel) && typeof channel["name"] === "string") return channel["name"];
+  return null;
+}
+
 interface VoiceSession {
   channelId: string;
   id: string;
@@ -36,6 +56,7 @@ interface LogItem {
   channelId: string | null;
   eventName: string;
   id: string;
+  payload: unknown;
   receivedAt: string;
 }
 
@@ -243,7 +264,9 @@ export function OverviewClient({ guildId }: OverviewClientProps) {
                   <p className="flex-1 truncate text-sm text-zinc-300">
                     {formatEventDescription(log.eventName, {
                       actorId: log.actorId,
+                      actorName: extractActorName(log.payload),
                       channelId: log.channelId,
+                      channelName: extractChannelName(log.payload),
                     })}
                   </p>
                   <span className="shrink-0 text-xs text-zinc-600">

@@ -9,18 +9,34 @@ import {
 } from "./event-display.js";
 
 describe("formatEventDescription", () => {
-  it("voice.session.join → actor/channel 入り", () => {
+  it("voice.session.join with actorId/channelId → truncated id display", () => {
     const result = formatEventDescription("voice.session.join", {
       actorId: "111",
       channelId: "222",
     });
-    assert.ok(result.includes("<@111>"), `expected mention, got: ${result}`);
-    assert.ok(result.includes("<#222>"), `expected channel, got: ${result}`);
+    assert.ok(result.includes("@111"), `expected actor id, got: ${result}`);
+    assert.ok(result.includes("#222"), `expected channel id, got: ${result}`);
+  });
+
+  it("voice.session.join with actorName/channelName → name display", () => {
+    const result = formatEventDescription("voice.session.join", {
+      actorId: "111",
+      actorName: "Yuzuki",
+      channelId: "222",
+      channelName: "general",
+    });
+    assert.ok(result.includes("@Yuzuki"), `expected actor name, got: ${result}`);
+    assert.ok(result.includes("#general"), `expected channel name, got: ${result}`);
   });
 
   it("member.kick → actor 入り", () => {
     const result = formatEventDescription("member.kick", { actorId: "333" });
-    assert.ok(result.includes("<@333>"), `expected mention, got: ${result}`);
+    assert.ok(result.includes("@333"), `expected actor id, got: ${result}`);
+  });
+
+  it("member.kick with actorName → name display", () => {
+    const result = formatEventDescription("member.kick", { actorName: "BadUser" });
+    assert.ok(result.includes("@BadUser"), `expected actor name, got: ${result}`);
   });
 
   it("未知イベントは eventName をそのまま返す", () => {

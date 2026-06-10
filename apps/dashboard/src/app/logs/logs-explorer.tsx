@@ -25,11 +25,13 @@ import {
   normalizeGuildId,
 } from "../dashboard-ui";
 import {
-  canViewRawLogPayload,
   eventColorClasses,
   formatEventDescription,
   formatRelativeTime,
   getEventColor,
+} from "../../lib/event-display";
+import {
+  canViewRawLogPayload,
   getLogCategoryTabs,
   getRealtimeStatusMeta,
   type RealtimeLogsStatus,
@@ -80,6 +82,31 @@ const CHART_COLORS: Record<string, string> = {
 };
 
 const categoryTabs = getLogCategoryTabs();
+
+function isObj(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+function extractActorName(payload: unknown): string | null {
+  if (!isObj(payload)) return null;
+  // member events: payload.member.displayName
+  const member = payload["member"];
+  if (isObj(member) && typeof member["displayName"] === "string") return member["displayName"];
+  // member.update / member.timeout: payload.after.displayName
+  const after = payload["after"];
+  if (isObj(after) && typeof after["displayName"] === "string") return after["displayName"];
+  // partial user (member.leave): payload.user.username
+  const user = payload["user"];
+  if (isObj(user) && typeof user["username"] === "string") return user["username"];
+  return null;
+}
+
+function extractChannelName(payload: unknown): string | null {
+  if (!isObj(payload)) return null;
+  const channel = payload["channel"];
+  if (isObj(channel) && typeof channel["name"] === "string") return channel["name"];
+  return null;
+}
 
 export function LogsExplorer() {
   const [uiLang] = useState<GuildLanguage>(detectBrowserLanguage);
@@ -181,7 +208,9 @@ export function LogsExplorer() {
         const q = appliedFilters.search.toLowerCase();
         const desc = formatEventDescription(log.eventName, {
           actorId: log.actorId,
+          actorName: extractActorName(log.payload),
           channelId: log.channelId,
+          channelName: extractChannelName(log.payload),
         }).toLowerCase();
         if (!desc.includes(q) && !log.eventName.includes(q)) return false;
       }
@@ -365,7 +394,9 @@ export function LogsExplorer() {
               const isExpanded = expandedId === log.id;
               const description = formatEventDescription(log.eventName, {
                 actorId: log.actorId,
+                actorName: extractActorName(log.payload),
                 channelId: log.channelId,
+                channelName: extractChannelName(log.payload),
               });
               const payload = isRecord(log.payload) ? log.payload : {};
 
