@@ -115,7 +115,7 @@ describe("log event formatting (ja)", () => {
       payload: { content: "hello" }
     };
 
-    assert.equal(formatLogEventTitle(event.eventName, jaLoc), "✉️ メッセージが送信された");
+    assert.equal(formatLogEventTitle(event.eventName, jaLoc), "✉️ メッセージ送信");
     assert.deepEqual(formatLogEventLines(event, jaLoc), [
       "アクター: <@user-1>",
       "チャンネル: <#channel-1>",
