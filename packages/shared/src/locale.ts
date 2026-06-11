@@ -106,6 +106,9 @@ type Locale = {
   ttsSpeakerServerDefault: (vars: { id: number }) => string;
   logEventTitle: (vars: { eventName: string }) => string;
   logEventTimeLabel: string;
+  logReason: (vars: { reason: string }) => string;
+  logFieldLabel: (field: string) => string | null;
+  logChangeField: (vars: { label: string; before: string; after: string }) => string;
   commandSuccess: (vars: { operation: string }) => string;
   commandError: (vars: { reason: string }) => string;
   voiceTempCreatedTitle: string;
@@ -256,6 +259,18 @@ const locales: Record<GuildLanguage, Locale> = {
       return titles[eventName] ?? `📋 ${eventName}`;
     },
     logEventTimeLabel: "Event time",
+    logReason: ({ reason }) => `Reason: ${reason}`,
+    logFieldLabel: (field) => ({
+      displayName: "Display name",
+      nickname: "Nickname",
+      name: "Name",
+      communicationDisabledUntil: "Timeout until",
+      description: "Description",
+      topic: "Topic",
+      color: "Color",
+      ownerId: "Owner",
+    } as Record<string, string>)[field] ?? null,
+    logChangeField: ({ label, before, after }) => `${label}: ${before} → ${after}`,
     commandSuccess: ({ operation }) => `✅ ${operation} completed`,
     commandError: ({ reason }) => `❌ ${reason}`,
     voiceTempCreatedTitle: "✨ Temp VC Created",
@@ -403,6 +418,18 @@ const locales: Record<GuildLanguage, Locale> = {
       return titles[eventName] ?? `📋 ${eventName}`;
     },
     logEventTimeLabel: "イベント時刻",
+    logReason: ({ reason }) => `理由: ${reason}`,
+    logFieldLabel: (field) => ({
+      displayName: "表示名",
+      nickname: "ニックネーム",
+      name: "名前",
+      communicationDisabledUntil: "タイムアウト期限",
+      description: "説明",
+      topic: "トピック",
+      color: "カラー",
+      ownerId: "オーナー",
+    } as Record<string, string>)[field] ?? null,
+    logChangeField: ({ label, before, after }) => `${label}: ${before} → ${after}`,
     commandSuccess: ({ operation }) => `✅ ${operation}が完了しました`,
     commandError: ({ reason }) => `❌ ${reason}`,
     voiceTempCreatedTitle: "✨ 一時VCが作成された",

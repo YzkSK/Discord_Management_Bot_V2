@@ -76,7 +76,6 @@ describe("log event formatting (en)", () => {
       "Actor: unknown",
       "Channel: unknown",
       "Event time: <t:1778544000:f>",
-      'Details: {"role":{"id":"role-1","name":"Admin"}}'
     ]);
   });
 
@@ -99,7 +98,6 @@ describe("log event formatting (en)", () => {
       "Actor: <@user-1>",
       "Channel: \u{1F3AE} Yuzuki",
       "Event time: <t:1778544000:f>",
-      'Details: {"tempVoiceChannelId":"deleted-channel-1","tempVoiceChannelName":"🎮 Yuzuki"}'
     ]);
   });
 });
@@ -143,7 +141,6 @@ describe("log event formatting (ja)", () => {
       "アクター: 不明",
       "チャンネル: 不明",
       "イベント時刻: <t:1778544000:f>",
-      '詳細: {"role":{"id":"role-1","name":"Admin"}}'
     ]);
   });
 });

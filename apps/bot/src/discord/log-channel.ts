@@ -137,20 +137,42 @@ function formatChannelLine(event: NormalizedEvent, loc: Locale) {
     : loc.logChannelUnknown;
 }
 
-function formatLogPayload(payload: NormalizedEvent["payload"], loc: Locale) {
+function isObj(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+function formatPayloadValue(v: unknown): string {
+  if (v === null || v === undefined) return "–";
+  if (typeof v === "string") return v || "–";
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  return "–";
+}
+
+function formatLogPayload(payload: NormalizedEvent["payload"], loc: Locale): string | null {
   const content = typeof payload.content === "string" ? payload.content : null;
+  if (content) return loc.logContent({ content: truncateForDiscord(content, 800) });
 
-  if (content) {
-    return loc.logContent({ content: truncateForDiscord(content, 800) });
+  const lines: string[] = [];
+
+  if (typeof payload.reason === "string" && payload.reason.length > 0) {
+    lines.push(loc.logReason({ reason: payload.reason }));
   }
 
-  const payloadSummary = JSON.stringify(payload);
-
-  if (!payloadSummary || payloadSummary === "{}") {
-    return loc.logDetailsNone;
+  const changes = payload.changes;
+  if (isObj(changes)) {
+    for (const [field, change] of Object.entries(changes)) {
+      if (!isObj(change)) continue;
+      const label = loc.logFieldLabel(field);
+      if (!label) continue;
+      lines.push(loc.logChangeField({
+        label,
+        before: formatPayloadValue(change.before),
+        after: formatPayloadValue(change.after),
+      }));
+    }
   }
 
-  return loc.logDetails({ details: truncateForDiscord(payloadSummary, 800) });
+  return lines.length > 0 ? lines.join("\n") : null;
 }
 
 function truncateForDiscord(value: string, maxLength: number) {
