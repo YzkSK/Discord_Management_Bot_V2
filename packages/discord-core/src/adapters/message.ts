@@ -5,7 +5,21 @@ import type { NormalizedEvent } from "@discord-bot/shared";
 type AnyMessage = Message | PartialMessage;
 
 export function normalizeMessageCreate(message: Message): NormalizedEvent {
-  return normalizeMessageEvent("message.create", message, message.createdAt);
+  const channelName =
+    message.channel && "name" in message.channel
+      ? (message.channel as { name: string }).name
+      : null;
+
+  return normalizeMessageEvent("message.create", message, message.createdAt, {
+    author: message.author
+      ? {
+          id: message.author.id,
+          username: message.author.username,
+          globalName: message.author.globalName,
+        }
+      : null,
+    channel: channelName ? { name: channelName } : null,
+  });
 }
 
 export function normalizeMessageUpdate(
