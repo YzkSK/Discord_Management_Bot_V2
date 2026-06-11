@@ -372,7 +372,15 @@ export async function handleTempVoiceControlInteraction(
     }
 
     if (parsed.action === "allow-target") {
-      await channel.permissionOverwrites.edit(parsed.targetUserId, { Connect: true });
+      try {
+        await channel.permissionOverwrites.edit(parsed.targetUserId, { Connect: true });
+      } catch {
+        await replyPrivate(interaction, "❌ 権限エラー", [
+          "ボットに `MANAGE_ROLES` 権限がないため、ユーザーへの個別権限設定ができません。",
+          "サーバー設定でボットロールに `ロールの管理` 権限を付与してください。"
+        ]);
+        return true;
+      }
       await replyPrivate(interaction, "✅ 入室許可", [
         `<@${parsed.targetUserId}> の入室を許可しました。`
       ]);
@@ -381,7 +389,15 @@ export async function handleTempVoiceControlInteraction(
     }
 
     if (parsed.action === "deny-target") {
-      await channel.permissionOverwrites.edit(parsed.targetUserId, { Connect: false });
+      try {
+        await channel.permissionOverwrites.edit(parsed.targetUserId, { Connect: false });
+      } catch {
+        await replyPrivate(interaction, "❌ 権限エラー", [
+          "ボットに `MANAGE_ROLES` 権限がないため、ユーザーへの個別権限設定ができません。",
+          "サーバー設定でボットロールに `ロールの管理` 権限を付与してください。"
+        ]);
+        return true;
+      }
       await replyPrivate(interaction, "🚫 入室禁止", [
         `<@${parsed.targetUserId}> の入室を禁止しました。`
       ]);
