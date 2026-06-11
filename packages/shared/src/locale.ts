@@ -195,14 +195,14 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsForceJoinSuggestion:
       "Ask a Dashboard admin or owner to use `/force-join`.",
     ttsConnected: "✅ 🔊 TTS connected",
-    ttsVoiceChannel: ({ id }) => `Voice channel: <#${id}>`,
-    ttsReadingChannel: ({ id }) => `Reading text channel: <#${id}>`,
+    ttsVoiceChannel: ({ id }) => `🎤 <#${id}>`,
+    ttsReadingChannel: ({ id }) => `Reading: <#${id}>`,
     ttsForceJoinFailed: "❌ TTS force join failed",
     ttsForceJoinAdminRequired: "Dashboard admin or owner access is required.",
     ttsForceJoinConfirmTitle: "⚠️ Confirm TTS move",
     ttsForceJoinAlreadyConnected:
       "The bot is already connected to another voice channel.",
-    ttsForceJoinMoveTo: ({ id }) => `Move TTS to <#${id}>?`,
+    ttsForceJoinMoveTo: ({ id }) => `→ Move to <#${id}>?`,
     ttsForceJoinWrongUser:
       "Only the user who ran `/force-join` can confirm this move.",
     ttsForceJoinNotInGuild:
@@ -385,15 +385,15 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsForceJoinSuggestion:
       "ダッシュボード管理者またはオーナーが `/force-join` を使用してください。",
     ttsConnected: "✅ 🔊 TTS接続完了",
-    ttsVoiceChannel: ({ id }) => `ボイスチャンネル: <#${id}>`,
-    ttsReadingChannel: ({ id }) => `読み上げチャンネル: <#${id}>`,
+    ttsVoiceChannel: ({ id }) => `🎤 <#${id}>`,
+    ttsReadingChannel: ({ id }) => `読み上げ: <#${id}>`,
     ttsForceJoinFailed: "❌ TTS強制参加失敗",
     ttsForceJoinAdminRequired:
       "ダッシュボード管理者またはオーナー権限が必要です。",
     ttsForceJoinConfirmTitle: "⚠️ TTS移動の確認",
     ttsForceJoinAlreadyConnected:
       "ボットはすでに別のボイスチャンネルに接続されています。",
-    ttsForceJoinMoveTo: ({ id }) => `TTSを <#${id}> に移動しますか？`,
+    ttsForceJoinMoveTo: ({ id }) => `→ <#${id}> に移動しますか？`,
     ttsForceJoinWrongUser:
       "`/force-join` を実行したユーザーのみが確認できます。",
     ttsForceJoinNotInGuild:
