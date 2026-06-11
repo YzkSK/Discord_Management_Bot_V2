@@ -17,6 +17,7 @@ export interface DashboardSettingsFeatureInput {
   tempVoiceCreateChannelId: string | null;
   tempVoiceCategoryId: string | null;
   ttsTextChannelId: string | null;
+  recruitmentChannelId: string | null;
 }
 
 export interface DashboardSettingsFeatures {
@@ -30,7 +31,7 @@ export interface DashboardSettingsFeatures {
     configured: boolean;
   };
   recruitment: {
-    channelMarker: string;
+    channelId: string | null;
     configured: boolean;
   };
   tts: {
@@ -56,8 +57,8 @@ export function buildDashboardSettingsFeatures(
       configured: Boolean(input.tempVoiceCreateChannelId)
     },
     recruitment: {
-      channelMarker: "[discord-management-bot:recruitment]",
-      configured: false
+      channelId: input.recruitmentChannelId,
+      configured: Boolean(input.recruitmentChannelId)
     },
     tts: {
       textChannelId: input.ttsTextChannelId,

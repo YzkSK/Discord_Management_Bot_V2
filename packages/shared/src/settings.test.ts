@@ -11,7 +11,8 @@ describe("buildDashboardSettingsFeatures", () => {
         language: "ja",
         tempVoiceCreateChannelId: "voice-create-1",
         tempVoiceCategoryId: "category-1",
-        ttsTextChannelId: "tts-text-1"
+        ttsTextChannelId: "tts-text-1",
+        recruitmentChannelId: "recruit-ch-1"
       }),
       {
         logs: {
@@ -24,8 +25,8 @@ describe("buildDashboardSettingsFeatures", () => {
           configured: true
         },
         recruitment: {
-          channelMarker: "[discord-management-bot:recruitment]",
-          configured: false
+          channelId: "recruit-ch-1",
+          configured: true
         },
         tts: {
           textChannelId: "tts-text-1",
@@ -41,10 +42,13 @@ describe("buildDashboardSettingsFeatures", () => {
       language: "en",
       tempVoiceCreateChannelId: null,
       tempVoiceCategoryId: null,
-      ttsTextChannelId: null
+      ttsTextChannelId: null,
+      recruitmentChannelId: null
     });
 
     assert.equal(features.tempVc.configured, false);
     assert.equal(features.tts.configured, false);
+    assert.equal(features.recruitment.configured, false);
+    assert.equal(features.recruitment.channelId, null);
   });
 });
