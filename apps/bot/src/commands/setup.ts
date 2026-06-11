@@ -288,7 +288,6 @@ async function handleLogsSetup(
       title: loc.logsSetupComplete,
       lines: [
         loc.logsChannel({ id: channel.id }),
-        loc.logsMarker({ marker: logChannelTopicMarker })
       ],
       accentColor: EVENT_COLORS.green,
       privateResponse: true
@@ -328,7 +327,6 @@ async function handleRecruitmentSetup(
       title: loc.recruitmentSetupComplete,
       lines: [
         loc.recruitmentChannel({ id: channel.id }),
-        loc.recruitmentMarker({ marker: recruitmentChannelTopicMarker })
       ],
       accentColor: EVENT_COLORS.green,
       privateResponse: true
@@ -411,7 +409,6 @@ async function handleVoiceStatusSetup(
       title: loc.voiceStatusSetupComplete,
       lines: [
         loc.voiceStatusChannel({ id: channel.id }),
-        loc.voiceStatusMarker({ marker: voiceStatusChannelTopicMarker })
       ],
       accentColor: EVENT_COLORS.green,
       privateResponse: true
