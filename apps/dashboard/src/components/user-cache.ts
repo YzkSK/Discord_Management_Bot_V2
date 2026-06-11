@@ -1,3 +1,5 @@
+import { buildAvatarUrl } from "../lib/discord-user";
+
 export interface CachedDiscordUser {
   id: string;
   username: string;
@@ -6,11 +8,7 @@ export interface CachedDiscordUser {
 }
 
 const cache = new Map<string, CachedDiscordUser>();
-
-function defaultAvatarUrl(userId: string): string {
-  const index = Number(BigInt(userId) % 5n);
-  return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
-}
+const MAX_CACHE_SIZE = 500;
 
 export async function fetchCachedDiscordUser(
   userId: string
@@ -24,13 +22,15 @@ export async function fetchCachedDiscordUser(
       id: userId,
       username: userId,
       globalName: null,
-      avatarUrl: defaultAvatarUrl(userId),
+      avatarUrl: buildAvatarUrl(userId, null),
     };
+    if (cache.size >= MAX_CACHE_SIZE) cache.clear();
     cache.set(userId, fallback);
     return fallback;
   }
 
   const data = (await response.json()) as CachedDiscordUser;
+  if (cache.size >= MAX_CACHE_SIZE) cache.clear();
   cache.set(userId, data);
   return data;
 }

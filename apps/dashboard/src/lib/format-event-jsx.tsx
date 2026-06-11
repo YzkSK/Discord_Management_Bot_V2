@@ -23,7 +23,7 @@ export function formatEventDescriptionJSX(
       {parts.before}
       <UserMention
         userId={vars.actorId}
-        actorName={vars.actorName ?? vars.actorId}
+        actorName={vars.actorName ?? vars.actorId ?? null}
       />
       {parts.after}
     </>
