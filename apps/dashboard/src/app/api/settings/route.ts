@@ -5,14 +5,15 @@ import {
   updateGuildTempVoiceConfigByGuildId,
   updateGuildTtsConfigByGuildId,
   updateGuildConfigByGuildId,
-  updateGuildManagementRoleIds
+  updateGuildManagementRoleIds,
+  updateGuildRecruitmentConfigByGuildId
 } from "@discord-bot/db";
 import { buildDashboardSettingsFeatures } from "@discord-bot/shared";
 import { parseDashboardAuthEnv } from "@discord-bot/config";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { authorizeDashboardApi } from "../../../dashboard-auth";
-import { fetchGuildRoles } from "../../../discord-api";
+import { fetchGuildRoles, fetchGuildChannels } from "../../../discord-api";
 import {
   parseSettingsPatchBody,
   type SettingsPatchValue
@@ -61,11 +62,33 @@ export async function GET(request: NextRequest) {
       ? await fetchGuildRoles(env.DISCORD_BOT_TOKEN, authorization.guild.id).catch(() => [])
       : undefined;
 
+    const channelsData = env.DISCORD_BOT_TOKEN
+      ? await fetchGuildChannels(env.DISCORD_BOT_TOKEN, authorization.guild.id).catch(() => [])
+      : [];
+
+    const availableTextChannels = channelsData
+      .filter((ch) => ch.type === 0)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(({ id, name }) => ({ id, name }));
+
+    const availableVoiceChannels = channelsData
+      .filter((ch) => ch.type === 2)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(({ id, name }) => ({ id, name }));
+
+    const availableCategories = channelsData
+      .filter((ch) => ch.type === 4)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(({ id, name }) => ({ id, name }));
+
     return NextResponse.json({
       ...toSettingsResponse(config),
       accessRole: authorization.role,
       dashboardManagementRoleIds: managementRoleIds,
-      ...(availableRoles !== undefined ? { availableRoles } : {})
+      ...(availableRoles !== undefined ? { availableRoles } : {}),
+      availableTextChannels,
+      availableVoiceChannels,
+      availableCategories
     });
   } finally {
     await dbConnection.close();
@@ -205,6 +228,15 @@ async function updateSettingsSection(
         : {}),
       ...("categoryId" in input.patch.values
         ? { tempVoiceCategoryId: input.patch.values.categoryId }
+        : {})
+    });
+  }
+
+  if (input.patch.section === "recruitment") {
+    return updateGuildRecruitmentConfigByGuildId(db, {
+      guildId: input.guildId,
+      ...("channelId" in input.patch.values
+        ? { recruitmentChannelId: input.patch.values.channelId }
         : {})
     });
   }
