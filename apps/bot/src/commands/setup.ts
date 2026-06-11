@@ -9,17 +9,12 @@ import type { DbClient } from "@discord-bot/db";
 import {
   ensureGuildSetup,
   getGuildConfigByGuildId,
-  updateGuildTtsConfigByGuildId,
   updateGuildTempVoiceConfigByGuildId
 } from "@discord-bot/db";
 import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/shared";
 
 import { createComponentsV2TextMessage, EVENT_COLORS } from "../discord/components-v2.js";
 import { logChannelTopicMarker, markLogChannel } from "../discord/log-channel.js";
-import {
-  markRecruitmentChannel,
-  recruitmentChannelTopicMarker
-} from "../discord/recruitment-channel.js";
 import {
   markVoiceStatusChannel,
   voiceStatusChannelTopicMarker
@@ -68,36 +63,6 @@ export const setupCommand = new SlashCommandBuilder()
           .setNameLocalization("ja", "チャンネル")
           .setDescription("Text channel where detected log events are posted.")
           .setDescriptionLocalization("ja", "ログイベントを投稿するテキストチャンネル。")
-          .addChannelTypes(ChannelType.GuildText)
-          .setRequired(true)
-      )
-  )
-  .addSubcommand((subcommand) =>
-    subcommand
-      .setName("recruitment")
-      .setDescription("Configure the recruitment posting channel.")
-      .setDescriptionLocalization("ja", "募集投稿チャンネルを設定します。")
-      .addChannelOption((option) =>
-        option
-          .setName("channel")
-          .setNameLocalization("ja", "チャンネル")
-          .setDescription("Text channel where recruitment posts are sent.")
-          .setDescriptionLocalization("ja", "募集投稿を送信するテキストチャンネル。")
-          .addChannelTypes(ChannelType.GuildText)
-          .setRequired(true)
-      )
-  )
-  .addSubcommand((subcommand) =>
-    subcommand
-      .setName("tts")
-      .setDescription("Configure the persistent TTS text channel.")
-      .setDescriptionLocalization("ja", "TTSテキストチャンネルを設定します。")
-      .addChannelOption((option) =>
-        option
-          .setName("channel")
-          .setNameLocalization("ja", "チャンネル")
-          .setDescription("Text channel whose messages are read while TTS is connected.")
-          .setDescriptionLocalization("ja", "TTS接続中にメッセージが読み上げられるテキストチャンネル。")
           .addChannelTypes(ChannelType.GuildText)
           .setRequired(true)
       )
@@ -173,14 +138,8 @@ export async function handleSetupCommand(
     case "logs":
       await handleLogsSetup(interaction, context, guildId, loc);
       return;
-    case "recruitment":
-      await handleRecruitmentSetup(interaction, context, guildId, loc);
-      return;
     case "temp-vc":
       await handleTempVoiceSetup(interaction, context, guildId, loc);
-      return;
-    case "tts":
-      await handleTtsSetup(interaction, context, guildId, loc);
       return;
     case "voice-status":
       await handleVoiceStatusSetup(interaction, context, guildId, loc);
@@ -288,88 +247,6 @@ async function handleLogsSetup(
       title: loc.logsSetupComplete,
       lines: [
         loc.logsChannel({ id: channel.id }),
-      ],
-      accentColor: EVENT_COLORS.green,
-      privateResponse: true
-    })
-  });
-}
-
-async function handleRecruitmentSetup(
-  interaction: ChatInputCommandInteraction,
-  context: SetupCommandContext,
-  guildId: string,
-  loc: Loc
-) {
-  const channel = interaction.options.getChannel("channel", true);
-
-  if (channel.type !== ChannelType.GuildText) {
-    await interaction.reply({
-      ...createComponentsV2TextMessage({
-        title: loc.recruitmentSetupFailed,
-        lines: [loc.recruitmentChannelMustBeText],
-        accentColor: EVENT_COLORS.red,
-        privateResponse: true
-      })
-    });
-    return;
-  }
-
-  await ensureGuildSetup(context.db, {
-    guildId,
-    name: interaction.guild?.name ?? null
-  });
-
-  await markRecruitmentChannel(channel as TextChannel);
-
-  await interaction.reply({
-    ...createComponentsV2TextMessage({
-      title: loc.recruitmentSetupComplete,
-      lines: [
-        loc.recruitmentChannel({ id: channel.id }),
-      ],
-      accentColor: EVENT_COLORS.green,
-      privateResponse: true
-    })
-  });
-}
-
-async function handleTtsSetup(
-  interaction: ChatInputCommandInteraction,
-  context: SetupCommandContext,
-  guildId: string,
-  loc: Loc
-) {
-  const channel = interaction.options.getChannel("channel", true);
-
-  if (channel.type !== ChannelType.GuildText) {
-    await interaction.reply({
-      ...createComponentsV2TextMessage({
-        title: loc.ttsSetupFailed,
-        lines: [loc.ttsChannelMustBeText],
-        accentColor: EVENT_COLORS.red,
-        privateResponse: true
-      })
-    });
-    return;
-  }
-
-  await ensureGuildSetup(context.db, {
-    guildId,
-    name: interaction.guild?.name ?? null
-  });
-
-  await updateGuildTtsConfigByGuildId(context.db, {
-    guildId,
-    ttsTextChannelId: channel.id
-  });
-
-  await interaction.reply({
-    ...createComponentsV2TextMessage({
-      title: loc.ttsSetupComplete,
-      lines: [
-        loc.ttsTtsChannel({ id: channel.id }),
-        loc.ttsChannelDescription
       ],
       accentColor: EVENT_COLORS.green,
       privateResponse: true
