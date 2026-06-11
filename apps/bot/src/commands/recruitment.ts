@@ -1,8 +1,11 @@
 import {
   ChannelType,
   type ChatInputCommandInteraction,
+  type Guild,
   PermissionFlagsBits,
   SlashCommandBuilder,
+  type TextBasedChannel,
+  type TextChannel,
   type VoiceChannel
 } from "discord.js";
 import type { DbClient } from "@discord-bot/db";
@@ -15,8 +18,7 @@ import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/sha
 
 import { createComponentsV2TextMessage, EVENT_COLORS } from "../discord/components-v2.js";
 import {
-  createRecruitmentPostMessage,
-  findMarkedRecruitmentChannel
+  createRecruitmentPostMessage
 } from "../discord/recruitment-channel.js";
 import type { DiscordLogWriter } from "../discord/log-writer.js";
 import { writeRecruitmentLifecycleLog } from "../discord/recruitment-logs.js";
@@ -83,6 +85,7 @@ export const recruitmentCommand = new SlashCommandBuilder()
 export interface RecruitmentCommandContext {
   db: DbClient;
   logWriter?: DiscordLogWriter;
+  loadRecruitmentChannelId?: (guildId: string) => Promise<string | null>;
 }
 
 async function resolveGuildLocale(db: DbClient, guildId: string) {
@@ -95,6 +98,28 @@ async function resolveGuildLocale(db: DbClient, guildId: string) {
       ? config.language
       : "en";
   return getLocale(lang);
+}
+
+export async function resolveRecruitmentChannel(input: {
+  guildId: string;
+  guild: Guild;
+  interactionChannel: TextBasedChannel | null;
+  loadChannelId: (guildId: string) => Promise<string | null>;
+}): Promise<TextChannel | null> {
+  const configuredId = await input.loadChannelId(input.guildId);
+
+  if (configuredId) {
+    const fetched = await input.guild.channels.fetch(configuredId).catch(() => null);
+    if (fetched?.type === ChannelType.GuildText) {
+      return fetched as TextChannel;
+    }
+  }
+
+  if (input.interactionChannel?.type === ChannelType.GuildText) {
+    return input.interactionChannel as TextChannel;
+  }
+
+  return null;
 }
 
 export async function handleRecruitmentCommand(
@@ -141,25 +166,32 @@ async function handleRecruitmentCreate(
     return;
   }
 
-  const recruitmentChannel = await findMarkedRecruitmentChannel(
-    interaction.guild
-  );
+  const loadChannelId = context.loadRecruitmentChannelId ??
+    ((guildId: string) =>
+      getGuildConfigByGuildId(context.db, guildId)
+        .then((c) => c?.recruitmentChannelId ?? null)
+        .catch(() => null));
+
+  const recruitmentChannel = await resolveRecruitmentChannel({
+    guildId: interaction.guildId,
+    guild: interaction.guild,
+    interactionChannel: interaction.channel,
+    loadChannelId
+  });
 
   if (!recruitmentChannel) {
     await interaction.reply({
       ...createComponentsV2TextMessage({
-        title: loc.recruitmentSetupRequired,
-        lines: [loc.recruitmentSetupRequiredMessage],
-        accentColor: EVENT_COLORS.yellow,
+        title: loc.recruitmentFailed,
+        lines: [loc.notInGuild],
+        accentColor: EVENT_COLORS.red,
         privateResponse: true
       })
     });
     return;
   }
 
-  const voiceChannel = interaction.options.getChannel("vc") as
-    | VoiceChannel
-    | null;
+  const voiceChannel = interaction.options.getChannel("vc") as VoiceChannel | null;
   const recruitment = await createRecruitment(context.db, {
     guildId: interaction.guildId,
     channelId: recruitmentChannel.id,
@@ -176,8 +208,8 @@ async function handleRecruitmentCreate(
 
   const recruitmentWithMessage =
     (await setRecruitmentMessageId(context.db, {
-    recruitmentId: recruitment.id,
-    messageId: message.id
+      recruitmentId: recruitment.id,
+      messageId: message.id
     })) ?? recruitment;
 
   if (context.logWriter) {
