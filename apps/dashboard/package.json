@@ -16,6 +16,7 @@
     "@discord-bot/db": "workspace:*",
     "@discord-bot/redis": "workspace:*",
     "@discord-bot/shared": "workspace:*",
+    "@radix-ui/react-popover": "^1.1.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
