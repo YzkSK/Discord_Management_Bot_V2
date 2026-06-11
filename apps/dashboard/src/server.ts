@@ -9,7 +9,7 @@ const require = createRequire(import.meta.url);
 const next = require("next") as typeof import("next").default;
 
 const dev = process.env.NODE_ENV !== "production";
-const hostname = process.env.HOSTNAME ?? "0.0.0.0";
+const hostname = process.env.SERVER_HOST ?? "0.0.0.0";
 const port = Number(process.env.PORT ?? 3000);
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
