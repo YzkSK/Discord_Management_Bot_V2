@@ -26,6 +26,7 @@ import {
 } from "@discord-bot/db";
 
 import { createComponentsV2TextMessage, EVENT_COLORS } from "./components-v2.js";
+import { updateControlChannelOwnerPermissions } from "./temp-voice.js";
 
 export type TempVoiceControlAction =
   | "rename"
@@ -406,14 +407,25 @@ export async function handleTempVoiceControlInteraction(
     }
 
     if (parsed.action === "transfer-target") {
+      const targetMember = await guild.members.fetch(parsed.targetUserId).catch(() => null);
+      if (!targetMember || targetMember.voice.channelId !== parsed.channelId) {
+        await replyPrivate(interaction, "❌ 譲渡できません", [
+          "オーナー譲渡は現在通話に参加しているメンバーにのみ行えます。"
+        ]);
+        return true;
+      }
       await transferTempVoiceChannelOwner(context.db, {
         channelId: parsed.channelId,
         ownerId: parsed.targetUserId
       });
+      await updateControlChannelOwnerPermissions(guild, {
+        controlChannelId: tempVoiceChannel.controlChannelId ?? null,
+        nextOwnerId: parsed.targetUserId,
+        previousOwnerId: tempVoiceChannel.ownerId
+      });
       await replyPrivate(interaction, "👑 オーナー譲渡完了", [
         `<@${parsed.targetUserId}> にオーナーを譲渡しました。`
       ]);
-      // Update panel to reflect new owner
       await updateControlPanel(guild, { ...tempVoiceChannel, ownerId: parsed.targetUserId });
       return true;
     }

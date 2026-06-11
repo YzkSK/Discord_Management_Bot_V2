@@ -44,6 +44,9 @@ import {
 } from "./temp-voice-log-suppression.js";
 
 const emptyDeleteDelayMs = 5000;
+const ownerTransferDelayMs = 10 * 60 * 1000; // 10分
+
+const pendingOwnerTransferTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 export interface InstallTempVoiceHandlersOptions {
   db: DbClient;
@@ -121,6 +124,14 @@ async function handleJoinedChannel(
     callSessionId: tempVoiceChannel.callSessionId,
     userId: transition.userId
   });
+
+  if (tempVoiceChannel.ownerId === transition.userId) {
+    const existing = pendingOwnerTransferTimers.get(transition.newChannelId);
+    if (existing) {
+      clearTimeout(existing);
+      pendingOwnerTransferTimers.delete(transition.newChannelId);
+    }
+  }
 }
 
 async function handleLeftChannel(
@@ -146,10 +157,25 @@ async function handleLeftChannel(
     callSessionId: tempVoiceChannel.callSessionId,
     userId: transition.userId
   });
-  await transferOwnerIfNeeded(db, logWriter, context.oldState.guild, {
-    channelId: tempVoiceChannel.channelId,
-    tempVoiceChannelName: context.oldState.channel?.name ?? null
-  });
+
+  if (tempVoiceChannel.ownerId === transition.userId) {
+    const existing = pendingOwnerTransferTimers.get(transition.oldChannelId);
+    if (existing) clearTimeout(existing);
+
+    const channelId = tempVoiceChannel.channelId;
+    const tempVoiceChannelName = context.oldState.channel?.name ?? null;
+    const guild = context.oldState.guild;
+
+    const timer = setTimeout(async () => {
+      pendingOwnerTransferTimers.delete(channelId);
+      await transferOwnerIfNeeded(db, logWriter, guild, {
+        channelId,
+        tempVoiceChannelName
+      });
+    }, ownerTransferDelayMs);
+
+    pendingOwnerTransferTimers.set(channelId, timer);
+  }
 
   if (isEmptyVoiceChannel(context.oldState.channel)) {
     await scheduleTempVoiceChannelDelete(db, {
@@ -390,7 +416,7 @@ async function transferOwnerIfNeeded(
   );
 }
 
-async function updateControlChannelOwnerPermissions(
+export async function updateControlChannelOwnerPermissions(
   guild: Guild,
   input: {
     controlChannelId: string | null;
