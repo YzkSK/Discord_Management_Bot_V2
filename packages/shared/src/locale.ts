@@ -53,6 +53,27 @@ type Locale = {
   recruitmentSetupRequiredMessage: string;
   recruitmentCreated: string;
   recruitmentPostLink: (vars: { url: string }) => string;
+  recruitmentPostTitle: (vars: { genre: string }) => string;
+  recruitmentStatusOpen: string;
+  recruitmentStatusFull: string;
+  recruitmentStatusClosed: string;
+  recruitmentPostCapacity: (vars: { current: number; max: number }) => string;
+  recruitmentPostCreator: (vars: { id: string }) => string;
+  recruitmentPostVc: (vars: { id: string }) => string;
+  recruitmentPostNoVc: string;
+  recruitmentPostAutoClose: (vars: { enabled: boolean }) => string;
+  recruitmentButtonJoin: string;
+  recruitmentButtonLeave: string;
+  recruitmentButtonClose: string;
+  recruitmentNotFound: string;
+  recruitmentNotFoundMessage: string;
+  recruitmentNotOpen: string;
+  recruitmentNotOpenMessage: string;
+  recruitmentJoined: (vars: { current: number; max: number }) => string;
+  recruitmentLeft: (vars: { current: number; max: number }) => string;
+  recruitmentClosedSuccess: string;
+  recruitmentCannotClose: string;
+  recruitmentCannotCloseMessage: string;
   ttsJoinFailed: string;
   ttsJoinVoiceFirst: string;
   ttsAlreadyConnected: string;
@@ -142,6 +163,27 @@ const locales: Record<GuildLanguage, Locale> = {
       "Run `/setup recruitment channel:<text channel>` first.",
     recruitmentCreated: "Recruitment created",
     recruitmentPostLink: ({ url }) => `Post: ${url}`,
+    recruitmentPostTitle: ({ genre }) => `🎮 Recruitment: ${genre}`,
+    recruitmentStatusOpen: "Open",
+    recruitmentStatusFull: "Full",
+    recruitmentStatusClosed: "Closed",
+    recruitmentPostCapacity: ({ current, max }) => `Capacity: ${current}/${max}`,
+    recruitmentPostCreator: ({ id }) => `Creator: <@${id}>`,
+    recruitmentPostVc: ({ id }) => `VC: <#${id}>`,
+    recruitmentPostNoVc: "VC: none",
+    recruitmentPostAutoClose: ({ enabled }) => `Auto close: ${enabled ? "on" : "off"}`,
+    recruitmentButtonJoin: "Join",
+    recruitmentButtonLeave: "Leave",
+    recruitmentButtonClose: "Close",
+    recruitmentNotFound: "Recruitment not found",
+    recruitmentNotFoundMessage: "This recruitment post no longer exists.",
+    recruitmentNotOpen: "Recruitment is not open",
+    recruitmentNotOpenMessage: "This recruitment is already full or closed.",
+    recruitmentJoined: ({ current, max }) => `Joined! (${current}/${max})`,
+    recruitmentLeft: ({ current, max }) => `Left. (${current}/${max})`,
+    recruitmentClosedSuccess: "Recruitment closed",
+    recruitmentCannotClose: "Cannot close recruitment",
+    recruitmentCannotCloseMessage: "Only the creator or a server manager can close this.",
     ttsJoinFailed: "TTS join failed",
     ttsJoinVoiceFirst: "Join a voice channel first.",
     ttsAlreadyConnected: "TTS already connected",
@@ -267,6 +309,27 @@ const locales: Record<GuildLanguage, Locale> = {
       "先に `/setup recruitment channel:<テキストチャンネル>` を実行してください。",
     recruitmentCreated: "募集を作成しました",
     recruitmentPostLink: ({ url }) => `投稿: ${url}`,
+    recruitmentPostTitle: ({ genre }) => `🎮 募集: ${genre}`,
+    recruitmentStatusOpen: "募集中",
+    recruitmentStatusFull: "満員",
+    recruitmentStatusClosed: "締切済み",
+    recruitmentPostCapacity: ({ current, max }) => `定員: ${current}/${max}人`,
+    recruitmentPostCreator: ({ id }) => `作成者: <@${id}>`,
+    recruitmentPostVc: ({ id }) => `VC: <#${id}>`,
+    recruitmentPostNoVc: "VC: なし",
+    recruitmentPostAutoClose: ({ enabled }) => `自動締切: ${enabled ? "オン" : "オフ"}`,
+    recruitmentButtonJoin: "参加",
+    recruitmentButtonLeave: "退出",
+    recruitmentButtonClose: "締切",
+    recruitmentNotFound: "募集が見つかりません",
+    recruitmentNotFoundMessage: "この募集投稿はすでに存在しません。",
+    recruitmentNotOpen: "募集は受け付けていません",
+    recruitmentNotOpenMessage: "この募集は満員または締切済みです。",
+    recruitmentJoined: ({ current, max }) => `参加しました！（${current}/${max}人）`,
+    recruitmentLeft: ({ current, max }) => `退出しました。（${current}/${max}人）`,
+    recruitmentClosedSuccess: "募集を締め切りました",
+    recruitmentCannotClose: "締め切れません",
+    recruitmentCannotCloseMessage: "作成者またはサーバー管理者のみが締め切れます。",
     ttsJoinFailed: "TTS参加失敗",
     ttsJoinVoiceFirst: "先にボイスチャンネルに参加してください。",
     ttsAlreadyConnected: "TTS接続中",

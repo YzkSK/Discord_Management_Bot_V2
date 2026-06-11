@@ -171,7 +171,7 @@ async function handleRecruitmentCreate(
     autoClose: interaction.options.getBoolean("auto-close") ?? true
   });
   const message = await recruitmentChannel.send(
-    createRecruitmentPostMessage(recruitment)
+    createRecruitmentPostMessage(recruitment, loc)
   );
 
   const recruitmentWithMessage =
