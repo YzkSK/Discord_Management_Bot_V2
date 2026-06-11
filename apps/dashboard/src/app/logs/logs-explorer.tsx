@@ -95,9 +95,12 @@ function extractActorName(payload: unknown): string | null {
   // member.update / member.timeout: payload.after.displayName
   const after = payload["after"];
   if (isObj(after) && typeof after["displayName"] === "string") return after["displayName"];
-  // partial user (member.leave): payload.user.username
+  // partial user (member.leave / ban / unban): payload.user.username
   const user = payload["user"];
   if (isObj(user) && typeof user["username"] === "string") return user["username"];
+  // message.create: payload.author.username
+  const author = payload["author"];
+  if (isObj(author) && typeof author["username"] === "string") return author["username"];
   return null;
 }
 
@@ -441,22 +444,42 @@ export function LogsExplorer() {
                             )}
                           </dd>
                         </div>
-                        {log.actorId && (
-                          <div>
-                            <dt className="text-zinc-600">アクター ID</dt>
-                            <dd className="font-mono text-zinc-300">
-                              {log.actorId}
-                            </dd>
-                          </div>
-                        )}
-                        {log.channelId && (
-                          <div>
-                            <dt className="text-zinc-600">チャンネル ID</dt>
-                            <dd className="font-mono text-zinc-300">
-                              {log.channelId}
-                            </dd>
-                          </div>
-                        )}
+                        {log.actorId && (() => {
+                          const name = extractActorName(log.payload);
+                          return (
+                            <div>
+                              <dt className="text-zinc-600">アクター</dt>
+                              <dd className="text-zinc-300">
+                                {name ? (
+                                  <>
+                                    <span>{name}</span>
+                                    <span className="ml-1 font-mono text-xs text-zinc-500">({log.actorId})</span>
+                                  </>
+                                ) : (
+                                  <span className="font-mono">{log.actorId}</span>
+                                )}
+                              </dd>
+                            </div>
+                          );
+                        })()}
+                        {log.channelId && (() => {
+                          const name = extractChannelName(log.payload);
+                          return (
+                            <div>
+                              <dt className="text-zinc-600">チャンネル</dt>
+                              <dd className="text-zinc-300">
+                                {name ? (
+                                  <>
+                                    <span>#{name}</span>
+                                    <span className="ml-1 font-mono text-xs text-zinc-500">({log.channelId})</span>
+                                  </>
+                                ) : (
+                                  <span className="font-mono">{log.channelId}</span>
+                                )}
+                              </dd>
+                            </div>
+                          );
+                        })()}
                         {Object.entries(payload)
                           .filter(
                             ([, v]) =>
