@@ -2,6 +2,7 @@ import { Events, type Client } from "discord.js";
 
 import {
   handleChatInputCommand,
+  handleSpeakerAutocomplete,
   type CommandContext
 } from "../commands/index.js";
 import { createDiscordLogWriter } from "./log-writer.js";
@@ -61,6 +62,17 @@ export function installInteractionRouter(client: Client, context: CommandContext
           });
         }
       );
+      return;
+    }
+
+    if (interaction.isAutocomplete()) {
+      void handleSpeakerAutocomplete(interaction, commandContext).catch((error: unknown) => {
+        console.error("autocomplete handler failed", {
+          commandName: interaction.commandName,
+          guildId: interaction.guildId,
+          error
+        });
+      });
       return;
     }
 

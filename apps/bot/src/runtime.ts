@@ -21,7 +21,7 @@ import { installTtsMessageReader } from "./discord/tts-message-reader.js";
 import { installTtsAutoLeaveHandler } from "./discord/tts-auto-leave.js";
 import { TtsSessionManager } from "./discord/tts-session.js";
 import { installVoiceActivityHandlers } from "./discord/voice-activity.js";
-import { createVoicevoxClient } from "./discord/voicevox.js";
+import { createVoicevoxClient, getVoicevoxSpeakers } from "./discord/voicevox.js";
 
 export interface BotRuntime {
   start: () => Promise<void>;
@@ -59,13 +59,19 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
         db: dbConnection.db,
         redis: redisConnection.client
       });
+      const voicevoxBaseUrl = env.VOICEVOX_URL;
+      const voicevox = createVoicevoxClient({
+        baseUrl: voicevoxBaseUrl,
+        speaker: env.VOICEVOX_SPEAKER_ID
+      });
       installDiscordLifecycleLogging(discordClient);
       installGuildRegistrationHandlers(discordClient, { db: dbConnection.db });
       installInteractionRouter(discordClient, {
         db: dbConnection.db,
         logWriter,
         redis: redisConnection.client,
-        ttsSessionManager
+        ttsSessionManager,
+        getSpeakers: () => getVoicevoxSpeakers(voicevoxBaseUrl)
       });
       installMessageLogHandlers(discordClient, {
         db: dbConnection.db,
@@ -92,10 +98,7 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
         logWriter,
         speakerId: env.VOICEVOX_SPEAKER_ID,
         ttsSessionManager,
-        voicevox: createVoicevoxClient({
-          baseUrl: env.VOICEVOX_URL,
-          speaker: env.VOICEVOX_SPEAKER_ID
-        })
+        voicevox
       });
       await discordClient.login(env.DISCORD_BOT_TOKEN);
       await recordStartupLog(dbConnection, env).catch((error: unknown) => {
