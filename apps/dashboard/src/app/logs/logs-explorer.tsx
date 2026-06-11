@@ -30,6 +30,7 @@ import {
   formatRelativeTime,
   getEventColor,
 } from "../../lib/event-display";
+import { formatEventDescriptionJSX } from "../../lib/format-event-jsx";
 import {
   canViewRawLogPayload,
   getLogCategoryTabs,
@@ -395,7 +396,7 @@ export function LogsExplorer() {
               const color = getEventColor(log.eventName);
               const cls = eventColorClasses[color];
               const isExpanded = expandedId === log.id;
-              const description = formatEventDescription(log.eventName, {
+              const description = formatEventDescriptionJSX(log.eventName, {
                 actorId: log.actorId,
                 actorName: extractActorName(log.payload),
                 channelId: log.channelId,
