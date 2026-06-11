@@ -13,10 +13,10 @@ import { Activity, Mic2, Users, Volume2 } from "lucide-react";
 
 import {
   eventColorClasses,
-  formatEventDescription,
   formatRelativeTime,
   getEventColor,
 } from "../lib/event-display";
+import { formatEventDescriptionJSX } from "../lib/format-event-jsx";
 
 function isObj(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
@@ -262,7 +262,7 @@ export function OverviewClient({ guildId }: OverviewClientProps) {
                     className={`h-2 w-2 shrink-0 rounded-[50%] ${cls.dot}`}
                   />
                   <p className="flex-1 truncate text-sm text-zinc-300">
-                    {formatEventDescription(log.eventName, {
+                    {formatEventDescriptionJSX(log.eventName, {
                       actorId: log.actorId,
                       actorName: extractActorName(log.payload),
                       channelId: log.channelId,
