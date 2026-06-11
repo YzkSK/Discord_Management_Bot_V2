@@ -96,12 +96,14 @@ function extractActorName(payload: unknown): string | null {
   // member.update / member.timeout: payload.after.displayName
   const after = payload["after"];
   if (isObj(after) && typeof after["displayName"] === "string") return after["displayName"];
-  // partial user (member.leave / ban / unban): payload.user.username
+  // partial user (member.leave / ban / unban): payload.user.globalName ?? username
   const user = payload["user"];
-  if (isObj(user) && typeof user["username"] === "string") return user["username"];
-  // message.create: payload.author.username
+  if (isObj(user) && typeof user["username"] === "string")
+    return (typeof user["globalName"] === "string" ? user["globalName"] : null) ?? user["username"];
+  // message.create: payload.author.globalName ?? username
   const author = payload["author"];
-  if (isObj(author) && typeof author["username"] === "string") return author["username"];
+  if (isObj(author) && typeof author["username"] === "string")
+    return (typeof author["globalName"] === "string" ? author["globalName"] : null) ?? author["username"];
   return null;
 }
 
@@ -151,7 +153,7 @@ export function LogsExplorer() {
       return;
     }
 
-    const socket = io({ path: "/socket.io" });
+    const socket = io({ path: "/socket.io", forceNew: true });
     setRealtimeStatus("connecting");
 
     socket.on("connect", () => {

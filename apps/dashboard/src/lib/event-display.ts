@@ -182,6 +182,12 @@ export function getActorText(vars: EventVars): string | null {
   return null;
 }
 
+export function getChannelText(vars: EventVars): string | null {
+  if (vars.channelName) return `#${vars.channelName}`;
+  if (vars.channelId) return `#${vars.channelId.slice(0, 8)}…`;
+  return null;
+}
+
 export function splitDescriptionOnActor(
   description: string,
   actorText: string

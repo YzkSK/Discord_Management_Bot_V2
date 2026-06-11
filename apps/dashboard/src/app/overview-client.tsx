@@ -28,7 +28,8 @@ function extractActorName(payload: unknown): string | null {
   const after = payload["after"];
   if (isObj(after) && typeof after["displayName"] === "string") return after["displayName"];
   const user = payload["user"];
-  if (isObj(user) && typeof user["username"] === "string") return user["username"];
+  if (isObj(user) && typeof user["username"] === "string")
+    return (typeof user["globalName"] === "string" ? user["globalName"] : null) ?? user["username"];
   return null;
 }
 function extractChannelName(payload: unknown): string | null {
@@ -69,38 +70,39 @@ export function OverviewClient({ guildId }: OverviewClientProps) {
   const [recruitments, setRecruitments] = useState<Recruitment[]>([]);
   const [recentLogs, setRecentLogs] = useState<LogItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    void (async () => {
+  const load = useMemo(
+    () => async () => {
+      setLoading(true);
+      setError(false);
       try {
-        const [voiceRes, recruitRes, logsRes] = await Promise.all([
-          fetch(`/api/voice?guildId=${encodeURIComponent(guildId)}`, {
-            cache: "no-store",
-          }),
-          fetch(
-            `/api/recruitments?guildId=${encodeURIComponent(guildId)}`,
-            { cache: "no-store" }
-          ),
-          fetch(
-            `/api/logs?guildId=${encodeURIComponent(guildId)}&limit=50`,
-            { cache: "no-store" }
-          ),
-        ]);
+        const res = await fetch(
+          `/api/overview?guildId=${encodeURIComponent(guildId)}`,
+          { cache: "no-store" }
+        );
 
-        const [voice, recruit, logs] = await Promise.all([
-          voiceRes.ok ? voiceRes.json() : { sessions: [] },
-          recruitRes.ok ? recruitRes.json() : { recruitments: [] },
-          logsRes.ok ? logsRes.json() : { items: [] },
-        ]);
+        if (!res.ok) {
+          setError(true);
+          return;
+        }
 
-        setSessions(voice.sessions ?? []);
-        setRecruitments(recruit.recruitments ?? []);
-        setRecentLogs(logs.items ?? []);
+        const data = await res.json();
+        setSessions(data.sessions ?? []);
+        setRecruitments(data.recruitments ?? []);
+        setRecentLogs(data.logItems ?? []);
+      } catch {
+        setError(true);
       } finally {
         setLoading(false);
       }
-    })();
-  }, [guildId]);
+    },
+    [guildId]
+  );
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const activeVcCount = sessions.filter((s) => s.status === "active").length;
   const openRecruitCount = recruitments.filter(
@@ -143,6 +145,20 @@ export function OverviewClient({ guildId }: OverviewClientProps) {
     return (
       <div className="flex items-center justify-center py-24 text-sm text-zinc-600">
         読み込み中...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-24">
+        <p className="text-sm text-zinc-500">データの取得に失敗しました</p>
+        <button
+          onClick={() => void load()}
+          className="rounded-md bg-zinc-800 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-700"
+        >
+          再試行
+        </button>
       </div>
     );
   }

@@ -2,7 +2,7 @@
 
 import * as Popover from "@radix-ui/react-popover";
 import { Copy } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { fetchCachedDiscordUser, type CachedDiscordUser } from "./user-cache";
 
 interface UserMentionProps {
@@ -12,13 +12,23 @@ interface UserMentionProps {
 
 export function UserMention({ userId, actorName }: UserMentionProps) {
   const [user, setUser] = useState<CachedDiscordUser | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loadingPopover, setLoadingPopover] = useState(false);
+  const [loadingName, setLoadingName] = useState(actorName === null);
   const [error, setError] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => {
+    if (actorName !== null) return;
+    setLoadingName(true);
+    fetchCachedDiscordUser(userId)
+      .then((data) => setUser(data))
+      .catch(() => {})
+      .finally(() => setLoadingName(false));
+  }, [userId, actorName]);
+
   async function handleOpenChange(open: boolean) {
     if (!open || user) return;
-    setLoading(true);
+    setLoadingPopover(true);
     setError(false);
     try {
       const data = await fetchCachedDiscordUser(userId);
@@ -26,7 +36,7 @@ export function UserMention({ userId, actorName }: UserMentionProps) {
     } catch {
       setError(true);
     } finally {
-      setLoading(false);
+      setLoadingPopover(false);
     }
   }
 
@@ -36,7 +46,8 @@ export function UserMention({ userId, actorName }: UserMentionProps) {
     setTimeout(() => setCopied(false), 1500);
   }
 
-  const displayName = actorName ?? userId;
+  const displayName = actorName ?? (user ? (user.globalName ?? user.username) : null);
+  const label = loadingName ? "..." : (displayName ?? userId);
 
   return (
     <Popover.Root onOpenChange={(open) => void handleOpenChange(open)}>
@@ -46,7 +57,7 @@ export function UserMention({ userId, actorName }: UserMentionProps) {
           onClick={(e) => e.stopPropagation()}
           className="inline-flex cursor-pointer items-center rounded bg-indigo-500/20 px-1 text-indigo-300 hover:bg-indigo-500/30"
         >
-          @{displayName}
+          @{label}
         </button>
       </Popover.Trigger>
       <Popover.Portal>
@@ -55,13 +66,13 @@ export function UserMention({ userId, actorName }: UserMentionProps) {
           sideOffset={6}
           onClick={(e) => e.stopPropagation()}
         >
-          {loading && (
+          {loadingPopover && (
             <p className="text-xs text-zinc-500">読み込み中...</p>
           )}
-          {error && !loading && (
+          {error && !loadingPopover && (
             <p className="text-xs text-zinc-500">情報を取得できませんでした</p>
           )}
-          {user && !loading && (
+          {user && !loadingPopover && (
             <div className="flex gap-3">
               <img
                 src={user.avatarUrl}
