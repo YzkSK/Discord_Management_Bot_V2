@@ -36,15 +36,12 @@ describe("createTempVoiceControlMessage", () => {
     const serialized = JSON.stringify(message);
 
     assert.equal(Number(message.flags), 32768);
-    assert.match(serialized, /Temp VC Control/);
-    assert.match(serialized, /Owner: <@owner-1>/);
-    assert.match(serialized, /Voice channel: <#voice-1>/);
+    assert.match(serialized, /Temp VC/);
     assert.match(serialized, /temp-vc:rename:voice-1/);
     assert.match(serialized, /temp-vc:lock:voice-1/);
     assert.match(serialized, /temp-vc:hide:voice-1/);
     assert.match(serialized, /temp-vc:user-limit:voice-1/);
-    assert.match(serialized, /temp-vc:bitrate:voice-1/);
-    assert.match(serialized, /temp-vc:kick:voice-1/);
+    assert.match(serialized, /temp-vc:user-management:voice-1/);
   });
 });
 
@@ -153,8 +150,8 @@ describe("handleTempVoiceControlInteraction", () => {
     ]);
   });
 
-  it("opens forms for rename, user limit, and bitrate", async () => {
-    for (const action of ["rename", "user-limit", "bitrate"] as const) {
+  it("opens forms for rename and user limit", async () => {
+    for (const action of ["rename", "user-limit"] as const) {
       const modals: unknown[] = [];
 
       await handleTempVoiceControlInteraction(
@@ -201,10 +198,9 @@ describe("handleTempVoiceControlInteraction", () => {
     assert.deepEqual(names, ["New Room"]);
   });
 
-  it("updates user limit and bitrate from modal input", async () => {
+  it("updates user limit from modal input", async () => {
     const userLimits: number[] = [];
-    const bitrates: number[] = [];
-    const channel = fakeVoiceChannel({ bitrates, userLimits });
+    const channel = fakeVoiceChannel({ userLimits });
 
     await handleTempVoiceControlInteraction(
       fakeModalInteraction({
@@ -222,37 +218,18 @@ describe("handleTempVoiceControlInteraction", () => {
         })
       }
     );
-    await handleTempVoiceControlInteraction(
-      fakeModalInteraction({
-        action: "bitrate",
-        channel,
-        channelId: "voice-1",
-        textValue: "64",
-        userId: "owner-1"
-      }),
-      {
-        db: {} as never,
-        getTempVoiceChannel: async () => ({
-          channelId: "voice-1",
-          ownerId: "owner-1"
-        })
-      }
-    );
 
     assert.deepEqual(userLimits, [8]);
-    assert.deepEqual(bitrates, [64000]);
   });
 
-  it("kicks a selected member who is in the generated voice channel", async () => {
-    const disconnected: string[] = [];
+  it("shows user management action buttons when a user is selected", async () => {
+    const updates: unknown[] = [];
 
     await handleTempVoiceControlInteraction(
       fakeUserSelectInteraction({
         channelId: "voice-1",
-        disconnected,
         selectedUserId: "user-2",
-        selectedUserVoiceChannelId: "voice-1",
-        userId: "owner-1"
+        updates
       }),
       {
         db: {} as never,
@@ -263,33 +240,10 @@ describe("handleTempVoiceControlInteraction", () => {
       }
     );
 
-    assert.deepEqual(disconnected, ["user-2"]);
-  });
-
-  it("does not kick a selected member outside the generated voice channel", async () => {
-    const disconnected: string[] = [];
-    const replies: unknown[] = [];
-
-    await handleTempVoiceControlInteraction(
-      fakeUserSelectInteraction({
-        channelId: "voice-1",
-        disconnected,
-        replies,
-        selectedUserId: "user-2",
-        selectedUserVoiceChannelId: "other-voice",
-        userId: "owner-1"
-      }),
-      {
-        db: {} as never,
-        getTempVoiceChannel: async () => ({
-          channelId: "voice-1",
-          ownerId: "owner-1"
-        })
-      }
-    );
-
-    assert.deepEqual(disconnected, []);
-    assert.match(JSON.stringify(replies[0]), /not in this Temp VC/);
+    const serialized = JSON.stringify(updates[0]);
+    assert.match(serialized, /temp-vc:kick-target:voice-1:user-2/);
+    assert.match(serialized, /temp-vc:allow-target:voice-1:user-2/);
+    assert.match(serialized, /temp-vc:deny-target:voice-1:user-2/);
   });
 });
 
@@ -370,33 +324,20 @@ function fakeModalInteraction(input: {
 
 function fakeUserSelectInteraction(input: {
   channelId: string;
-  disconnected: string[];
-  replies?: unknown[];
   selectedUserId: string;
-  selectedUserVoiceChannelId: string | null;
-  userId: string;
+  updates?: unknown[];
+  userId?: string;
 }) {
-  const replies = input.replies ?? [];
+  const updates = input.updates ?? [];
 
   return {
     customId: toTempVoiceControlCustomId({
-      action: "kick",
+      action: "user-management-select",
       channelId: input.channelId
     }),
     guild: {
       channels: {
         fetch: async () => fakeVoiceChannel()
-      },
-      members: {
-        fetch: async (userId: string) => ({
-          id: userId,
-          voice: {
-            channelId: input.selectedUserVoiceChannelId,
-            disconnect: async () => {
-              input.disconnected.push(userId);
-            }
-          }
-        })
       },
       roles: {
         everyone: {
@@ -404,11 +345,11 @@ function fakeUserSelectInteraction(input: {
         }
       }
     },
-    reply: async (reply: unknown) => {
-      replies.push(reply);
+    update: async (update: unknown) => {
+      updates.push(update);
     },
     user: {
-      id: input.userId
+      id: input.userId ?? "owner-1"
     },
     values: [input.selectedUserId]
   } as never;
