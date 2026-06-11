@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
 import {
   BookOpen,
@@ -243,18 +243,32 @@ function KeyValue({ label, value }: { label: string; value: string }) {
 
 function GuildDefaultSpeakerPreview({ speakerId }: { speakerId: number }) {
   const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   async function handlePreview() {
     if (playing) return;
     setPlaying(true);
     try {
       const res = await fetch(`/api/tts/preview?speakerId=${speakerId}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        setPlaying(false);
+        return;
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
-      audio.onended = () => { URL.revokeObjectURL(url); setPlaying(false); };
-      audio.onerror = () => { URL.revokeObjectURL(url); setPlaying(false); };
+      audioRef.current = audio;
+      audio.onended = () => { URL.revokeObjectURL(url); setPlaying(false); audioRef.current = null; };
+      audio.onerror = () => { URL.revokeObjectURL(url); setPlaying(false); audioRef.current = null; };
       void audio.play();
     } catch {
       setPlaying(false);
@@ -451,23 +465,39 @@ function UserSpeakerTable({
 }) {
   const visibleSpeakers = userSpeakers.slice(0, 8);
   const [playingId, setPlayingId] = useState<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   async function handlePreview(speakerId: number) {
     if (playingId !== null) return;
     setPlayingId(speakerId);
     try {
       const res = await fetch(`/api/tts/preview?speakerId=${speakerId}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        setPlayingId(null);
+        return;
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
+      audioRef.current = audio;
       audio.onended = () => {
         URL.revokeObjectURL(url);
         setPlayingId(null);
+        audioRef.current = null;
       };
       audio.onerror = () => {
         URL.revokeObjectURL(url);
         setPlayingId(null);
+        audioRef.current = null;
       };
       void audio.play();
     } catch {
