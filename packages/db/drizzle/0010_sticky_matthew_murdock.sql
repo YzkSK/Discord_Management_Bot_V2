@@ -1,0 +1,1 @@
+ALTER TABLE "guild_configs" ADD COLUMN "recruitment_channel_id" text;
