@@ -8,10 +8,16 @@ import {
   type TextChannel
 } from "discord.js";
 
+import type { getLocale } from "@discord-bot/shared";
+
+import { discordRelative, EVENT_COLORS } from "./components-v2.js";
+
 export const voiceStatusChannelTopicMarker =
   "[discord-management-bot:voice-status]";
 
 export type VoiceStatusDisplayState = "started" | "active" | "ended";
+
+type Loc = ReturnType<typeof getLocale>;
 
 export function hasVoiceStatusChannelMarker(
   topic: string | null | undefined
@@ -73,6 +79,8 @@ export function resolveVoiceStatusDisplayState(input: {
 export function createVoiceStatusMessage(input: {
   channelId: string;
   endedAt?: Date | null;
+  loc: Loc;
+  memberIds?: string[];
   memberCount: number;
   now: Date;
   sessionId: string;
@@ -84,54 +92,78 @@ export function createVoiceStatusMessage(input: {
     startedAt: input.startedAt
   });
 
+  const accentColor = stateAccentColor(state);
+  const title = stateTitle(state, input.loc);
+  const durationMs = (input.endedAt ?? input.now).getTime() - input.startedAt.getTime();
+  const duration = formatDuration(durationMs);
+  const relativeStarted = discordRelative(input.startedAt);
+
+  const containerComponents: unknown[] = [
+    { type: ComponentType.TextDisplay, content: `## ${title}` },
+    { type: ComponentType.TextDisplay, content: `<#${input.channelId}>` }
+  ];
+
+  const memberIds = input.memberIds ?? [];
+
+  if (memberIds.length > 0) {
+    containerComponents.push({ type: ComponentType.Separator });
+    containerComponents.push({
+      type: ComponentType.TextDisplay,
+      content: `👥 ${memberIds.map(id => `<@${id}>`).join("  ")}`
+    });
+  } else if (input.memberCount > 0) {
+    containerComponents.push({ type: ComponentType.Separator });
+    containerComponents.push({
+      type: ComponentType.TextDisplay,
+      content: `👥 ${input.memberCount}`
+    });
+  }
+
+  containerComponents.push({ type: ComponentType.Separator });
+
+  if (input.endedAt) {
+    containerComponents.push({
+      type: ComponentType.TextDisplay,
+      content: input.loc.voiceSessionEndedAt({ timestamp: discordRelative(input.endedAt), duration })
+    });
+  } else {
+    containerComponents.push({
+      type: ComponentType.TextDisplay,
+      content: input.loc.voiceSessionStartedAt({ timestamp: relativeStarted, duration })
+    });
+  }
+
   return {
     flags: MessageFlags.IsComponentsV2,
     components: [
       {
         type: ComponentType.Container,
-        components: [
-          {
-            type: ComponentType.TextDisplay,
-            content: `## Voice Session: ${formatVoiceStatusState(state)}`
-          },
-          {
-            type: ComponentType.TextDisplay,
-            content: `Voice channel: <#${input.channelId}>`
-          },
-          {
-            type: ComponentType.TextDisplay,
-            content: `Members: ${input.memberCount}`
-          },
-          {
-            type: ComponentType.TextDisplay,
-            content: `Duration: ${formatDuration(
-              (input.endedAt ?? input.now).getTime() - input.startedAt.getTime()
-            )}`
-          },
-          {
-            type: ComponentType.TextDisplay,
-            content: `Started: ${input.startedAt.toISOString()}`
-          },
-          {
-            type: ComponentType.TextDisplay,
-            content: input.endedAt
-              ? `Ended: ${input.endedAt.toISOString()}`
-              : `Session ID: ${input.sessionId}`
-          }
-        ]
+        accent_color: accentColor,
+        components: containerComponents as never[]
       }
     ]
   };
 }
 
-function formatVoiceStatusState(state: VoiceStatusDisplayState) {
+function stateAccentColor(state: VoiceStatusDisplayState): number {
   switch (state) {
-    case "active":
-      return "Active";
-    case "ended":
-      return "Ended";
     case "started":
-      return "Started";
+      return EVENT_COLORS.green;
+    case "active":
+      return EVENT_COLORS.blue;
+    case "ended":
+      return EVENT_COLORS.gray;
+  }
+}
+
+function stateTitle(state: VoiceStatusDisplayState, loc: Loc): string {
+  switch (state) {
+    case "started":
+      return loc.voiceSessionTitleStarted;
+    case "active":
+      return loc.voiceSessionTitleActive;
+    case "ended":
+      return loc.voiceSessionTitleEnded;
   }
 }
 
