@@ -8,6 +8,11 @@ import { Server, type Socket } from "socket.io";
 
 import { resolveDashboardAccess } from "./authorization.js";
 import {
+  getUsableDiscordAccessToken,
+  toDashboardDiscordToken
+} from "./auth-token.js";
+import {
+  DiscordApiError,
   fetchCurrentUserGuildById,
   fetchGuildMemberRoleIds
 } from "./discord-api.js";
@@ -47,7 +52,17 @@ async function subscribeToLogs(socket: Socket, payload: unknown) {
     return;
   }
 
-  const authorized = await authorizeSocket(socket, guildId);
+  let authorized: boolean;
+  try {
+    authorized = await authorizeSocket(socket, guildId);
+  } catch (error) {
+    const message =
+      error instanceof DiscordApiError
+        ? "Failed to verify Discord access. Please try again."
+        : "Connection failed. Please try again.";
+    socket.emit(realtimeErrorEventName, { error: message });
+    return;
+  }
 
   if (!authorized) {
     socket.emit(realtimeErrorEventName, { error: "Dashboard access denied." });
@@ -76,18 +91,32 @@ async function authorizeSocket(socket: Socket, guildId: string) {
     secret: env.NEXTAUTH_SECRET ?? ""
   }).catch(() => null);
 
-  if (!token?.sub || !token.discordAccessToken) {
+  if (!token?.sub) {
+    return false;
+  }
+
+  const accessTokenResult = await getUsableDiscordAccessToken({
+    clientId: env.DISCORD_CLIENT_ID,
+    clientSecret: env.DISCORD_CLIENT_SECRET,
+    token: toDashboardDiscordToken(token)
+  });
+
+  if (!accessTokenResult.ok) {
     return false;
   }
 
   let discordGuild;
   try {
     discordGuild = await fetchCurrentUserGuildById(
-      token.discordAccessToken as string,
+      accessTokenResult.accessToken,
       guildId
     );
-  } catch {
-    return false;
+  } catch (error) {
+    // 401/403 are definitive auth failures; other errors (5xx, 429, network) are transient
+    if (error instanceof DiscordApiError && (error.status === 401 || error.status === 403)) {
+      return false;
+    }
+    throw error;
   }
 
   if (!discordGuild) {
