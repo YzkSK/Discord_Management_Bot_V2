@@ -3,6 +3,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   formatEventDescription,
+  getActorText,
+  splitDescriptionOnActor,
   getEventColor,
   getEventIcon,
   formatRelativeTime,
@@ -110,5 +112,40 @@ describe("formatEventDescription — default vars", () => {
     const result = formatEventDescription("guild.update");
     assert.ok(typeof result === "string");
     assert.ok(result.length > 0);
+  });
+});
+
+describe("getActorText", () => {
+  it("actorName がある場合は @actorName を返す", () => {
+    assert.equal(getActorText({ actorName: "Yuzuki" }), "@Yuzuki");
+  });
+
+  it("actorName がなく actorId がある場合は先頭8文字 + … を返す", () => {
+    assert.equal(getActorText({ actorId: "123456789012345678" }), "@12345678…");
+  });
+
+  it("どちらもない場合は null を返す", () => {
+    assert.equal(getActorText({}), null);
+  });
+
+  it("actorName が null で actorId がある場合は actorId ベースを返す", () => {
+    assert.equal(getActorText({ actorId: "111222333", actorName: null }), "@11122233…");
+  });
+});
+
+describe("splitDescriptionOnActor", () => {
+  it("アクターテキストが含まれる場合に before/after で分割する", () => {
+    const result = splitDescriptionOnActor("🎤 @Yuzuki が参加", "@Yuzuki");
+    assert.deepEqual(result, { before: "🎤 ", after: " が参加" });
+  });
+
+  it("アクターテキストが含まれない場合は null を返す", () => {
+    const result = splitDescriptionOnActor("🗑️ メッセージを削除", "@Yuzuki");
+    assert.equal(result, null);
+  });
+
+  it("先頭にアクターテキストがある場合", () => {
+    const result = splitDescriptionOnActor("@Yuzuki がログイン", "@Yuzuki");
+    assert.deepEqual(result, { before: "", after: " がログイン" });
   });
 });

@@ -175,3 +175,21 @@ export const eventColorClasses: Record<EventColorKey, { dot: string; badge: stri
   sky:    { dot: "bg-sky-500",    badge: "bg-sky-500/10 text-sky-400",       border: "border-sky-500/20" },
   gray:   { dot: "bg-zinc-500",   badge: "bg-zinc-500/10 text-zinc-400",     border: "border-zinc-500/20" },
 };
+
+export function getActorText(vars: EventVars): string | null {
+  if (vars.actorName) return `@${vars.actorName}`;
+  if (vars.actorId) return `@${vars.actorId.slice(0, 8)}…`;
+  return null;
+}
+
+export function splitDescriptionOnActor(
+  description: string,
+  actorText: string
+): { before: string; after: string } | null {
+  const idx = description.indexOf(actorText);
+  if (idx === -1) return null;
+  return {
+    before: description.slice(0, idx),
+    after: description.slice(idx + actorText.length),
+  };
+}
