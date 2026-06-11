@@ -13,6 +13,7 @@ import {
   MessageFlags,
   PermissionFlagsBits,
   SlashCommandBuilder,
+  type AutocompleteInteraction,
   type ButtonInteraction,
   type ChatInputCommandInteraction,
   type GuildMember,
@@ -31,6 +32,7 @@ import {
   createTtsSessionStoppedEvent
 } from "../discord/tts-logs.js";
 import type { TtsSessionManager } from "../discord/tts-session.js";
+import type { VoicevoxSpeaker } from "../discord/voicevox.js";
 
 type Loc = ReturnType<typeof getLocale>;
 
@@ -64,7 +66,7 @@ export const speakerCommand = new SlashCommandBuilder()
           .setName("speaker_id")
           .setDescription("VOICEVOX speaker id.")
           .setDescriptionLocalization("ja", "VOICEVOXの話者ID。")
-          .setMinValue(0)
+          .setAutocomplete(true)
           .setRequired(true)
       )
   )
@@ -78,17 +80,57 @@ export const speakerCommand = new SlashCommandBuilder()
           .setName("speaker_id")
           .setDescription("VOICEVOX speaker id.")
           .setDescriptionLocalization("ja", "VOICEVOXの話者ID。")
-          .setMinValue(0)
+          .setAutocomplete(true)
           .setRequired(true)
       )
   );
 
 export interface TtsCommandContext {
   db: DbClient;
+  getSpeakers?: () => Promise<VoicevoxSpeaker[]>;
   logWriter?: DiscordLogWriter;
   setGuildDefaultSpeaker?: typeof setGuildDefaultTtsSpeaker;
   setUserSpeaker?: typeof setUserTtsSpeaker;
   ttsSessionManager: TtsSessionManager;
+}
+
+export function buildSpeakerAutocompleteChoices(
+  speakers: VoicevoxSpeaker[],
+  query: string
+) {
+  const lowerQuery = query.toLowerCase();
+  const choices: { name: string; value: number }[] = [];
+
+  for (const speaker of speakers) {
+    for (const style of speaker.styles) {
+      const label = `${speaker.name}（${style.name}） [ID: ${style.id}]`;
+      if (!lowerQuery || label.toLowerCase().includes(lowerQuery)) {
+        choices.push({ name: label, value: style.id });
+      }
+      if (choices.length >= 25) return choices;
+    }
+  }
+
+  return choices;
+}
+
+export async function handleSpeakerAutocomplete(
+  interaction: AutocompleteInteraction,
+  context: TtsCommandContext
+) {
+  if (interaction.commandName !== speakerCommand.name) {
+    return false;
+  }
+
+  const focused = interaction.options.getFocused(true);
+  if (focused.name !== "speaker_id") {
+    return false;
+  }
+
+  const speakers = context.getSpeakers ? await context.getSpeakers() : [];
+  const choices = buildSpeakerAutocompleteChoices(speakers, String(focused.value));
+  await interaction.respond(choices);
+  return true;
 }
 
 export interface ForceJoinCustomIdInput {

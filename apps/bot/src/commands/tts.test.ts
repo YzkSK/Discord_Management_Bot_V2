@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  buildSpeakerAutocompleteChoices,
   forceJoinCommand,
   handleSpeakerCommand,
   joinCommand,
@@ -11,6 +12,7 @@ import {
   speakerCommand,
   toForceJoinCustomId
 } from "./tts.js";
+import type { VoicevoxSpeaker } from "../discord/voicevox.js";
 
 describe("tts slash commands", () => {
   it("exposes join, force-join, leave, and speaker command builders", () => {
@@ -168,6 +170,54 @@ describe("handleSpeakerCommand", () => {
     );
 
     assert.equal(stored, false);
+  });
+});
+
+describe("buildSpeakerAutocompleteChoices", () => {
+  const speakers: VoicevoxSpeaker[] = [
+    {
+      name: "四国めたん",
+      speaker_uuid: "uuid-1",
+      styles: [
+        { id: 2, name: "ノーマル", type: "talk" },
+        { id: 0, name: "あまあま", type: "talk" }
+      ]
+    },
+    {
+      name: "ずんだもん",
+      speaker_uuid: "uuid-2",
+      styles: [{ id: 3, name: "ノーマル", type: "talk" }]
+    }
+  ];
+
+  it("returns one choice per style with name + id label", () => {
+    const choices = buildSpeakerAutocompleteChoices(speakers, "");
+
+    assert.equal(choices[0]?.name, "四国めたん（ノーマル） [ID: 2]");
+    assert.equal(choices[0]?.value, 2);
+    assert.equal(choices[1]?.name, "四国めたん（あまあま） [ID: 0]");
+    assert.equal(choices[1]?.value, 0);
+    assert.equal(choices[2]?.name, "ずんだもん（ノーマル） [ID: 3]");
+    assert.equal(choices[2]?.value, 3);
+  });
+
+  it("filters choices by query string (case-insensitive partial match)", () => {
+    const choices = buildSpeakerAutocompleteChoices(speakers, "ずんだ");
+
+    assert.equal(choices.length, 1);
+    assert.equal(choices[0]?.value, 3);
+  });
+
+  it("returns at most 25 choices", () => {
+    const manySpeakers: VoicevoxSpeaker[] = Array.from({ length: 30 }, (_, i) => ({
+      name: `Speaker${i}`,
+      speaker_uuid: `uuid-${i}`,
+      styles: [{ id: i, name: "ノーマル", type: "talk" }]
+    }));
+
+    const choices = buildSpeakerAutocompleteChoices(manySpeakers, "");
+
+    assert.equal(choices.length, 25);
   });
 });
 
