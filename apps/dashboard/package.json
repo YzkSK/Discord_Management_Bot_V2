@@ -8,7 +8,7 @@
     "dev": "next dev",
     "lint": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/server.js",
-    "test": "tsc -p tsconfig.test.json && node --test dist-test/app/dashboard-ui.test.js dist-test/auth-token.test.js dist-test/app/settings/access-grants.test.js dist-test/app/settings/settings-sections.test.js dist-test/app/logs/logs-ui.test.js dist-test/app/dashboard-style-policy.test.js dist-test/lib/locale.test.js dist-test/lib/locale-recruitment.test.js dist-test/lib/locale-tts.test.js dist-test/lib/locale-logs.test.js dist-test/lib/locale-health.test.js dist-test/lib/utils.test.js dist-test/app/api/guilds/guild-filter.test.js dist-test/app/api/dashboard-access/validation.test.js dist-test/app/api/settings/validation.test.js dist-test/app/api/voice/summary.test.js dist-test/app/api/recruitments/summary.test.js dist-test/app/api/tts/summary.test.js dist-test/app/api/health/summary.test.js dist-test/app/api/tts-settings/validation.test.js",
+    "test": "tsc -p tsconfig.test.json && node --test dist-test/app/dashboard-ui.test.js dist-test/auth-token.test.js dist-test/app/settings/access-grants.test.js dist-test/app/settings/settings-sections.test.js dist-test/app/logs/logs-ui.test.js dist-test/app/dashboard-style-policy.test.js dist-test/lib/locale.test.js dist-test/lib/locale-recruitment.test.js dist-test/lib/locale-tts.test.js dist-test/lib/locale-logs.test.js dist-test/lib/locale-health.test.js dist-test/lib/utils.test.js dist-test/app/api/guilds/guild-filter.test.js dist-test/app/api/dashboard-access/validation.test.js dist-test/app/api/settings/validation.test.js dist-test/app/api/voice/summary.test.js dist-test/app/api/recruitments/summary.test.js dist-test/app/api/tts/summary.test.js dist-test/app/api/health/summary.test.js dist-test/app/api/tts-settings/validation.test.js dist-test/lib/event-display.test.js dist-test/lib/discord-user.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -16,6 +16,7 @@
     "@discord-bot/db": "workspace:*",
     "@discord-bot/redis": "workspace:*",
     "@discord-bot/shared": "workspace:*",
+    "@radix-ui/react-popover": "^1.1.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
@@ -23,6 +24,7 @@
     "next-auth": "^4.24.14",
     "react": "*",
     "react-dom": "*",
+    "recharts": "^3.8.1",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "tailwind-merge": "^3.6.0"

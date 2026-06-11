@@ -6,19 +6,29 @@ import type { DbClient } from "@discord-bot/db";
 import {
   closeRecruitment,
   countActiveRecruitmentParticipants,
+  getGuildConfigByGuildId,
   getRecruitmentById,
   joinRecruitment,
   leaveRecruitment,
   updateRecruitmentStatus
 } from "@discord-bot/db";
+import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/shared";
 
-import { createComponentsV2TextMessage } from "./components-v2.js";
+import { createComponentsV2TextMessage, EVENT_COLORS } from "./components-v2.js";
 import {
   createRecruitmentPostMessage,
   parseRecruitmentCustomId
 } from "./recruitment-channel.js";
 import type { DiscordLogWriter } from "./log-writer.js";
 import { writeRecruitmentLifecycleLog } from "./recruitment-logs.js";
+
+async function resolveLocale(db: DbClient, guildId: string | null) {
+  if (!guildId) return getLocale("ja");
+  const config = await getGuildConfigByGuildId(db, guildId).catch(() => null);
+  const lang: GuildLanguage =
+    config?.language && isGuildLanguage(config.language) ? config.language : "ja";
+  return getLocale(lang);
+}
 
 export interface RecruitmentInteractionContext {
   db: DbClient;
@@ -35,13 +45,15 @@ export async function handleRecruitmentButtonInteraction(
     return false;
   }
 
+  const loc = await resolveLocale(context.db, interaction.guildId);
   const recruitment = await getRecruitmentById(context.db, parsed.recruitmentId);
 
   if (!recruitment) {
     await interaction.reply({
       ...createComponentsV2TextMessage({
-        title: "Recruitment not found",
-        lines: ["This recruitment post no longer exists."],
+        title: loc.recruitmentNotFound,
+        lines: [loc.recruitmentNotFoundMessage],
+        accentColor: EVENT_COLORS.red,
         privateResponse: true
       })
     });
@@ -49,23 +61,24 @@ export async function handleRecruitmentButtonInteraction(
   }
 
   if (parsed.action === "join") {
-    await handleJoin(interaction, context, recruitment);
+    await handleJoin(interaction, context, recruitment, loc);
     return true;
   }
 
   if (parsed.action === "leave") {
-    await handleLeave(interaction, context, recruitment);
+    await handleLeave(interaction, context, recruitment, loc);
     return true;
   }
 
-  await handleClose(interaction, context, recruitment);
+  await handleClose(interaction, context, recruitment, loc);
   return true;
 }
 
 async function handleJoin(
   interaction: ButtonInteraction,
   context: RecruitmentInteractionContext,
-  recruitment: NonNullable<Awaited<ReturnType<typeof getRecruitmentById>>>
+  recruitment: NonNullable<Awaited<ReturnType<typeof getRecruitmentById>>>,
+  loc: ReturnType<typeof getLocale>
 ) {
   const activeCount = await countActiveRecruitmentParticipants(
     context.db,
@@ -75,8 +88,9 @@ async function handleJoin(
   if (recruitment.status === "closed" || activeCount >= recruitment.capacity) {
     await interaction.reply({
       ...createComponentsV2TextMessage({
-        title: "Recruitment is not open",
-        lines: ["This recruitment is already full or closed."],
+        title: loc.recruitmentNotOpen,
+        lines: [loc.recruitmentNotOpenMessage],
+        accentColor: EVENT_COLORS.yellow,
         privateResponse: true
       })
     });
@@ -106,7 +120,7 @@ async function handleJoin(
   });
 
   await interaction.message.edit(
-    createRecruitmentPostMessage(updatedRecruitment ?? recruitment, nextCount)
+    createRecruitmentPostMessage(updatedRecruitment ?? recruitment, loc, nextCount)
   );
   const loggedRecruitment = updatedRecruitment ?? recruitment;
   if (context.logWriter && nextStatus !== "open") {
@@ -124,8 +138,8 @@ async function handleJoin(
 
   await interaction.reply({
     ...createComponentsV2TextMessage({
-      title: "Joined recruitment",
-      lines: [`Participants: ${nextCount}/${recruitment.capacity}`],
+      title: loc.recruitmentJoined({ current: nextCount, max: recruitment.capacity }),
+      accentColor: EVENT_COLORS.green,
       privateResponse: true
     })
   });
@@ -134,7 +148,8 @@ async function handleJoin(
 async function handleLeave(
   interaction: ButtonInteraction,
   context: RecruitmentInteractionContext,
-  recruitment: NonNullable<Awaited<ReturnType<typeof getRecruitmentById>>>
+  recruitment: NonNullable<Awaited<ReturnType<typeof getRecruitmentById>>>,
+  loc: ReturnType<typeof getLocale>
 ) {
   await leaveRecruitment(context.db, {
     recruitmentId: recruitment.id,
@@ -161,12 +176,12 @@ async function handleLeave(
     : recruitment;
 
   await interaction.message.edit(
-    createRecruitmentPostMessage(updatedRecruitment, nextCount)
+    createRecruitmentPostMessage(updatedRecruitment, loc, nextCount)
   );
   await interaction.reply({
     ...createComponentsV2TextMessage({
-      title: "Left recruitment",
-      lines: [`Participants: ${nextCount}/${recruitment.capacity}`],
+      title: loc.recruitmentLeft({ current: nextCount, max: recruitment.capacity }),
+      accentColor: EVENT_COLORS.gray,
       privateResponse: true
     })
   });
@@ -175,7 +190,8 @@ async function handleLeave(
 async function handleClose(
   interaction: ButtonInteraction,
   context: RecruitmentInteractionContext,
-  recruitment: NonNullable<Awaited<ReturnType<typeof getRecruitmentById>>>
+  recruitment: NonNullable<Awaited<ReturnType<typeof getRecruitmentById>>>,
+  loc: ReturnType<typeof getLocale>
 ) {
   const canClose =
     interaction.user.id === recruitment.creatorId ||
@@ -184,8 +200,9 @@ async function handleClose(
   if (!canClose) {
     await interaction.reply({
       ...createComponentsV2TextMessage({
-        title: "Cannot close recruitment",
-        lines: ["Only the creator or a server manager can close this."],
+        title: loc.recruitmentCannotClose,
+        lines: [loc.recruitmentCannotCloseMessage],
+        accentColor: EVENT_COLORS.red,
         privateResponse: true
       })
     });
@@ -203,7 +220,7 @@ async function handleClose(
   );
 
   await interaction.message.edit(
-    createRecruitmentPostMessage(updatedRecruitment, activeCount)
+    createRecruitmentPostMessage(updatedRecruitment, loc, activeCount)
   );
   if (context.logWriter) {
     writeRecruitmentLifecycleLog(context.logWriter, "recruitment.closed", {
@@ -216,7 +233,8 @@ async function handleClose(
 
   await interaction.reply({
     ...createComponentsV2TextMessage({
-      title: "Recruitment closed",
+      title: loc.recruitmentClosedSuccess,
+      accentColor: EVENT_COLORS.teal,
       privateResponse: true
     })
   });

@@ -19,6 +19,7 @@ import {
   handleForceJoinCommand,
   handleJoinCommand,
   handleLeaveCommand,
+  handleSpeakerAutocomplete,
   handleSpeakerCommand,
   joinCommand,
   leaveCommand,
@@ -80,3 +81,5 @@ export async function handleChatInputCommand(
       });
   }
 }
+
+export { handleSpeakerAutocomplete };

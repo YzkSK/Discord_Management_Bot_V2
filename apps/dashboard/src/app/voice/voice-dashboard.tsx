@@ -1,28 +1,19 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import {
-  Activity,
-  Clock,
-  ExternalLink,
-  Headphones,
-  Radio,
-  UserRound
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
-
-import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Crown, Mic2, Timer, Users } from "lucide-react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "../../components/ui/table";
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
+import { formatRelativeTime } from "../../lib/event-display";
 
 interface VoiceTempVoice {
   channelId?: string;
@@ -59,14 +50,38 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
   const loc = getDashboardLocale(uiLang);
 
   useEffect(() => {
-    fetchVoiceSummary(guildId)
+    const query = new URLSearchParams({ guildId });
+    fetch(`/api/voice?${query.toString()}`, { cache: "no-store" })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`Failed to load voice state (${r.status})`);
+        return (await r.json()) as VoiceResponse;
+      })
       .then(setData)
-      .catch((e: unknown) => setError(toErrorMessage(e)))
+      .catch((e: unknown) =>
+        setError(e instanceof Error ? e.message : "Voice request failed")
+      )
       .finally(() => setLoading(false));
   }, [guildId]);
 
+  // ピーク時間チャートデータ（recentSessions の startedAt を時間帯別に集計）
+  const peakData = useMemo(() => {
+    const bins = Array.from({ length: 24 }, (_, h) => ({
+      hour: `${h}時`,
+      count: 0,
+    }));
+    (data?.recentSessions ?? []).forEach((s) => {
+      const h = new Date(s.startedAt).getHours();
+      if (bins[h]) bins[h].count++;
+    });
+    return bins;
+  }, [data]);
+
   if (loading) {
-    return <p className="text-sm text-zinc-500">{loc.loading}...</p>;
+    return (
+      <div className="flex items-center justify-center py-16 text-sm text-zinc-600">
+        読み込み中...
+      </div>
+    );
   }
 
   if (!data) {
@@ -78,255 +93,155 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
   }
 
   return (
-    <section className="grid max-w-6xl gap-4">
-      <div className="grid gap-3 md:grid-cols-3">
-        <VoiceMetric
-          icon={<Radio className="h-4 w-4 text-green-400" />}
-          label={loc.voiceActiveCalls}
-          value={data.activeSessions.length.toString()}
-        />
-        <VoiceMetric
-          icon={<Headphones className="h-4 w-4 text-green-400" />}
-          label={loc.voiceTempVcChannels}
-          value={data.tempVoiceChannels.length.toString()}
-        />
-        <VoiceMetric
-          icon={<Activity className="h-4 w-4 text-green-400" />}
-          label={loc.voiceRecentCalls}
-          value={data.recentSessions.length.toString()}
-        />
+    <div className="flex max-w-6xl flex-col gap-6">
+      {/* サマリー */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          {
+            label: loc.voiceActiveCalls,
+            value: data.activeSessions.length,
+            icon: <Mic2 className="h-4 w-4" />,
+          },
+          {
+            label: loc.voiceTempVcChannels,
+            value: data.tempVoiceChannels.length,
+            icon: <Users className="h-4 w-4" />,
+          },
+          {
+            label: loc.voiceRecentCalls,
+            value: data.recentSessions.length,
+            icon: <Timer className="h-4 w-4" />,
+          },
+        ].map((kpi) => (
+          <div
+            key={kpi.label}
+            className="rounded-lg border border-zinc-800 bg-zinc-900 p-4"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-zinc-500">{kpi.label}</p>
+              <span className="text-zinc-500">{kpi.icon}</span>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-zinc-100">
+              {kpi.value}
+            </p>
+          </div>
+        ))}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[1.1fr_.9fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Radio className="h-4 w-4 text-green-400" />
-              {loc.voiceActiveCalls}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <SessionTable
-              emptyText={loc.voiceNoActiveCalls}
-              loc={loc}
-              sessions={data.activeSessions}
-            />
-          </CardContent>
-        </Card>
+      {/* アクティブセッション */}
+      <section>
+        <h2 className="mb-3 text-sm font-semibold text-zinc-400">
+          {loc.voiceActiveCalls}
+        </h2>
+        {data.activeSessions.length === 0 ? (
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900 py-10 text-center text-sm text-zinc-600">
+            {loc.voiceNoActiveCalls}
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {data.activeSessions.map((s) => (
+              <div
+                key={s.id}
+                className="rounded-lg border border-zinc-800 bg-zinc-900 p-4"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-[50%] bg-purple-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-[50%] bg-purple-500" />
+                  </span>
+                  <span className="truncate text-sm font-medium text-zinc-200">
+                    #{s.channelId}
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center gap-4 text-xs text-zinc-500">
+                  <span className="flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    {s.memberCount}人
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Timer className="h-3 w-3" />
+                    {formatDuration(s.durationSeconds)}
+                  </span>
+                </div>
+                {s.tempVoice && (
+                  <p className="mt-1.5 text-xs text-purple-400">Temp VC</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Headphones className="h-4 w-4 text-green-400" />
-              {loc.voiceTempVcChannels}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TempVoiceTable
-              emptyText={loc.voiceNoTempVcChannels}
-              loc={loc}
-              tempVoiceChannels={data.tempVoiceChannels}
-            />
-          </CardContent>
-        </Card>
-      </div>
+      {/* 一時 VC */}
+      {data.tempVoiceChannels.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-sm font-semibold text-zinc-400">
+            {loc.voiceTempVcChannels}
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {data.tempVoiceChannels.map((vc) => (
+              <div
+                key={vc.channelId}
+                className="rounded-lg border border-zinc-800 bg-zinc-900 p-4"
+              >
+                <p className="truncate text-sm font-medium text-zinc-200">
+                  #{vc.channelId}
+                </p>
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-zinc-500">
+                  <Crown className="h-3 w-3 text-yellow-500" />
+                  <span className="font-mono">{vc.ownerId}</span>
+                </div>
+                {vc.deleteScheduledAt && (
+                  <p className="mt-1 text-xs text-zinc-600">
+                    削除予定:{" "}
+                    {formatRelativeTime(new Date(vc.deleteScheduledAt))}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-zinc-400" />
-            {loc.voiceRecentCalls}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <SessionTable
-            emptyText={loc.voiceNoRecentCalls}
-            loc={loc}
-            sessions={data.recentSessions}
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{loc.voiceSetupShortcuts}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-2 sm:grid-cols-2">
-          <VoiceShortcut
-            body="/setup voice-status channel:<text channel>"
-            href="/settings"
-            label={loc.voiceStatusSetup}
-          />
-          <VoiceShortcut
-            body="/setup temp-vc create-channel:<voice channel>"
-            href="/settings"
-            label={loc.tempVcSettings}
-          />
-        </CardContent>
-      </Card>
-    </section>
-  );
-}
-
-function VoiceMetric({
-  icon,
-  label,
-  value
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-md border border-zinc-800 bg-zinc-900 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-medium text-zinc-500">{label}</p>
-        {icon}
-      </div>
-      <p className="mt-2 text-2xl font-semibold text-zinc-100">{value}</p>
+      {/* ピーク時間チャート */}
+      <section>
+        <h2 className="mb-3 text-sm font-semibold text-zinc-400">
+          ピーク時間帯
+        </h2>
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+          <ResponsiveContainer width="100%" height={120}>
+            <BarChart data={peakData}>
+              <XAxis
+                dataKey="hour"
+                tick={{ fontSize: 10, fill: "#71717A" }}
+                tickLine={false}
+                axisLine={false}
+                interval={2}
+              />
+              <YAxis
+                tick={{ fontSize: 10, fill: "#71717A" }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: "#18181B",
+                  border: "1px solid #3F3F46",
+                  fontSize: 12,
+                }}
+                labelStyle={{ color: "#A1A1AA" }}
+              />
+              <Bar dataKey="count" fill="#8B5CF6" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
     </div>
   );
-}
-
-function SessionTable({
-  emptyText,
-  loc,
-  sessions
-}: {
-  emptyText: string;
-  loc: ReturnType<typeof getDashboardLocale>;
-  sessions: VoiceSession[];
-}) {
-  return (
-    <div className="overflow-hidden rounded-md border border-zinc-800">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{loc.voiceChannelId}</TableHead>
-            <TableHead>{loc.voiceMembers}</TableHead>
-            <TableHead>{loc.voiceDuration}</TableHead>
-            <TableHead>{loc.voiceTempVc}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sessions.length === 0 ? (
-            <TableRow>
-              <TableCell className="py-8 text-center text-zinc-600" colSpan={4}>
-                {emptyText}
-              </TableCell>
-            </TableRow>
-          ) : sessions.map((session) => (
-            <TableRow key={session.id}>
-              <TableCell className="break-all font-mono text-xs">
-                {session.channelId}
-              </TableCell>
-              <TableCell>
-                <span className="inline-flex items-center gap-1 text-zinc-300">
-                  <UserRound className="h-3.5 w-3.5 text-zinc-500" />
-                  {session.memberCount}
-                </span>
-              </TableCell>
-              <TableCell>{formatDuration(session.durationSeconds)}</TableCell>
-              <TableCell>
-                <Badge variant={session.tempVoice ? "success" : "outline"}>
-                  {session.tempVoice ? loc.configured : loc.notConfigured}
-                </Badge>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
-
-function TempVoiceTable({
-  emptyText,
-  loc,
-  tempVoiceChannels
-}: {
-  emptyText: string;
-  loc: ReturnType<typeof getDashboardLocale>;
-  tempVoiceChannels: Array<VoiceTempVoice & { channelId: string }>;
-}) {
-  return (
-    <div className="overflow-hidden rounded-md border border-zinc-800">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{loc.voiceChannelId}</TableHead>
-            <TableHead>{loc.voiceOwnerId}</TableHead>
-            <TableHead>{loc.voiceControlChannelId}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {tempVoiceChannels.length === 0 ? (
-            <TableRow>
-              <TableCell className="py-8 text-center text-zinc-600" colSpan={3}>
-                {emptyText}
-              </TableCell>
-            </TableRow>
-          ) : tempVoiceChannels.map((tempVoice) => (
-            <TableRow key={tempVoice.channelId}>
-              <TableCell className="break-all font-mono text-xs">
-                {tempVoice.channelId}
-              </TableCell>
-              <TableCell className="break-all font-mono text-xs">
-                {tempVoice.ownerId}
-              </TableCell>
-              <TableCell className="break-all font-mono text-xs">
-                {tempVoice.controlChannelId ?? "-"}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
-
-function VoiceShortcut({
-  body,
-  href,
-  label
-}: {
-  body: string;
-  href: string;
-  label: string;
-}) {
-  return (
-    <a
-      className="flex items-start justify-between gap-3 rounded-md border border-zinc-800 bg-zinc-950 p-3 transition-colors hover:border-zinc-600 hover:bg-zinc-900"
-      href={href}
-    >
-      <div>
-        <p className="text-sm font-medium text-zinc-200">{label}</p>
-        <p className="mt-1 break-all font-mono text-xs text-zinc-500">{body}</p>
-      </div>
-      <Button aria-label={label} size="icon" type="button" variant="ghost">
-        <ExternalLink className="h-3.5 w-3.5" />
-      </Button>
-    </a>
-  );
-}
-
-async function fetchVoiceSummary(guildId: string): Promise<VoiceResponse> {
-  const query = new URLSearchParams({ guildId });
-  const response = await fetch(`/api/voice?${query.toString()}`, {
-    cache: "no-store"
-  });
-  if (!response.ok) {
-    throw new Error(`Failed to load voice state (${response.status})`);
-  }
-  return (await response.json()) as VoiceResponse;
 }
 
 function formatDuration(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
-}
-
-function toErrorMessage(e: unknown) {
-  return e instanceof Error ? e.message : "Voice request failed";
 }

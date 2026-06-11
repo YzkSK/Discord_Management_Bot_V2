@@ -4,6 +4,40 @@ export interface DashboardNavItem {
   description: string;
 }
 
+export interface DashboardNavGroup {
+  label: string;
+  items: DashboardNavItem[];
+}
+
+const dashboardNavGroups: DashboardNavGroup[] = [
+  {
+    label: "アクティビティ",
+    items: [
+      { href: "/", label: "概要", description: "KPIと最近のアクティビティ" },
+      { href: "/logs", label: "ログ", description: "イベント履歴とリアルタイム通知" },
+    ],
+  },
+  {
+    label: "機能",
+    items: [
+      { href: "/voice", label: "音声", description: "VCセッションと一時VC管理" },
+      { href: "/recruitment", label: "募集", description: "募集投稿とステータス管理" },
+      { href: "/tts", label: "TTS", description: "テキスト読み上げの設定" },
+    ],
+  },
+  {
+    label: "システム",
+    items: [
+      { href: "/settings", label: "設定", description: "サーバー設定とアクセス管理" },
+      { href: "/health", label: "ヘルス", description: "依存サービスの状態" },
+    ],
+  },
+];
+
+export function getDashboardNavGroups(): DashboardNavGroup[] {
+  return dashboardNavGroups;
+}
+
 export interface DashboardFilters {
   actorId?: string;
   eventName?: string;

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { MessageFlags } from "discord.js";
+import { getLocale } from "@discord-bot/shared";
 
 import {
   appendRecruitmentChannelMarker,
@@ -66,7 +67,7 @@ describe("createRecruitmentPostMessage", () => {
       closedAt: null,
       createdAt: new Date("2026-05-12T00:00:00.000Z"),
       updatedAt: new Date("2026-05-12T00:00:00.000Z")
-    });
+    }, getLocale("ja"));
 
     assert.equal(message.components?.length, 2);
     assert.equal(message.flags, MessageFlags.IsComponentsV2);

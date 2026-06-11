@@ -8,12 +8,15 @@ import {
   MessageFlags,
   type TextChannel
 } from "discord.js";
+import { EVENT_COLORS } from "./components-v2.js";
 import type { createRecruitment } from "@discord-bot/db";
+import type { getLocale } from "@discord-bot/shared";
 
 export const recruitmentChannelTopicMarker =
   "[discord-management-bot:recruitment]";
 
 type Recruitment = Awaited<ReturnType<typeof createRecruitment>>;
+type Loc = ReturnType<typeof getLocale>;
 
 export type RecruitmentAction = "close" | "join" | "leave";
 
@@ -83,8 +86,15 @@ export async function findMarkedRecruitmentChannel(guild: Guild) {
   );
 }
 
+function localizeStatus(status: string, loc: Loc): string {
+  if (status === "open") return loc.recruitmentStatusOpen;
+  if (status === "full") return loc.recruitmentStatusFull;
+  return loc.recruitmentStatusClosed;
+}
+
 export function createRecruitmentPostMessage(
   recruitment: Recruitment,
+  loc: Loc,
   activeParticipantCount = 0
 ): MessageCreateOptions & MessageEditOptions {
   return {
@@ -92,32 +102,33 @@ export function createRecruitmentPostMessage(
     components: [
       {
         type: ComponentType.Container,
+        accent_color: EVENT_COLORS.teal,
         components: [
           {
             type: ComponentType.TextDisplay,
-            content: `## Recruitment: ${recruitment.genre}`
+            content: `## ${loc.recruitmentPostTitle({ genre: recruitment.genre })}`
           },
           {
             type: ComponentType.TextDisplay,
-            content: `Status: ${recruitment.status}`
+            content: localizeStatus(recruitment.status, loc)
           },
           {
             type: ComponentType.TextDisplay,
-            content: `Capacity: ${activeParticipantCount}/${recruitment.capacity}`
+            content: loc.recruitmentPostCapacity({ current: activeParticipantCount, max: recruitment.capacity })
           },
           {
             type: ComponentType.TextDisplay,
-            content: `Creator: <@${recruitment.creatorId}>`
+            content: loc.recruitmentPostCreator({ id: recruitment.creatorId })
           },
           {
             type: ComponentType.TextDisplay,
             content: recruitment.voiceChannelId
-              ? `VC: <#${recruitment.voiceChannelId}>`
-              : "VC: none"
+              ? loc.recruitmentPostVc({ id: recruitment.voiceChannelId })
+              : loc.recruitmentPostNoVc
           },
           {
             type: ComponentType.TextDisplay,
-            content: `Auto close: ${recruitment.autoClose ? "on" : "off"}`
+            content: loc.recruitmentPostAutoClose({ enabled: recruitment.autoClose })
           },
           {
             type: ComponentType.TextDisplay,
@@ -131,20 +142,20 @@ export function createRecruitmentPostMessage(
           {
             type: ComponentType.Button,
             customId: createRecruitmentCustomId("join", recruitment.id),
-            label: "Join",
+            label: loc.recruitmentButtonJoin,
             style: ButtonStyle.Primary,
             disabled: recruitment.status === "closed"
           },
           {
             type: ComponentType.Button,
             customId: createRecruitmentCustomId("leave", recruitment.id),
-            label: "Leave",
+            label: loc.recruitmentButtonLeave,
             style: ButtonStyle.Secondary
           },
           {
             type: ComponentType.Button,
             customId: createRecruitmentCustomId("close", recruitment.id),
-            label: "Close",
+            label: loc.recruitmentButtonClose,
             style: ButtonStyle.Danger,
             disabled: recruitment.status === "closed"
           }

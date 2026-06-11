@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { createVoicevoxClient, normalizeTtsText } from "./voicevox.js";
+import { createVoicevoxClient, getVoicevoxSpeakers, normalizeTtsText } from "./voicevox.js";
 
 describe("normalizeTtsText", () => {
   it("skips bot-authored messages", () => {
@@ -153,5 +153,45 @@ describe("createVoicevoxClient", () => {
     assert.equal(audioQueryAttempts, 2);
     assert.deepEqual(delays, [25]);
     assert.deepEqual([...audio], [1, 2, 3]);
+  });
+});
+
+describe("getVoicevoxSpeakers", () => {
+  it("fetches and returns the speaker list", async () => {
+    const speakers = [
+      {
+        name: "四国めたん",
+        speaker_uuid: "uuid-1",
+        styles: [
+          { id: 2, name: "ノーマル", type: "talk" },
+          { id: 0, name: "あまあま", type: "talk" }
+        ]
+      }
+    ];
+    const fetchImpl: typeof fetch = async () =>
+      new Response(JSON.stringify(speakers), { status: 200 });
+
+    const result = await getVoicevoxSpeakers("http://voicevox:50021", fetchImpl);
+
+    assert.deepEqual(result, speakers);
+  });
+
+  it("returns an empty array when VOICEVOX is unreachable", async () => {
+    const fetchImpl: typeof fetch = async () => {
+      throw new Error("ECONNREFUSED");
+    };
+
+    const result = await getVoicevoxSpeakers("http://voicevox:50021", fetchImpl);
+
+    assert.deepEqual(result, []);
+  });
+
+  it("returns an empty array on non-200 response", async () => {
+    const fetchImpl: typeof fetch = async () =>
+      new Response("Service Unavailable", { status: 503 });
+
+    const result = await getVoicevoxSpeakers("http://voicevox:50021", fetchImpl);
+
+    assert.deepEqual(result, []);
   });
 });

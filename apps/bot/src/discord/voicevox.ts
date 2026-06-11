@@ -147,3 +147,29 @@ async function requestSynthesis(
 
   return Buffer.from(await response.arrayBuffer());
 }
+
+export interface VoicevoxSpeakerStyle {
+  id: number;
+  name: string;
+  type: string;
+}
+
+export interface VoicevoxSpeaker {
+  name: string;
+  speaker_uuid: string;
+  styles: VoicevoxSpeakerStyle[];
+}
+
+export async function getVoicevoxSpeakers(
+  baseUrl: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<VoicevoxSpeaker[]> {
+  try {
+    const url = `${baseUrl.replace(/\/$/, "")}/speakers`;
+    const response = await fetchImpl(url);
+    if (!response.ok) return [];
+    return (await response.json()) as VoicevoxSpeaker[];
+  } catch {
+    return [];
+  }
+}

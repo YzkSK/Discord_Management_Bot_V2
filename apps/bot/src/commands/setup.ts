@@ -14,7 +14,7 @@ import {
 } from "@discord-bot/db";
 import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/shared";
 
-import { createComponentsV2TextMessage } from "../discord/components-v2.js";
+import { createComponentsV2TextMessage, EVENT_COLORS } from "../discord/components-v2.js";
 import { logChannelTopicMarker, markLogChannel } from "../discord/log-channel.js";
 import {
   markRecruitmentChannel,
@@ -146,6 +146,7 @@ export async function handleSetupCommand(
       ...createComponentsV2TextMessage({
         title: loc.setupFailed,
         lines: [loc.notInGuild],
+        accentColor: EVENT_COLORS.red,
         privateResponse: true
       })
     });
@@ -159,6 +160,7 @@ export async function handleSetupCommand(
       ...createComponentsV2TextMessage({
         title: loc.setupFailed,
         lines: [loc.noManagePermission],
+        accentColor: EVENT_COLORS.red,
         privateResponse: true
       })
     });
@@ -188,6 +190,7 @@ export async function handleSetupCommand(
         ...createComponentsV2TextMessage({
           title: loc.setupFailed,
           lines: [loc.unknownSetupTarget({ target: subcommand })],
+          accentColor: EVENT_COLORS.red,
           privateResponse: true
         })
       });
@@ -208,6 +211,7 @@ async function handleTempVoiceSetup(
       ...createComponentsV2TextMessage({
         title: loc.tempVcSetupFailed,
         lines: [loc.tempVcCreationChannelMustBeVoice],
+        accentColor: EVENT_COLORS.red,
         privateResponse: true
       })
     });
@@ -219,6 +223,7 @@ async function handleTempVoiceSetup(
       ...createComponentsV2TextMessage({
         title: loc.tempVcSetupFailed,
         lines: [loc.tempVcCategoryMustBeCategory],
+        accentColor: EVENT_COLORS.red,
         privateResponse: true
       })
     });
@@ -245,6 +250,7 @@ async function handleTempVoiceSetup(
           ? loc.tempVcCategory({ id: category.id })
           : loc.tempVcCategorySame
       ],
+      accentColor: EVENT_COLORS.green,
       privateResponse: true
     })
   });
@@ -263,6 +269,7 @@ async function handleLogsSetup(
       ...createComponentsV2TextMessage({
         title: loc.logsSetupFailed,
         lines: [loc.logsChannelMustBeText],
+        accentColor: EVENT_COLORS.red,
         privateResponse: true
       })
     });
@@ -281,8 +288,8 @@ async function handleLogsSetup(
       title: loc.logsSetupComplete,
       lines: [
         loc.logsChannel({ id: channel.id }),
-        loc.logsMarker({ marker: logChannelTopicMarker })
       ],
+      accentColor: EVENT_COLORS.green,
       privateResponse: true
     })
   });
@@ -301,6 +308,7 @@ async function handleRecruitmentSetup(
       ...createComponentsV2TextMessage({
         title: loc.recruitmentSetupFailed,
         lines: [loc.recruitmentChannelMustBeText],
+        accentColor: EVENT_COLORS.red,
         privateResponse: true
       })
     });
@@ -319,8 +327,8 @@ async function handleRecruitmentSetup(
       title: loc.recruitmentSetupComplete,
       lines: [
         loc.recruitmentChannel({ id: channel.id }),
-        loc.recruitmentMarker({ marker: recruitmentChannelTopicMarker })
       ],
+      accentColor: EVENT_COLORS.green,
       privateResponse: true
     })
   });
@@ -339,6 +347,7 @@ async function handleTtsSetup(
       ...createComponentsV2TextMessage({
         title: loc.ttsSetupFailed,
         lines: [loc.ttsChannelMustBeText],
+        accentColor: EVENT_COLORS.red,
         privateResponse: true
       })
     });
@@ -362,6 +371,7 @@ async function handleTtsSetup(
         loc.ttsTtsChannel({ id: channel.id }),
         loc.ttsChannelDescription
       ],
+      accentColor: EVENT_COLORS.green,
       privateResponse: true
     })
   });
@@ -380,6 +390,7 @@ async function handleVoiceStatusSetup(
       ...createComponentsV2TextMessage({
         title: loc.voiceStatusSetupFailed,
         lines: [loc.voiceStatusChannelMustBeText],
+        accentColor: EVENT_COLORS.red,
         privateResponse: true
       })
     });
@@ -398,8 +409,8 @@ async function handleVoiceStatusSetup(
       title: loc.voiceStatusSetupComplete,
       lines: [
         loc.voiceStatusChannel({ id: channel.id }),
-        loc.voiceStatusMarker({ marker: voiceStatusChannelTopicMarker })
       ],
+      accentColor: EVENT_COLORS.green,
       privateResponse: true
     })
   });

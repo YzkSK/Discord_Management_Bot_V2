@@ -13,6 +13,7 @@ import {
   MessageFlags,
   PermissionFlagsBits,
   SlashCommandBuilder,
+  type AutocompleteInteraction,
   type ButtonInteraction,
   type ChatInputCommandInteraction,
   type GuildMember,
@@ -20,7 +21,7 @@ import {
   type InteractionUpdateOptions
 } from "discord.js";
 
-import { createComponentsV2TextMessage } from "../discord/components-v2.js";
+import { createComponentsV2TextMessage, EVENT_COLORS } from "../discord/components-v2.js";
 import {
   hasDashboardAdminCommandAccess,
   resolveDashboardCommandAccessRole
@@ -31,6 +32,7 @@ import {
   createTtsSessionStoppedEvent
 } from "../discord/tts-logs.js";
 import type { TtsSessionManager } from "../discord/tts-session.js";
+import type { VoicevoxSpeaker } from "../discord/voicevox.js";
 
 type Loc = ReturnType<typeof getLocale>;
 
@@ -64,7 +66,7 @@ export const speakerCommand = new SlashCommandBuilder()
           .setName("speaker_id")
           .setDescription("VOICEVOX speaker id.")
           .setDescriptionLocalization("ja", "VOICEVOXの話者ID。")
-          .setMinValue(0)
+          .setAutocomplete(true)
           .setRequired(true)
       )
   )
@@ -78,17 +80,57 @@ export const speakerCommand = new SlashCommandBuilder()
           .setName("speaker_id")
           .setDescription("VOICEVOX speaker id.")
           .setDescriptionLocalization("ja", "VOICEVOXの話者ID。")
-          .setMinValue(0)
+          .setAutocomplete(true)
           .setRequired(true)
       )
   );
 
 export interface TtsCommandContext {
   db: DbClient;
+  getSpeakers?: () => Promise<VoicevoxSpeaker[]>;
   logWriter?: DiscordLogWriter;
   setGuildDefaultSpeaker?: typeof setGuildDefaultTtsSpeaker;
   setUserSpeaker?: typeof setUserTtsSpeaker;
   ttsSessionManager: TtsSessionManager;
+}
+
+export function buildSpeakerAutocompleteChoices(
+  speakers: VoicevoxSpeaker[],
+  query: string
+) {
+  const lowerQuery = query.toLowerCase();
+  const choices: { name: string; value: number }[] = [];
+
+  for (const speaker of speakers) {
+    for (const style of speaker.styles) {
+      const label = `${speaker.name}（${style.name}） [ID: ${style.id}]`;
+      if (!lowerQuery || label.toLowerCase().includes(lowerQuery)) {
+        choices.push({ name: label, value: style.id });
+      }
+      if (choices.length >= 25) return choices;
+    }
+  }
+
+  return choices;
+}
+
+export async function handleSpeakerAutocomplete(
+  interaction: AutocompleteInteraction,
+  context: TtsCommandContext
+) {
+  if (interaction.commandName !== speakerCommand.name) {
+    return false;
+  }
+
+  const focused = interaction.options.getFocused(true);
+  if (focused.name !== "speaker_id") {
+    return false;
+  }
+
+  const speakers = context.getSpeakers ? await context.getSpeakers() : [];
+  const choices = buildSpeakerAutocompleteChoices(speakers, String(focused.value));
+  await interaction.respond(choices);
+  return true;
 }
 
 export interface ForceJoinCustomIdInput {
@@ -166,7 +208,7 @@ export async function handleJoinCommand(
   const target = await getTtsJoinTarget(interaction);
 
   if (!target) {
-    await replyPrivate(interaction, loc.ttsJoinFailed, [loc.ttsJoinVoiceFirst]);
+    await replyPrivate(interaction, loc.ttsJoinFailed, [loc.ttsJoinVoiceFirst], EVENT_COLORS.red);
     return;
   }
 
@@ -176,14 +218,14 @@ export async function handleJoinCommand(
     await replyPrivate(interaction, loc.ttsAlreadyConnected, [
       loc.ttsAlreadyConnectedMessage,
       loc.ttsForceJoinSuggestion
-    ]);
+    ], EVENT_COLORS.yellow);
     return;
   }
 
   await replyPrivate(interaction, loc.ttsConnected, [
     loc.ttsVoiceChannel({ id: target.voiceChannelId }),
     loc.ttsReadingChannel({ id: target.textChannelId })
-  ]);
+  ], EVENT_COLORS.green);
 
   if (result.status === "joined") {
     await writeTtsLog(
@@ -210,12 +252,12 @@ export async function handleForceJoinCommand(
   const target = await getTtsJoinTarget(interaction);
 
   if (!target) {
-    await replyPrivate(interaction, loc.ttsForceJoinFailed, [loc.ttsJoinVoiceFirst]);
+    await replyPrivate(interaction, loc.ttsForceJoinFailed, [loc.ttsJoinVoiceFirst], EVENT_COLORS.red);
     return;
   }
 
   if (!(await canUseForceJoin(interaction, context))) {
-    await replyPrivate(interaction, loc.ttsForceJoinFailed, [loc.ttsForceJoinAdminRequired]);
+    await replyPrivate(interaction, loc.ttsForceJoinFailed, [loc.ttsForceJoinAdminRequired], EVENT_COLORS.red);
     return;
   }
 
@@ -235,7 +277,7 @@ export async function handleForceJoinCommand(
     result.status === "moved" ? loc.ttsMoved : loc.ttsReady,
     loc.ttsVoiceChannel({ id: target.voiceChannelId }),
     loc.ttsReadingChannel({ id: target.textChannelId })
-  ]);
+  ], EVENT_COLORS.green);
 
   if (result.status !== "already-connected") {
     await writeTtsLog(
@@ -259,7 +301,7 @@ export async function handleLeaveCommand(
 
   if (!guildId) {
     const loc = getLocale("en");
-    await replyPrivate(interaction, loc.ttsLeaveFailed, [loc.ttsLeaveNotInGuild]);
+    await replyPrivate(interaction, loc.ttsLeaveFailed, [loc.ttsLeaveNotInGuild], EVENT_COLORS.red);
     return;
   }
 
@@ -267,7 +309,7 @@ export async function handleLeaveCommand(
   const voiceChannelId = context.ttsSessionManager.getVoiceChannelId(guildId);
   const wasConnected = context.ttsSessionManager.isConnected(guildId);
   context.ttsSessionManager.leave(guildId);
-  await replyPrivate(interaction, loc.ttsDisconnected, [loc.ttsChannelsCleared]);
+  await replyPrivate(interaction, loc.ttsDisconnected, [loc.ttsChannelsCleared], EVENT_COLORS.green);
 
   if (wasConnected) {
     await writeTtsLog(
@@ -294,7 +336,7 @@ export async function handleSpeakerCommand(
   if (!guildId) {
     await replyPrivate(interaction, loc.ttsSpeakerFailed, [
       loc.ttsLeaveNotInGuild
-    ]);
+    ], EVENT_COLORS.red);
     return;
   }
 
@@ -312,7 +354,7 @@ export async function handleSpeakerCommand(
     });
     await replyPrivate(interaction, loc.ttsSpeakerUpdated, [
       loc.ttsSpeakerUser({ id: speakerId })
-    ]);
+    ], EVENT_COLORS.green);
     return;
   }
 
@@ -320,7 +362,7 @@ export async function handleSpeakerCommand(
     if (!(await canUseDashboardAdminCommand(interaction, context))) {
       await replyPrivate(interaction, loc.ttsSpeakerFailed, [
         loc.ttsForceJoinAdminRequired
-      ]);
+      ], EVENT_COLORS.red);
       return;
     }
 
@@ -332,13 +374,13 @@ export async function handleSpeakerCommand(
     });
     await replyPrivate(interaction, loc.ttsSpeakerUpdated, [
       loc.ttsSpeakerServerDefault({ id: speakerId })
-    ]);
+    ], EVENT_COLORS.green);
     return;
   }
 
   await replyPrivate(interaction, loc.ttsSpeakerFailed, [
     loc.unknownSetupTarget({ target: subcommand })
-  ]);
+  ], EVENT_COLORS.red);
 }
 
 export async function handleForceJoinButtonInteraction(
@@ -353,7 +395,7 @@ export async function handleForceJoinButtonInteraction(
 
   if (cancel) {
     await interaction.update(
-      createUpdateMessage(loc.ttsMoveCancelledTitle, [loc.ttsMoveCancelledMessage])
+      createUpdateMessage(loc.ttsMoveCancelledTitle, [loc.ttsMoveCancelledMessage], EVENT_COLORS.gray)
     );
     return true;
   }
@@ -369,6 +411,7 @@ export async function handleForceJoinButtonInteraction(
       ...createComponentsV2TextMessage({
         title: loc.ttsForceJoinFailed,
         lines: [loc.ttsForceJoinWrongUser],
+        accentColor: EVENT_COLORS.red,
         privateResponse: true
       })
     });
@@ -380,6 +423,7 @@ export async function handleForceJoinButtonInteraction(
       ...createComponentsV2TextMessage({
         title: loc.ttsForceJoinFailed,
         lines: [loc.ttsForceJoinNotInGuild],
+        accentColor: EVENT_COLORS.red,
         privateResponse: true
       })
     });
@@ -396,7 +440,7 @@ export async function handleForceJoinButtonInteraction(
     createUpdateMessage(loc.ttsMovedTitle, [
       loc.ttsVoiceChannel({ id: target.voiceChannelId }),
       loc.ttsReadingChannel({ id: target.textChannelId })
-    ])
+    ], EVENT_COLORS.green)
   );
 
   if (result.status !== "already-connected") {
@@ -503,6 +547,7 @@ function createForceJoinConfirmation(
       loc.ttsForceJoinAlreadyConnected,
       loc.ttsForceJoinMoveTo({ id: input.voiceChannelId })
     ],
+    accentColor: EVENT_COLORS.yellow,
     privateResponse: true
   });
 
@@ -514,11 +559,13 @@ function createForceJoinConfirmation(
 
 function createUpdateMessage(
   title: string,
-  lines: string[]
+  lines: string[],
+  accentColor?: number
 ): InteractionUpdateOptions {
   const message = createComponentsV2TextMessage({
     title,
-    lines
+    lines,
+    ...(accentColor !== undefined && { accentColor })
   });
 
   return {
@@ -530,12 +577,14 @@ function createUpdateMessage(
 async function replyPrivate(
   interaction: ChatInputCommandInteraction,
   title: string,
-  lines: string[]
+  lines: string[],
+  accentColor?: number
 ) {
   await interaction.reply({
     ...createComponentsV2TextMessage({
       title,
       lines,
+      ...(accentColor !== undefined && { accentColor }),
       privateResponse: true
     })
   });
