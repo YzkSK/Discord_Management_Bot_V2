@@ -223,8 +223,7 @@ export async function handleJoinCommand(
   }
 
   await replyPrivate(interaction, loc.ttsConnected, [
-    loc.ttsVoiceChannel({ id: target.voiceChannelId }),
-    loc.ttsReadingChannel({ id: target.textChannelId })
+    `${loc.ttsVoiceChannel({ id: target.voiceChannelId })}  ·  ${loc.ttsReadingChannel({ id: target.textChannelId })}`
   ], EVENT_COLORS.green);
 
   if (result.status === "joined") {
@@ -274,9 +273,7 @@ export async function handleForceJoinCommand(
 
   const result = await context.ttsSessionManager.forceJoin(target);
   await replyPrivate(interaction, loc.ttsConnected, [
-    result.status === "moved" ? loc.ttsMoved : loc.ttsReady,
-    loc.ttsVoiceChannel({ id: target.voiceChannelId }),
-    loc.ttsReadingChannel({ id: target.textChannelId })
+    `${loc.ttsVoiceChannel({ id: target.voiceChannelId })}  ·  ${loc.ttsReadingChannel({ id: target.textChannelId })}`
   ], EVENT_COLORS.green);
 
   if (result.status !== "already-connected") {
@@ -309,7 +306,7 @@ export async function handleLeaveCommand(
   const voiceChannelId = context.ttsSessionManager.getVoiceChannelId(guildId);
   const wasConnected = context.ttsSessionManager.isConnected(guildId);
   context.ttsSessionManager.leave(guildId);
-  await replyPrivate(interaction, loc.ttsDisconnected, [loc.ttsChannelsCleared], EVENT_COLORS.green);
+  await replyPrivate(interaction, loc.ttsDisconnected, [loc.ttsChannelsCleared], EVENT_COLORS.gray);
 
   if (wasConnected) {
     await writeTtsLog(
@@ -438,8 +435,7 @@ export async function handleForceJoinButtonInteraction(
   });
   await interaction.update(
     createUpdateMessage(loc.ttsMovedTitle, [
-      loc.ttsVoiceChannel({ id: target.voiceChannelId }),
-      loc.ttsReadingChannel({ id: target.textChannelId })
+      `${loc.ttsVoiceChannel({ id: target.voiceChannelId })}  ·  ${loc.ttsReadingChannel({ id: target.textChannelId })}`
     ], EVENT_COLORS.green)
   );
 
