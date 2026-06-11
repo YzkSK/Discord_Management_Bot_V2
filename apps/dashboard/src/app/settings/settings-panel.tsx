@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Plus, Save, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, Plus, Save, Trash2 } from "lucide-react";
 import type { DashboardSettingsFeatures, GuildLanguage } from "@discord-bot/shared";
 import { isGuildLanguage } from "@discord-bot/shared";
 import { getDashboardLocale, detectBrowserLanguage } from "../../lib/locale";
@@ -95,8 +95,6 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   const [grantRole, setGrantRole] = useState<GrantableAccessRole>("viewer");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [savingTempVc, setSavingTempVc] = useState(false);
-  const [savingTts, setSavingTts] = useState(false);
   const [savingTtsDictionary, setSavingTtsDictionary] = useState(false);
   const [savingTtsSpeaker, setSavingTtsSpeaker] = useState(false);
   const [savingRoles, setSavingRoles] = useState(false);
@@ -105,6 +103,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"logs" | "voice" | "tts" | "access">("logs");
+  const [confirmRoleRemoval, setConfirmRoleRemoval] = useState(false);
 
   const loc = getDashboardLocale(uiLang);
 
@@ -150,41 +149,44 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
       .finally(() => setLoading(false));
   }, [guildId]);
 
-  async function saveLogMode() {
+  async function saveAllChanges() {
     if (!settings) return;
     setSaving(true); setError(null); setMessage(null);
     try {
-      const data = await updateSettings(settings.guildId, logMode, language);
-      setSettings((s) => (s ? { ...s, ...data } : s));
+      const logsDirty = logMode !== (settings.logMode) || language !== (settings.language);
+      const voiceDirty =
+        tempVcCreateChannelId !== (settings.features.tempVc.createChannelId ?? "") ||
+        tempVcCategoryId !== (settings.features.tempVc.categoryId ?? "");
+      const ttsChannelDirty =
+        ttsTextChannelId !== (settings.features.tts.textChannelId ?? "");
+
+      const updates = await Promise.all([
+        logsDirty ? updateSettings(settings.guildId, logMode, language) : null,
+        voiceDirty
+          ? updateTempVcSettings(settings.guildId, tempVcCreateChannelId, tempVcCategoryId)
+          : null,
+        ttsChannelDirty ? updateTtsSettings(settings.guildId, ttsTextChannelId) : null,
+      ]);
+
+      setSettings((s) => {
+        if (!s) return s;
+        let merged = { ...s };
+        for (const update of updates) {
+          if (update) merged = { ...merged, ...update };
+        }
+        return merged;
+      });
       setMessage(loc.settingsSaved);
     } catch (e) { setError(toErrorMessage(e)); } finally { setSaving(false); }
   }
 
-  async function saveTempVcSettings() {
+  function cancelChanges() {
     if (!settings) return;
-    setSavingTempVc(true); setError(null); setMessage(null);
-    try {
-      const data = await updateTempVcSettings(
-        settings.guildId,
-        tempVcCreateChannelId,
-        tempVcCategoryId
-      );
-      setSettings((s) => (s ? { ...s, ...data } : s));
-      setTempVcCreateChannelId(data.features.tempVc.createChannelId ?? "");
-      setTempVcCategoryId(data.features.tempVc.categoryId ?? "");
-      setMessage(loc.tempVcSettingsSaved);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTempVc(false); }
-  }
-
-  async function saveTtsSettings() {
-    if (!settings) return;
-    setSavingTts(true); setError(null); setMessage(null);
-    try {
-      const data = await updateTtsSettings(settings.guildId, ttsTextChannelId);
-      setSettings((s) => (s ? { ...s, ...data } : s));
-      setTtsTextChannelId(data.features.tts.textChannelId ?? "");
-      setMessage(loc.ttsSettingsSaved);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTts(false); }
+    setLogMode(settings.logMode);
+    setLanguage(settings.language);
+    setTempVcCreateChannelId(settings.features.tempVc.createChannelId ?? "");
+    setTempVcCategoryId(settings.features.tempVc.categoryId ?? "");
+    setTtsTextChannelId(settings.features.tts.textChannelId ?? "");
   }
 
   async function saveTtsDefaultSpeaker() {
@@ -275,11 +277,25 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
     } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTtsDictionary(false); }
   }
 
-  async function saveManagementRoles() {
+  function requestSaveManagementRoles() {
     if (!settings) return;
+    const removedAny = settings.dashboardManagementRoleIds.some(
+      (id) => !managementRoleIds.includes(id)
+    );
+    if (removedAny) {
+      setConfirmRoleRemoval(true);
+    } else {
+      void doSaveManagementRoles();
+    }
+  }
+
+  async function doSaveManagementRoles() {
+    if (!settings) return;
+    setConfirmRoleRemoval(false);
     setSavingRoles(true); setError(null); setMessage(null);
     try {
       await updateManagementRoles(settings.guildId, managementRoleIds);
+      setSettings((s) => s ? { ...s, dashboardManagementRoleIds: managementRoleIds } : s);
       setMessage(loc.accessRolesUpdated);
     } catch (e) { setError(toErrorMessage(e)); } finally { setSavingRoles(false); }
   }
@@ -355,6 +371,18 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   const isOwner = settings.accessRole === "owner";
   const canEditTts = settings.accessRole !== "viewer";
   const summaries = buildSettingsSectionSummaries(settings.features);
+
+  const dirtyCount = useMemo(() => {
+    return [
+      logMode !== settings.logMode,
+      language !== settings.language,
+      tempVcCreateChannelId !== (settings.features.tempVc.createChannelId ?? ""),
+      tempVcCategoryId !== (settings.features.tempVc.categoryId ?? ""),
+      ttsTextChannelId !== (settings.features.tts.textChannelId ?? ""),
+    ].filter(Boolean).length;
+  }, [logMode, language, tempVcCreateChannelId, tempVcCategoryId, ttsTextChannelId, settings]);
+
+  const isDirty = dirtyCount > 0;
 
   const tabDefs = [
     { key: "logs",   label: "ログ設定" },
@@ -454,12 +482,6 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
                 </Select>
               </label>
 
-              <div className="flex justify-end">
-                <Button disabled={saving} onClick={saveLogMode} type="button" size="sm">
-                  <Save className="h-3.5 w-3.5" />
-                  {saving ? loc.saving : loc.saveChanges}
-                </Button>
-              </div>
             </CardContent>
           </Card>
         )}
@@ -490,12 +512,6 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
                   value={tempVcCategoryId}
                 />
               </label>
-              <div className="flex justify-end">
-                <Button disabled={savingTempVc} onClick={saveTempVcSettings} type="button" size="sm">
-                  <Save className="h-3.5 w-3.5" />
-                  {savingTempVc ? loc.saving : loc.saveTempVcSettings}
-                </Button>
-              </div>
             </CardContent>
           </Card>
         )}
@@ -519,13 +535,6 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
                 value={ttsTextChannelId}
               />
             </label>
-            <div className="flex justify-end">
-              <Button disabled={savingTts} onClick={saveTtsSettings} type="button" size="sm">
-                <Save className="h-3.5 w-3.5" />
-                {savingTts ? loc.saving : loc.saveTtsSettings}
-              </Button>
-            </div>
-
             <div className="grid gap-3 border-t border-zinc-800 pt-3">
               <p className="text-xs font-semibold text-zinc-300">{loc.ttsSpeakerDefault}</p>
               <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
@@ -880,7 +889,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
                   ))}
                 </div>
                 <div className="flex justify-end">
-                  <Button disabled={savingRoles} onClick={saveManagementRoles} size="sm" type="button">
+                  <Button disabled={savingRoles} onClick={requestSaveManagementRoles} size="sm" type="button">
                     <Save className="h-3.5 w-3.5" />
                     {savingRoles ? loc.savingRoles : loc.saveRoles}
                   </Button>
@@ -891,6 +900,72 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
         </Card>
         )}
       </div>
+
+      {/* 未保存変更バー */}
+      {isDirty && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-700 bg-zinc-900/95 px-4 py-3 backdrop-blur-sm">
+          <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+            <span className="text-sm text-zinc-300">
+              {dirtyCount}件の変更があります
+            </span>
+            <div className="flex gap-2">
+              <Button
+                disabled={saving}
+                onClick={cancelChanges}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                キャンセル
+              </Button>
+              <Button
+                disabled={saving}
+                onClick={() => void saveAllChanges()}
+                size="sm"
+                type="button"
+              >
+                <Save className="h-3.5 w-3.5" />
+                {saving ? loc.saving : "保存"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 管理ロール削除確認モーダル */}
+      {confirmRoleRemoval && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-lg border border-zinc-700 bg-zinc-900 p-5 shadow-xl">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-400" />
+              <div>
+                <p className="text-sm font-semibold text-zinc-100">管理ロールを削除しますか？</p>
+                <p className="mt-1 text-xs text-zinc-400">
+                  該当ロールを持つユーザーのダッシュボードアクセスが失われます。
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                onClick={() => setConfirmRoleRemoval(false)}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                キャンセル
+              </Button>
+              <Button
+                onClick={() => void doSaveManagementRoles()}
+                size="sm"
+                type="button"
+                variant="destructive"
+              >
+                削除して保存
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
