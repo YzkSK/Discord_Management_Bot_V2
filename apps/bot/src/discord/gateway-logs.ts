@@ -585,12 +585,17 @@ function createVoiceEvent(
   oldState: VoiceState,
   newState: VoiceState
 ): NormalizedEvent {
+  const member = newState.member ?? oldState.member;
+  const channel = newState.channel ?? oldState.channel;
+
   return createEvent(eventName, {
     guildId: newState.guild.id,
     actorId: newState.member?.id ?? newState.id,
     channelId: newState.channelId ?? oldState.channelId,
     messageId: null,
     payload: {
+      member: member ? memberPayload(member) : null,
+      channel: channel ? { id: channel.id, name: channel.name } : null,
       before: voiceStatePayload(oldState),
       after: voiceStatePayload(newState),
       changes: diffRecord(voiceStatePayload(oldState), voiceStatePayload(newState))
