@@ -8,13 +8,14 @@ import { fetchCachedDiscordChannel, type CachedDiscordChannel } from "./channel-
 interface ChannelMentionProps {
   channelId: string;
   channelName: string | null;
+  guildId?: string;
 }
 
 function looksLikeId(name: string): boolean {
   return /^\d{17,20}$/.test(name);
 }
 
-export function ChannelMention({ channelId, channelName }: ChannelMentionProps) {
+export function ChannelMention({ channelId, channelName, guildId }: ChannelMentionProps) {
   const [channel, setChannel] = useState<CachedDiscordChannel | null>(null);
   const [loadingName, setLoadingName] = useState(false);
   const [loadingPopover, setLoadingPopover] = useState(false);
@@ -26,18 +27,18 @@ export function ChannelMention({ channelId, channelName }: ChannelMentionProps) 
   useEffect(() => {
     if (knownName) return;
     setLoadingName(true);
-    fetchCachedDiscordChannel(channelId)
+    fetchCachedDiscordChannel(channelId, guildId)
       .then(setChannel)
       .catch(() => {})
       .finally(() => setLoadingName(false));
-  }, [channelId, knownName]);
+  }, [channelId, knownName, guildId]);
 
   async function handleOpenChange(open: boolean) {
     if (!open || channel) return;
     setLoadingPopover(true);
     setError(false);
     try {
-      const data = await fetchCachedDiscordChannel(channelId);
+      const data = await fetchCachedDiscordChannel(channelId, guildId);
       setChannel(data);
     } catch {
       setError(true);

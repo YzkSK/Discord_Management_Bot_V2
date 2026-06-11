@@ -403,7 +403,7 @@ export function LogsExplorer() {
                 actorName: extractActorName(log.payload),
                 channelId: log.channelId,
                 channelName: extractChannelName(log.payload),
-              });
+              }, normalizeGuildId(appliedFilters.guildId) ?? undefined);
               const payload = isRecord(log.payload) ? log.payload : {};
 
               return (

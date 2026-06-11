@@ -1,22 +1,29 @@
 import { parseDashboardAuthEnv } from "@discord-bot/config";
-import { NextResponse } from "next/server";
-import { getDashboardSession } from "../../../../../auth";
+import { NextResponse, type NextRequest } from "next/server";
+import { authorizeDashboardApi } from "../../../../../dashboard-auth";
 import { fetchDiscordApiChannel } from "../../../../../lib/discord-channel";
 
 const env = parseDashboardAuthEnv();
 
 export const dynamic = "force-dynamic";
 
+const SNOWFLAKE_RE = /^\d{17,20}$/;
+
 export async function GET(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ channelId: string }> }
 ) {
-  const session = await getDashboardSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { channelId } = await params;
+
+  if (!SNOWFLAKE_RE.test(channelId)) {
+    return NextResponse.json({ error: "Invalid channel id." }, { status: 400 });
   }
 
-  const { channelId } = await params;
+  const guildId = request.nextUrl.searchParams.get("guildId") ?? undefined;
+  const auth = await authorizeDashboardApi({ request, guildId });
+  if (!auth.allowed) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
 
   if (!env.DISCORD_BOT_TOKEN) {
     return NextResponse.json(

@@ -283,7 +283,7 @@ export function OverviewClient({ guildId }: OverviewClientProps) {
                       actorName: extractActorName(log.payload),
                       channelId: log.channelId,
                       channelName: extractChannelName(log.payload),
-                    })}
+                    }, guildId)}
                   </p>
                   <span className="shrink-0 text-xs text-zinc-600">
                     {formatRelativeTime(new Date(log.receivedAt))}

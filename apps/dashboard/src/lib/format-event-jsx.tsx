@@ -11,7 +11,8 @@ import { ChannelMention } from "../components/channel-mention";
 
 export function formatEventDescriptionJSX(
   eventName: string,
-  vars: EventVars
+  vars: EventVars,
+  guildId?: string
 ): ReactNode {
   const description = formatEventDescription(eventName, vars);
   const actorText = getActorText(vars);
@@ -45,6 +46,7 @@ export function formatEventDescriptionJSX(
         <ChannelMention
           channelId={vars.channelId}
           channelName={vars.channelName ?? null}
+          {...(guildId !== undefined ? { guildId } : {})}
         />
       );
       middle = chParts.before;

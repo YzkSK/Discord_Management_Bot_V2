@@ -8,13 +8,17 @@ interface DiscordApiChannel {
   name: string;
 }
 
+const SNOWFLAKE_RE = /^\d{17,20}$/;
+
 export async function fetchDiscordApiChannel(
   channelId: string,
   botToken: string,
   fetcher: (url: string, init?: RequestInit) => Promise<Response> = fetch
 ): Promise<DiscordChannelResponse | null> {
+  if (!SNOWFLAKE_RE.test(channelId)) return null;
+
   const response = await fetcher(
-    `https://discord.com/api/v10/channels/${channelId}`,
+    `https://discord.com/api/v10/channels/${encodeURIComponent(channelId)}`,
     { headers: { Authorization: `Bot ${botToken}` } }
   );
 
