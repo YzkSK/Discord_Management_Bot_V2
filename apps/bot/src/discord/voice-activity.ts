@@ -10,7 +10,7 @@ import {
   updateCallSessionStatusMessage,
   upsertCallSessionMember
 } from "@discord-bot/db";
-import type { NormalizedEvent } from "@discord-bot/shared";
+import { getLocale, isGuildLanguage, type NormalizedEvent } from "@discord-bot/shared";
 import type { Client } from "discord.js";
 
 import type { DiscordLogWriter } from "./log-writer.js";
@@ -83,6 +83,7 @@ export interface VoiceActivityContext {
   updateVoiceStatus?: (input: {
     activeMemberCount: number;
     endedAt?: Date | null;
+    memberIds?: string[];
     session: VoiceActivitySession;
     state: VoiceStatusDisplayState;
   }) => Promise<string | null>;
@@ -132,7 +133,7 @@ export function installVoiceActivityHandlers(
         repository: createDbVoiceActivityRepository(options.db),
         scheduleActiveStatusUpdate,
         updateVoiceStatus: (input) =>
-          updateDiscordVoiceStatusMessage(client, input),
+          updateDiscordVoiceStatusMessage(client, options.db, input),
         writeLog: (event) => options.logWriter.write(event)
       })
   });
@@ -287,8 +288,14 @@ async function handleVoiceJoin(
         startedAt: now
       })
     );
+    const memberIdsAfterJoin = [
+      ...activeMembersBeforeJoin.map(m => m.userId),
+      transition.userId
+    ].filter((id, i, arr) => arr.indexOf(id) === i);
+
     const statusMessageId = await context.updateVoiceStatus?.({
-      activeMemberCount: Math.max(activeMembersBeforeJoin.length, 1),
+      activeMemberCount: memberIdsAfterJoin.length,
+      memberIds: memberIdsAfterJoin,
       session,
       state: "started"
     });
@@ -434,8 +441,9 @@ async function refreshActiveVoiceStatus(
     return false;
   }
 
-  await updateDiscordVoiceStatusMessage(client, {
+  await updateDiscordVoiceStatusMessage(client, options.db, {
     activeMemberCount: activeMembers.length,
+    memberIds: activeMembers.map(m => m.userId),
     session,
     state: "active"
   });
@@ -444,9 +452,11 @@ async function refreshActiveVoiceStatus(
 
 async function updateDiscordVoiceStatusMessage(
   client: Client,
+  db: DbClient,
   input: {
     activeMemberCount: number;
     endedAt?: Date | null;
+    memberIds?: string[];
     session: VoiceActivitySession;
     state: VoiceStatusDisplayState;
   }
@@ -463,10 +473,18 @@ async function updateDiscordVoiceStatusMessage(
     return null;
   }
 
+  const guildConfig = await getGuildConfigByGuildId(db, input.session.guildId).catch(() => null);
+  const lang = guildConfig?.language && isGuildLanguage(guildConfig.language)
+    ? guildConfig.language
+    : "ja";
+  const loc = getLocale(lang);
+
   const message = createVoiceStatusMessage({
     channelId: input.session.channelId,
     endedAt: input.endedAt ?? null,
+    loc,
     memberCount: input.activeMemberCount,
+    ...(input.memberIds ? { memberIds: input.memberIds } : {}),
     now: input.endedAt ?? new Date(),
     sessionId: input.session.id,
     startedAt: input.session.startedAt

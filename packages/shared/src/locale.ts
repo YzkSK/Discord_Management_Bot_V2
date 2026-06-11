@@ -113,6 +113,11 @@ type Locale = {
   commandError: (vars: { reason: string }) => string;
   voiceTempCreatedTitle: string;
   voiceTempDeletedTitle: string;
+  voiceSessionTitleStarted: string;
+  voiceSessionTitleActive: string;
+  voiceSessionTitleEnded: string;
+  voiceSessionStartedAt: (vars: { timestamp: string; duration: string }) => string;
+  voiceSessionEndedAt: (vars: { timestamp: string; duration: string }) => string;
 };
 
 const locales: Record<GuildLanguage, Locale> = {
@@ -307,6 +312,11 @@ const locales: Record<GuildLanguage, Locale> = {
     commandError: ({ reason }) => `❌ ${reason}`,
     voiceTempCreatedTitle: "✨ Temp VC Created",
     voiceTempDeletedTitle: "🗑️ Temp VC Deleted",
+    voiceSessionTitleStarted: "🟢 Voice Session Started",
+    voiceSessionTitleActive: "🔵 Voice Session Active",
+    voiceSessionTitleEnded: "⚫ Voice Session Ended",
+    voiceSessionStartedAt: ({ timestamp, duration }) => `Started: ${timestamp}  ·  ${duration}`,
+    voiceSessionEndedAt: ({ timestamp, duration }) => `Ended: ${timestamp}  ·  ${duration}`,
   },
   ja: {
     logTitle: ({ eventName }) => `ログ: ${eventName}`,
@@ -498,6 +508,11 @@ const locales: Record<GuildLanguage, Locale> = {
     commandError: ({ reason }) => `❌ ${reason}`,
     voiceTempCreatedTitle: "✨ 一時VCが作成された",
     voiceTempDeletedTitle: "🗑️ 一時VCが削除された",
+    voiceSessionTitleStarted: "🟢 通話セッション開始",
+    voiceSessionTitleActive: "🔵 通話セッション中",
+    voiceSessionTitleEnded: "⚫ 通話セッション終了",
+    voiceSessionStartedAt: ({ timestamp, duration }) => `開始: ${timestamp}  ·  ${duration}`,
+    voiceSessionEndedAt: ({ timestamp, duration }) => `終了: ${timestamp}  ·  ${duration}`,
     voiceStatusSetupFailed: "❌ 通話状態セットアップ失敗",
     voiceStatusChannelMustBeText:
       "通話状態チャンネルはテキストチャンネルにしてください。",
