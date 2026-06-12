@@ -1,0 +1,1 @@
+ALTER TABLE "guild_configs" ADD COLUMN "tts_llm_enabled" boolean DEFAULT false NOT NULL;

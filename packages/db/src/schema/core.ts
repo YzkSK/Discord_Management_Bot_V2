@@ -42,6 +42,7 @@ export const guildConfigs = pgTable(
     tempVoiceCreateChannelId: text("temp_voice_create_channel_id"),
     tempVoiceCategoryId: text("temp_voice_category_id"),
     ttsTextChannelId: text("tts_text_channel_id"),
+    ttsLlmEnabled: boolean("tts_llm_enabled").notNull().default(false),
     recruitmentChannelId: text("recruitment_channel_id"),
     language: text("language").notNull().default("en"),
     dashboardManagementRoleIds: text("dashboard_management_role_ids")
