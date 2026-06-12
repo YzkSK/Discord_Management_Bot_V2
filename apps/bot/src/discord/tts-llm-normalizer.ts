@@ -64,11 +64,16 @@ export function createOllamaTextNormalizer(
       clearTimeout(timer);
 
       if (!response.ok) {
+        console.warn("ollama normalization failed", { status: response.status, model, text });
         return text;
       }
 
       const data = (await response.json()) as { response: string };
       const normalized = data.response.trim();
+
+      if (!normalized) {
+        return text;
+      }
 
       if (cache.size >= maxCacheSize) {
         const firstKey = cache.keys().next().value!;
@@ -77,7 +82,10 @@ export function createOllamaTextNormalizer(
       cache.set(text, normalized);
 
       return normalized;
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.name !== "AbortError") {
+        console.warn("ollama normalization error", { error, model });
+      }
       return text;
     }
   }

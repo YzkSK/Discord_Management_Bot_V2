@@ -363,6 +363,8 @@ export async function handleTtsMessage(
     ? await options.normalizeWithLlm(sanitizedText, message.guildId)
     : sanitizedText;
 
+  const readableText = llmText || sanitizedText;
+
   const loadDictionaryEntries =
     options.loadDictionaryEntries ??
     ((input: LoadTtsDictionaryEntriesInput) =>
@@ -377,7 +379,7 @@ export async function handleTtsMessage(
     userId: message.author.id
   });
   const text = applyTtsDictionaryEntries(
-    llmText,
+    readableText,
     await loadDictionaryEntries({
       guildId: message.guildId,
       userId: message.author.id
