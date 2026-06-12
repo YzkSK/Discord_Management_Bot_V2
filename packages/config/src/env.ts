@@ -14,7 +14,7 @@ export const appEnvSchema = z.object({
   VOICEVOX_URL: z.string().url(),
   VOICEVOX_SPEAKER_ID: z.coerce.number().int().nonnegative().default(2),
   OLLAMA_URL: z.string().url().optional(),
-  OLLAMA_MODEL: z.string().default("gemma2:2b"),
+  OLLAMA_MODEL: z.string().min(1).default("gemma2:2b"),
   NEXTAUTH_SECRET: z.string().min(1),
   SESSION_ENCRYPTION_KEY: z.string().min(1),
   PUBLIC_DASHBOARD_URL: z.string().url(),
