@@ -77,7 +77,7 @@ describe("voice status display", () => {
     const serialized = JSON.stringify(message);
 
     assert.match(serialized, /Voice Session Ended/);
-    assert.match(serialized, /2m 30s/);
+    assert.match(serialized, /0:02/);
     assert.match(serialized, /<#voice-1>/);
   });
 

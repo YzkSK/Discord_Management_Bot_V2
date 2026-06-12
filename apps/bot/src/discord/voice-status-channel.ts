@@ -168,13 +168,8 @@ function stateTitle(state: VoiceStatusDisplayState, loc: Loc): string {
 }
 
 function formatDuration(durationMs: number) {
-  const totalSeconds = Math.max(0, Math.floor(durationMs / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-
-  if (minutes === 0) {
-    return `${seconds}s`;
-  }
-
-  return `${minutes}m ${seconds}s`;
+  const totalMinutes = Math.max(0, Math.floor(durationMs / 60000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}:${String(minutes).padStart(2, "0")}`;
 }

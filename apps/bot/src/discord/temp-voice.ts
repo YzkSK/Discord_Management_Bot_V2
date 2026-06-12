@@ -1,9 +1,11 @@
 import {
   ChannelType,
   type Client,
+  ComponentType,
   DiscordAPIError,
   type Guild,
   type GuildBasedChannel,
+  MessageFlags,
   PermissionFlagsBits,
   RESTJSONErrorCodes,
   type TextChannel,
@@ -448,6 +450,28 @@ export async function updateControlChannelOwnerPermissions(
     SendMessages: true,
     ViewChannel: true
   });
+
+  if ("send" in controlChannel) {
+    await (controlChannel as TextChannel).send({
+      flags: MessageFlags.IsComponentsV2,
+      components: [
+        {
+          type: ComponentType.Container,
+          accent_color: 0xFFD700,
+          components: [
+            {
+              type: ComponentType.TextDisplay,
+              content: `## 👑 オーナーが変更されました`
+            },
+            {
+              type: ComponentType.TextDisplay,
+              content: `<@${input.nextOwnerId}> さんがこの Temp VC のオーナーになりました。\nコントロールパネルからチャンネルを管理できます。`
+            }
+          ]
+        }
+      ]
+    } as never).catch(() => undefined);
+  }
 }
 
 function scheduleDiscordChannelDelete(
