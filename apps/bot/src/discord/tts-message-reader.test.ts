@@ -232,6 +232,42 @@ describe("sanitizeTtsText", () => {
       "見て ok"
     );
   });
+
+  it("removes Unicode emojis", () => {
+    assert.equal(sanitizeTtsText("見て😂😂"), "見て");
+  });
+
+  it("removes Discord custom emojis", () => {
+    assert.equal(sanitizeTtsText("<:yay:123456789>"), "");
+  });
+
+  it("removes Discord animated emojis", () => {
+    assert.equal(sanitizeTtsText("<a:wave:987654321>"), "");
+  });
+
+  it("strips Markdown bold and strikethrough, keeping text", () => {
+    assert.equal(sanitizeTtsText("**太字**と~~打消し~~"), "太字と打消し");
+  });
+
+  it("removes inline code", () => {
+    assert.equal(sanitizeTtsText("`code`を実行"), "を実行");
+  });
+
+  it("removes code blocks", () => {
+    assert.equal(sanitizeTtsText("```\nblock\n```"), "");
+  });
+
+  it("strips block quote markers, keeping text", () => {
+    assert.equal(sanitizeTtsText("> 引用テキスト"), "引用テキスト");
+  });
+
+  it("removes kaomoji with only symbols inside parentheses", () => {
+    assert.equal(sanitizeTtsText("(・∀・)こんにちは"), "こんにちは");
+  });
+
+  it("does not remove parentheses containing Japanese text", () => {
+    assert.equal(sanitizeTtsText("テスト(テスト)"), "テスト(テスト)");
+  });
 });
 
 describe("TtsMessageRateLimiter", () => {
@@ -410,5 +446,46 @@ describe("handleTtsMessage", () => {
 
     assert.deepEqual(queuedGuilds, ["guild-1"]);
     assert.deepEqual(played, ["first"]);
+  });
+
+  it("applies LLM normalization when normalizeWithLlm is provided", async () => {
+    let synthesizedText = "";
+
+    await handleTtsMessage(
+      {
+        author: { bot: false, id: "user-1" },
+        channelId: "text-1",
+        content: "テストAI",
+        guildId: "guild-1",
+        id: "message-1",
+        inGuild: () => true
+      } as never,
+      {
+        db: null as never,
+        loadDictionaryEntries: async () => [],
+        loadSpeakerId: async () => 2,
+        logWriter: {
+          recordHandlerError: async () => undefined,
+          write: async () => undefined
+        },
+        normalizeWithLlm: async (text, _guildId) =>
+          text.replace("AI", "エーアイ"),
+        speakerId: 2,
+        ttsSessionManager: {
+          getReadableChannelIds: () => ["text-1"],
+          getVoiceChannelId: () => "voice-1",
+          isConnected: () => true,
+          play: async () => undefined
+        } as never,
+        voicevox: {
+          synthesize: async (text) => {
+            synthesizedText = text;
+            return Buffer.alloc(0);
+          }
+        }
+      }
+    );
+
+    assert.equal(synthesizedText, "テストエーアイ");
   });
 });

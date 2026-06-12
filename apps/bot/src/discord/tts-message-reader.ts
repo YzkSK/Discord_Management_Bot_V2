@@ -23,6 +23,7 @@ export interface InstallTtsMessageReaderOptions {
   ) => Promise<EffectiveTtsDictionaryEntry[]>;
   loadSpeakerId?: (input: LoadTtsSpeakerIdInput) => Promise<number>;
   logWriter: DiscordLogWriter;
+  normalizeWithLlm?: (text: string, guildId: string) => Promise<string>;
   rateLimiter?: TtsRateLimiter;
   speakerId: number;
   ttsQueue?: TtsPlaybackQueue;
@@ -234,7 +235,27 @@ export function applyTtsDictionaryEntries(
 
 export function sanitizeTtsText(text: string) {
   return text
+    // コードブロック (Markdown 処理より先に除去)
+    .replace(/```[\s\S]*?```/g, " ")
+    // インラインコード
+    .replace(/`[^`\n]+`/g, " ")
+    // Discord カスタム/アニメ絵文字 <:name:id> / <a:name:id>
+    .replace(/<a?:[a-zA-Z0-9_]+:\d+>/g, " ")
+    // Unicode 絵文字
+    .replace(/\p{Extended_Pictographic}/gu, " ")
+    // Markdown (記号を除去・本文は残す)
+    .replace(/\*\*([^*\n]+)\*\*/g, "$1")
+    .replace(/~~([^~\n]+)~~/g, "$1")
+    .replace(/\*([^*\n]+)\*/g, "$1")
+    .replace(/__([^_\n]+)__/g, "$1")
+    // 引用行の > を除去
+    .replace(/^>\s?/gm, "")
+    // 顔文字ヒューリスティック: 括弧内に日本語・英数字を含まない記号列
+    // ぁ-ゞ=ひらがな, ァ-ヺ=カタカナ(・U+30FBは除外範囲外=顔文字に使用可)
+    .replace(/[（(][^ぁ-ゞァ-ヺ一-鿿（）()\w\n]{2,20}[）)]/g, " ")
+    // URL 除去
     .replace(/https?:\/\/\S+|www\.\S+/gi, " ")
+    // Discord メンション除去
     .replace(/<@!?\d+>|<@&\d+>|<#\d+>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -338,6 +359,10 @@ export async function handleTtsMessage(
     return;
   }
 
+  const llmText = options.normalizeWithLlm
+    ? await options.normalizeWithLlm(sanitizedText, message.guildId)
+    : sanitizedText;
+
   const loadDictionaryEntries =
     options.loadDictionaryEntries ??
     ((input: LoadTtsDictionaryEntriesInput) =>
@@ -352,7 +377,7 @@ export async function handleTtsMessage(
     userId: message.author.id
   });
   const text = applyTtsDictionaryEntries(
-    sanitizedText,
+    llmText,
     await loadDictionaryEntries({
       guildId: message.guildId,
       userId: message.author.id
