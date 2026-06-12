@@ -1,7 +1,7 @@
 import type { AppEnv } from "@discord-bot/config";
 import { parseAppEnv } from "@discord-bot/config";
 import type { DbConnection } from "@discord-bot/db";
-import { createDbConnection, recordSystemBotStarted } from "@discord-bot/db";
+import { createDbConnection, recordSystemBotStarted, getGuildTtsLlmEnabled } from "@discord-bot/db";
 import type { RedisConnection } from "@discord-bot/redis";
 import { createRedisConnection } from "@discord-bot/redis";
 import { realtimeDefaultDisabledEvents } from "@discord-bot/shared";
@@ -19,6 +19,7 @@ import { installTempVoiceHandlers } from "./discord/temp-voice.js";
 import { createDiscordLogWriter } from "./discord/log-writer.js";
 import { installTtsMessageReader } from "./discord/tts-message-reader.js";
 import { installTtsAutoLeaveHandler } from "./discord/tts-auto-leave.js";
+import { createOllamaTextNormalizer } from "./discord/tts-llm-normalizer.js";
 import { installTtsAnnounceHandler } from "./discord/tts-announce.js";
 import { TtsSessionManager } from "./discord/tts-session.js";
 import { installVoiceActivityHandlers } from "./discord/voice-activity.js";
@@ -100,12 +101,23 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
         ttsSessionManager,
         voicevox
       });
+      const ollamaNormalizer = env.OLLAMA_URL
+        ? createOllamaTextNormalizer({
+            ollamaUrl: env.OLLAMA_URL,
+            model: env.OLLAMA_MODEL,
+            isEnabled: (guildId) =>
+              getGuildTtsLlmEnabled(dbConnection!.db, { guildId })
+          })
+        : undefined;
       installTtsMessageReader(discordClient, {
         db: dbConnection.db,
         logWriter,
         speakerId: env.VOICEVOX_SPEAKER_ID,
         ttsSessionManager,
-        voicevox
+        voicevox,
+        ...(ollamaNormalizer
+          ? { normalizeWithLlm: (text: string, guildId: string) => ollamaNormalizer.normalize(text, guildId) }
+          : {})
       });
       await discordClient.login(env.DISCORD_BOT_TOKEN);
       await recordStartupLog(dbConnection, env).catch((error: unknown) => {
