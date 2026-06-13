@@ -40,15 +40,6 @@ services:
           cpus: "${VOICEVOX_CPU_LIMIT:-6}"
     # For smaller hosts, lower VOICEVOX_CPU_NUM_THREADS and VOICEVOX_CPU_LIMIT after monitoring.
 
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    profiles:
-      - app
-
   bot:
     build:
       context: .
@@ -60,8 +51,6 @@ services:
       REDIS_URL: redis://redis:6379
       VOICEVOX_URL: http://voicevox:50021
       VOICEVOX_SPEAKER_ID: ${VOICEVOX_SPEAKER_ID:-2}
-      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-hf.co/bartowski/gemma-2-2b-jpn-it-GGUF:latest}
       PUBLIC_DASHBOARD_URL: http://localhost:3000
       NEXTAUTH_URL: http://localhost:3000
     depends_on:
@@ -70,8 +59,6 @@ services:
       redis:
         condition: service_healthy
       voicevox:
-        condition: service_started
-      ollama:
         condition: service_started
     profiles:
       - app
@@ -123,4 +110,3 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  ollama_data:

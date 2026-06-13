@@ -23,7 +23,6 @@ export interface InstallTtsMessageReaderOptions {
   ) => Promise<EffectiveTtsDictionaryEntry[]>;
   loadSpeakerId?: (input: LoadTtsSpeakerIdInput) => Promise<number>;
   logWriter: DiscordLogWriter;
-  normalizeWithLlm?: (text: string, guildId: string) => Promise<string>;
   rateLimiter?: TtsRateLimiter;
   speakerId: number;
   ttsQueue?: TtsPlaybackQueue;
@@ -359,11 +358,7 @@ export async function handleTtsMessage(
     return;
   }
 
-  const llmText = options.normalizeWithLlm
-    ? await options.normalizeWithLlm(sanitizedText, message.guildId)
-    : sanitizedText;
-
-  const readableText = llmText || sanitizedText;
+  const readableText = sanitizedText;
 
   const loadDictionaryEntries =
     options.loadDictionaryEntries ??

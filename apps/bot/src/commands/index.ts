@@ -26,16 +26,9 @@ import {
   speakerCommand,
   type TtsCommandContext
 } from "./tts.js";
-import {
-  handleTtsLlmCommand,
-  ttsLlmCommand,
-  type TtsLlmCommandContext
-} from "./tts-llm.js";
-
 export type CommandContext = RecruitmentCommandContext &
   SetupCommandContext &
-  TtsCommandContext &
-  TtsLlmCommandContext & {
+  TtsCommandContext & {
     db: DbClient;
     redis: RedisStreamWriter;
     logWriter?: DiscordLogWriter;
@@ -47,8 +40,7 @@ export const slashCommands = [
   joinCommand,
   forceJoinCommand,
   leaveCommand,
-  speakerCommand,
-  ttsLlmCommand
+  speakerCommand
 ] as const;
 
 export function slashCommandPayloads() {
@@ -77,9 +69,6 @@ export async function handleChatInputCommand(
       return;
     case speakerCommand.name:
       await handleSpeakerCommand(interaction, context);
-      return;
-    case ttsLlmCommand.name:
-      await handleTtsLlmCommand(interaction, context);
       return;
     default:
       await interaction.reply({

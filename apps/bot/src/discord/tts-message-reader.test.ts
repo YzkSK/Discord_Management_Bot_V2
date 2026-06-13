@@ -448,44 +448,4 @@ describe("handleTtsMessage", () => {
     assert.deepEqual(played, ["first"]);
   });
 
-  it("applies LLM normalization when normalizeWithLlm is provided", async () => {
-    let synthesizedText = "";
-
-    await handleTtsMessage(
-      {
-        author: { bot: false, id: "user-1" },
-        channelId: "text-1",
-        content: "テストAI",
-        guildId: "guild-1",
-        id: "message-1",
-        inGuild: () => true
-      } as never,
-      {
-        db: null as never,
-        loadDictionaryEntries: async () => [],
-        loadSpeakerId: async () => 2,
-        logWriter: {
-          recordHandlerError: async () => undefined,
-          write: async () => undefined
-        },
-        normalizeWithLlm: async (text, _guildId) =>
-          text.replace("AI", "エーアイ"),
-        speakerId: 2,
-        ttsSessionManager: {
-          getReadableChannelIds: () => ["text-1"],
-          getVoiceChannelId: () => "voice-1",
-          isConnected: () => true,
-          play: async () => undefined
-        } as never,
-        voicevox: {
-          synthesize: async (text) => {
-            synthesizedText = text;
-            return Buffer.alloc(0);
-          }
-        }
-      }
-    );
-
-    assert.equal(synthesizedText, "テストエーアイ");
-  });
 });
