@@ -5,8 +5,10 @@ import {
   type DbClient,
   type EffectiveTtsDictionaryEntry
 } from "@discord-bot/db";
+import { getLocale, isGuildLanguage } from "@discord-bot/shared";
 import { Events, type Client, type Message } from "discord.js";
 
+import { createComponentsV2TextMessage, EVENT_COLORS } from "./components-v2.js";
 import type { DiscordLogWriter } from "./log-writer.js";
 import {
   createTtsMessageSkippedEvent,
@@ -16,6 +18,8 @@ import { LocalTtsPlaybackQueue, type TtsPlaybackQueue } from "./tts-queue.js";
 import type { TtsSessionManager } from "./tts-session.js";
 import { normalizeTtsText, type VoicevoxClient } from "./voicevox.js";
 
+const RATE_LIMIT_NOTIFY_COOLDOWN_MS = 5_000;
+
 export interface InstallTtsMessageReaderOptions {
   db: DbClient;
   loadDictionaryEntries?: (
@@ -24,6 +28,7 @@ export interface InstallTtsMessageReaderOptions {
   loadSpeakerId?: (input: LoadTtsSpeakerIdInput) => Promise<number>;
   logWriter: DiscordLogWriter;
   rateLimiter?: TtsRateLimiter;
+  rateLimitNotifyCooldowns?: Map<string, number>;
   speakerId: number;
   ttsQueue?: TtsPlaybackQueue;
   ttsSessionManager: TtsSessionManager;
@@ -89,6 +94,7 @@ export function installTtsMessageReader(
   const readerOptions: InstallTtsMessageReaderOptions = {
     ...options,
     rateLimiter: options.rateLimiter ?? new TtsMessageRateLimiter(),
+    rateLimitNotifyCooldowns: options.rateLimitNotifyCooldowns ?? new Map<string, number>(),
     ttsQueue: options.ttsQueue ?? new LocalTtsPlaybackQueue()
   };
 
@@ -330,6 +336,25 @@ export async function handleTtsMessage(
         voiceChannelId
       })
     );
+    const cooldowns = options.rateLimitNotifyCooldowns;
+    if (cooldowns) {
+      const now = Date.now();
+      const lastNotified = cooldowns.get(message.author.id) ?? 0;
+      if (now - lastNotified >= RATE_LIMIT_NOTIFY_COOLDOWN_MS) {
+        cooldowns.set(message.author.id, now);
+        const config = await getGuildConfigByGuildId(options.db, message.guildId);
+        const lang = config?.language && isGuildLanguage(config.language) ? config.language : "en";
+        const loc = getLocale(lang);
+        await message.reply(
+          createComponentsV2TextMessage({
+            title: loc.ttsRateLimited,
+            lines: [loc.ttsRateLimitedHint],
+            accentColor: EVENT_COLORS.yellow,
+            privateResponse: false
+          })
+        );
+      }
+    }
     return;
   }
 
