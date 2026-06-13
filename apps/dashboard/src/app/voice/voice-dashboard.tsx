@@ -14,6 +14,8 @@ import {
 
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import { formatRelativeTime } from "../../lib/event-display";
+import { ErrorAlert } from "../../components/error-alert";
+import { useDashboardData } from "../../hooks/use-dashboard-data";
 
 interface VoiceTempVoice {
   channelId?: string;
@@ -42,28 +44,26 @@ interface VoiceResponse {
   tempVoiceChannels: Array<VoiceTempVoice & { channelId: string }>;
 }
 
+async function fetchVoiceData(guildId: string): Promise<VoiceResponse> {
+  const query = new URLSearchParams({ guildId });
+  const r = await fetch(`/api/voice?${query.toString()}`, { cache: "no-store" });
+  if (!r.ok) throw new Error(`Failed to load voice state (${r.status})`);
+  return (await r.json()) as VoiceResponse;
+}
+
 export function VoiceDashboard({ guildId }: { guildId: string }) {
-  const [data, setData] = useState<VoiceResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [uiLang] = useState<GuildLanguage>(detectBrowserLanguage);
+  const [uiLang, setUiLang] = useState<GuildLanguage>("en");
   const loc = getDashboardLocale(uiLang);
+  const { data, loading, error } = useDashboardData(
+    () => fetchVoiceData(guildId),
+    [guildId],
+    "Voice request failed"
+  );
 
   useEffect(() => {
-    const query = new URLSearchParams({ guildId });
-    fetch(`/api/voice?${query.toString()}`, { cache: "no-store" })
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`Failed to load voice state (${r.status})`);
-        return (await r.json()) as VoiceResponse;
-      })
-      .then(setData)
-      .catch((e: unknown) =>
-        setError(e instanceof Error ? e.message : "Voice request failed")
-      )
-      .finally(() => setLoading(false));
-  }, [guildId]);
+    setUiLang(detectBrowserLanguage());
+  }, []);
 
-  // ピーク時間チャートデータ（recentSessions の startedAt を時間帯別に集計）
   const peakData = useMemo(() => {
     const bins = Array.from({ length: 24 }, (_, h) => ({
       hour: `${h}時`,
@@ -85,11 +85,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
   }
 
   if (!data) {
-    return (
-      <div className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-        {error ?? loc.voiceFailedToLoad}
-      </div>
-    );
+    return <ErrorAlert message={error ?? loc.voiceFailedToLoad} />;
   }
 
   return (

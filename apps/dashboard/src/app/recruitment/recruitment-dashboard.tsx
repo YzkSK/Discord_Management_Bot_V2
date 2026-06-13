@@ -6,6 +6,8 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import { formatRelativeTime } from "../../lib/event-display";
+import { ErrorAlert } from "../../components/error-alert";
+import { useDashboardData } from "../../hooks/use-dashboard-data";
 
 type RecruitmentStatus = "open" | "full" | "closed";
 
@@ -97,27 +99,25 @@ function CapacityBar({
   );
 }
 
+async function fetchRecruitmentData(guildId: string): Promise<RecruitmentResponse> {
+  const query = new URLSearchParams({ guildId });
+  const r = await fetch(`/api/recruitments?${query.toString()}`, { cache: "no-store" });
+  if (!r.ok) throw new Error(`Failed to load recruitments (${r.status})`);
+  return (await r.json()) as RecruitmentResponse;
+}
+
 export function RecruitmentDashboard({ guildId }: { guildId: string }) {
-  const [data, setData] = useState<RecruitmentResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [uiLang] = useState<GuildLanguage>(detectBrowserLanguage);
+  const [uiLang, setUiLang] = useState<GuildLanguage>("en");
   const loc = getDashboardLocale(uiLang);
+  const { data, loading, error } = useDashboardData(
+    () => fetchRecruitmentData(guildId),
+    [guildId],
+    "Recruitment request failed"
+  );
 
   useEffect(() => {
-    const query = new URLSearchParams({ guildId });
-    fetch(`/api/recruitments?${query.toString()}`, { cache: "no-store" })
-      .then(async (r) => {
-        if (!r.ok)
-          throw new Error(`Failed to load recruitments (${r.status})`);
-        return (await r.json()) as RecruitmentResponse;
-      })
-      .then(setData)
-      .catch((e: unknown) =>
-        setError(e instanceof Error ? e.message : "Recruitment request failed")
-      )
-      .finally(() => setLoading(false));
-  }, [guildId]);
+    setUiLang(detectBrowserLanguage());
+  }, []);
 
   const grouped = useMemo(() => {
     const empty: Record<RecruitmentStatus, RecruitmentItem[]> = {
@@ -152,11 +152,7 @@ export function RecruitmentDashboard({ guildId }: { guildId: string }) {
   }
 
   if (!data) {
-    return (
-      <div className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-        {error ?? loc.recruitmentFailedToLoad}
-      </div>
-    );
+    return <ErrorAlert message={error ?? loc.recruitmentFailedToLoad} />;
   }
 
   return (
