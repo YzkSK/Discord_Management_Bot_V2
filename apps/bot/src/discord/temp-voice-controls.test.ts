@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { PermissionFlagsBits, type GuildBasedChannel } from "discord.js";
+
 import {
   createTempVoiceControlMessage,
+  getTempVoiceState,
   handleTempVoiceControlInteraction,
   parseTempVoiceControlCustomId,
   toTempVoiceControlCustomId
@@ -244,6 +247,97 @@ describe("handleTempVoiceControlInteraction", () => {
     assert.match(serialized, /temp-vc:kick-target:voice-1:user-2/);
     assert.match(serialized, /temp-vc:allow-target:voice-1:user-2/);
     assert.match(serialized, /temp-vc:deny-target:voice-1:user-2/);
+  });
+});
+
+describe("createTempVoiceControlMessage — state toggle", () => {
+  it("shows only 🔓 解除 when isLocked is true", () => {
+    const msg = createTempVoiceControlMessage({
+      ownerId: "o1",
+      tempVoiceChannelId: "v1",
+      isLocked: true,
+      isHidden: false
+    });
+    const s = JSON.stringify(msg);
+
+    assert.doesNotMatch(s, /temp-vc:lock:v1/);
+    assert.match(s, /temp-vc:unlock:v1/);
+  });
+
+  it("shows only 🔒 ロック when isLocked is false", () => {
+    const msg = createTempVoiceControlMessage({
+      ownerId: "o1",
+      tempVoiceChannelId: "v1",
+      isLocked: false,
+      isHidden: false
+    });
+    const s = JSON.stringify(msg);
+
+    assert.match(s, /temp-vc:lock:v1/);
+    assert.doesNotMatch(s, /temp-vc:unlock:v1/);
+  });
+
+  it("shows only 👁️ 表示 when isHidden is true", () => {
+    const msg = createTempVoiceControlMessage({
+      ownerId: "o1",
+      tempVoiceChannelId: "v1",
+      isLocked: false,
+      isHidden: true
+    });
+    const s = JSON.stringify(msg);
+
+    assert.doesNotMatch(s, /temp-vc:hide:v1/);
+    assert.match(s, /temp-vc:show:v1/);
+  });
+
+  it("shows status line in header", () => {
+    const msg = createTempVoiceControlMessage({
+      ownerId: "o1",
+      tempVoiceChannelId: "v1",
+      isLocked: true,
+      isHidden: false
+    });
+    const s = JSON.stringify(msg);
+
+    assert.match(s, /🔒/);
+    assert.match(s, /👁️/);
+  });
+});
+
+describe("getTempVoiceState", () => {
+  it("returns isLocked true when @everyone has Connect denied", () => {
+    const channel = {
+      permissionOverwrites: {
+        cache: new Map([
+          ["everyone-id", { type: 0, deny: { has: (f: bigint) => f === PermissionFlagsBits.Connect } }]
+        ])
+      }
+    } as unknown as GuildBasedChannel;
+    const state = getTempVoiceState(channel);
+    assert.equal(state.isLocked, true);
+    assert.equal(state.isHidden, false);
+  });
+
+  it("returns isHidden true when @everyone has ViewChannel denied", () => {
+    const channel = {
+      permissionOverwrites: {
+        cache: new Map([
+          ["everyone-id", { type: 0, deny: { has: (f: bigint) => f === PermissionFlagsBits.ViewChannel } }]
+        ])
+      }
+    } as unknown as GuildBasedChannel;
+    const state = getTempVoiceState(channel);
+    assert.equal(state.isLocked, false);
+    assert.equal(state.isHidden, true);
+  });
+
+  it("returns both false when no overwrites", () => {
+    const channel = {
+      permissionOverwrites: { cache: new Map() }
+    } as unknown as GuildBasedChannel;
+    const state = getTempVoiceState(channel);
+    assert.equal(state.isLocked, false);
+    assert.equal(state.isHidden, false);
   });
 });
 

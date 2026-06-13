@@ -101,13 +101,24 @@ export function createTempVoiceControlMessage(input: {
   tempVoiceChannelId: string;
   allowedUserIds?: string[];
   deniedUserIds?: string[];
+  isLocked?: boolean;
+  isHidden?: boolean;
 }): MessageCreateOptions & MessageEditOptions {
   const { allowedUserIds = [], deniedUserIds = [] } = input;
+  const isLocked = input.isLocked ?? false;
+  const isHidden = input.isHidden ?? false;
+
+  const statusLine = [
+    isLocked ? "🔒 ロック中" : "🔓 オープン",
+    isHidden ? "🙈 非表示" : "👁️ 表示中"
+  ].join("  ·  ");
+
   const hasPermissionInfo = allowedUserIds.length > 0 || deniedUserIds.length > 0;
 
   const infoLines = [
     `オーナー: <@${input.ownerId}>`,
-    `VC: <#${input.tempVoiceChannelId}>`
+    `VC: <#${input.tempVoiceChannelId}>`,
+    statusLine
   ];
 
   if (hasPermissionInfo) {
@@ -148,10 +159,12 @@ export function createTempVoiceControlMessage(input: {
 
   const firstRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
     createButton(channelId, "rename", "✏️ 名前変更", ButtonStyle.Primary),
-    createButton(channelId, "lock", "🔒 ロック", ButtonStyle.Secondary),
-    createButton(channelId, "unlock", "🔓 解除", ButtonStyle.Secondary),
-    createButton(channelId, "hide", "🙈 非表示", ButtonStyle.Secondary),
-    createButton(channelId, "show", "👁️ 表示", ButtonStyle.Secondary)
+    ...(isLocked
+      ? [createButton(channelId, "unlock", "🔓 解除", ButtonStyle.Secondary)]
+      : [createButton(channelId, "lock", "🔒 ロック", ButtonStyle.Secondary)]),
+    ...(isHidden
+      ? [createButton(channelId, "show", "👁️ 表示", ButtonStyle.Secondary)]
+      : [createButton(channelId, "hide", "🙈 非表示", ButtonStyle.Secondary)])
   );
 
   const secondRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -175,6 +188,20 @@ function createButton(
     .setCustomId(toTempVoiceControlCustomId({ action, channelId }))
     .setLabel(label)
     .setStyle(style);
+}
+
+export function getTempVoiceState(channel: GuildBasedChannel) {
+  if (!("permissionOverwrites" in channel)) {
+    return { isLocked: false, isHidden: false };
+  }
+  const overwrites = (channel as { permissionOverwrites: { cache: Map<string, { type: number; deny: { has: (flag: bigint) => boolean } }> } }).permissionOverwrites.cache;
+  const everyoneOverwrite = [...overwrites.values()].find(
+    (o) => o.type === 0 // OverwriteType.Role = 0
+  );
+  return {
+    isLocked: everyoneOverwrite?.deny.has(PermissionFlagsBits.Connect) ?? false,
+    isHidden: everyoneOverwrite?.deny.has(PermissionFlagsBits.ViewChannel) ?? false
+  };
 }
 
 function getChannelUserPermissions(channel: GuildBasedChannel & { isVoiceBased: () => true }) {
@@ -208,6 +235,7 @@ async function updateControlPanel(
   if (!isVoiceBasedChannel(voiceChannel) || !controlChannel?.isTextBased()) return;
 
   const { allowedUserIds, deniedUserIds } = getChannelUserPermissions(voiceChannel);
+  const { isLocked, isHidden } = getTempVoiceState(voiceChannel);
 
   const messages = await controlChannel.messages.fetch({ limit: 10 }).catch(() => null);
   if (!messages) return;
@@ -230,7 +258,9 @@ async function updateControlPanel(
       ownerId: tempVoice.ownerId,
       tempVoiceChannelId: tempVoice.channelId,
       allowedUserIds,
-      deniedUserIds
+      deniedUserIds,
+      isLocked,
+      isHidden
     })
   );
 }
@@ -444,24 +474,28 @@ export async function handleTempVoiceControlInteraction(
   if (parsed.action === "lock") {
     await channel.permissionOverwrites.edit(guild.roles.everyone.id, { Connect: false });
     await replyPrivate(interaction, "✅ 🔒 ロック完了", ["新しいメンバーは接続できなくなりました。"]);
+    await updateControlPanel(guild, tempVoiceChannel);
     return true;
   }
 
   if (parsed.action === "unlock") {
     await channel.permissionOverwrites.edit(guild.roles.everyone.id, { Connect: null });
     await replyPrivate(interaction, "✅ 🔓 ロック解除", ["新しいメンバーが接続できるようになりました。"]);
+    await updateControlPanel(guild, tempVoiceChannel);
     return true;
   }
 
   if (parsed.action === "hide") {
     await channel.permissionOverwrites.edit(guild.roles.everyone.id, { ViewChannel: false });
     await replyPrivate(interaction, "✅ 🙈 非表示", ["チャンネルを非表示にしました。"]);
+    await updateControlPanel(guild, tempVoiceChannel);
     return true;
   }
 
   if (parsed.action === "show") {
     await channel.permissionOverwrites.edit(guild.roles.everyone.id, { ViewChannel: null });
     await replyPrivate(interaction, "✅ 👁️ 表示", ["チャンネルを表示しました。"]);
+    await updateControlPanel(guild, tempVoiceChannel);
     return true;
   }
 
