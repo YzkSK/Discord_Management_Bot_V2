@@ -73,3 +73,36 @@ describe("createRecruitmentPostMessage", () => {
     assert.equal(message.flags, MessageFlags.IsComponentsV2);
   });
 });
+
+describe("settings custom id", () => {
+  it("parses settings action", () => {
+    const id = createRecruitmentCustomId("settings", "r1");
+    assert.deepEqual(parseRecruitmentCustomId(id), {
+      action: "settings",
+      recruitmentId: "r1"
+    });
+  });
+
+  it("parses toggle-auto-close action", () => {
+    const id = createRecruitmentCustomId("toggle-auto-close", "r1");
+    assert.deepEqual(parseRecruitmentCustomId(id), {
+      action: "toggle-auto-close",
+      recruitmentId: "r1"
+    });
+  });
+});
+
+describe("createRecruitmentPostMessage with settings button", () => {
+  it("includes 4 buttons: join, leave, close, settings", () => {
+    const msg = createRecruitmentPostMessage({
+      id: "r1", guildId: "g1", channelId: "c1", messageId: null,
+      creatorId: "u1", genre: "Test", capacity: 4, content: "x",
+      voiceChannelId: null, autoClose: true, status: "open",
+      autoClosed: false, closedAt: null,
+      createdAt: new Date(), updatedAt: new Date()
+    }, getLocale("ja"));
+
+    const actionRow = msg.components?.[1] as { components: unknown[] };
+    assert.equal(actionRow.components.length, 4);
+  });
+});

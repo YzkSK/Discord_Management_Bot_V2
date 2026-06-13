@@ -232,6 +232,42 @@ describe("sanitizeTtsText", () => {
       "見て ok"
     );
   });
+
+  it("removes Unicode emojis", () => {
+    assert.equal(sanitizeTtsText("見て😂😂"), "見て");
+  });
+
+  it("removes Discord custom emojis", () => {
+    assert.equal(sanitizeTtsText("<:yay:123456789>"), "");
+  });
+
+  it("removes Discord animated emojis", () => {
+    assert.equal(sanitizeTtsText("<a:wave:987654321>"), "");
+  });
+
+  it("strips Markdown bold and strikethrough, keeping text", () => {
+    assert.equal(sanitizeTtsText("**太字**と~~打消し~~"), "太字と打消し");
+  });
+
+  it("removes inline code", () => {
+    assert.equal(sanitizeTtsText("`code`を実行"), "を実行");
+  });
+
+  it("removes code blocks", () => {
+    assert.equal(sanitizeTtsText("```\nblock\n```"), "");
+  });
+
+  it("strips block quote markers, keeping text", () => {
+    assert.equal(sanitizeTtsText("> 引用テキスト"), "引用テキスト");
+  });
+
+  it("removes kaomoji with only symbols inside parentheses", () => {
+    assert.equal(sanitizeTtsText("(・∀・)こんにちは"), "こんにちは");
+  });
+
+  it("does not remove parentheses containing Japanese text", () => {
+    assert.equal(sanitizeTtsText("テスト(テスト)"), "テスト(テスト)");
+  });
 });
 
 describe("TtsMessageRateLimiter", () => {
@@ -366,6 +402,170 @@ describe("handleTtsMessage", () => {
     assert.equal(skippedReason, "rate-limited");
   });
 
+  it("sends a yellow reply when the rate limiter blocks the user", async () => {
+    let replyCalled = 0;
+
+    const cooldowns = new Map<string, number>();
+    const mockDb = {
+      select: () => ({
+        from: () => ({
+          innerJoin: () => ({
+            where: () => ({
+              limit: async () => []
+            })
+          })
+        })
+      })
+    };
+
+    await handleTtsMessage(
+      {
+        author: { bot: false, id: "user-1" },
+        channelId: "text-1",
+        content: "hello",
+        guildId: "guild-1",
+        id: "message-1",
+        inGuild: () => true,
+        reply: async () => {
+          replyCalled += 1;
+        }
+      } as never,
+      {
+        db: mockDb as never,
+        loadDictionaryEntries: async () => [],
+        logWriter: {
+          recordHandlerError: async () => undefined,
+          write: async () => undefined
+        },
+        rateLimiter: { allow: () => false },
+        rateLimitNotifyCooldowns: cooldowns,
+        speakerId: 1,
+        ttsSessionManager: {
+          getReadableChannelIds: () => ["text-1"],
+          getVoiceChannelId: () => "voice-1",
+          isConnected: () => true,
+          play: async () => undefined
+        } as never,
+        voicevox: {
+          synthesize: async () => Buffer.from("audio")
+        }
+      }
+    );
+
+    assert.equal(replyCalled, 1);
+  });
+
+  it("suppresses the rate-limit notification within the cooldown window", async () => {
+    let replyCalled = 0;
+
+    const now = Date.now();
+    const cooldowns = new Map<string, number>([["user-1", now]]);
+    const mockDb = {
+      select: () => ({
+        from: () => ({
+          innerJoin: () => ({
+            where: () => ({
+              limit: async () => []
+            })
+          })
+        })
+      })
+    };
+
+    const baseOptions = {
+      db: mockDb as never,
+      loadDictionaryEntries: async () => [],
+      logWriter: {
+        recordHandlerError: async () => undefined,
+        write: async () => undefined
+      },
+      rateLimiter: { allow: () => false },
+      rateLimitNotifyCooldowns: cooldowns,
+      speakerId: 1,
+      ttsSessionManager: {
+        getReadableChannelIds: () => ["text-1"],
+        getVoiceChannelId: () => "voice-1",
+        isConnected: () => true,
+        play: async () => undefined
+      } as never,
+      voicevox: {
+        synthesize: async () => Buffer.from("audio")
+      }
+    };
+
+    await handleTtsMessage(
+      {
+        author: { bot: false, id: "user-1" },
+        channelId: "text-1",
+        content: "hello",
+        guildId: "guild-1",
+        id: "message-1",
+        inGuild: () => true,
+        reply: async () => {
+          replyCalled += 1;
+        }
+      } as never,
+      baseOptions
+    );
+
+    assert.equal(replyCalled, 0);
+  });
+
+  it("resets the cooldown and notifies again after the cooldown window elapses", async () => {
+    let replyCalled = 0;
+
+    // Set last notification to more than RATE_LIMIT_NOTIFY_COOLDOWN_MS ago
+    const pastTimestamp = Date.now() - 6_000;
+    const cooldowns = new Map<string, number>([["user-1", pastTimestamp]]);
+    const mockDb = {
+      select: () => ({
+        from: () => ({
+          innerJoin: () => ({
+            where: () => ({
+              limit: async () => []
+            })
+          })
+        })
+      })
+    };
+
+    await handleTtsMessage(
+      {
+        author: { bot: false, id: "user-1" },
+        channelId: "text-1",
+        content: "hello",
+        guildId: "guild-1",
+        id: "message-1",
+        inGuild: () => true,
+        reply: async () => {
+          replyCalled += 1;
+        }
+      } as never,
+      {
+        db: mockDb as never,
+        loadDictionaryEntries: async () => [],
+        logWriter: {
+          recordHandlerError: async () => undefined,
+          write: async () => undefined
+        },
+        rateLimiter: { allow: () => false },
+        rateLimitNotifyCooldowns: cooldowns,
+        speakerId: 1,
+        ttsSessionManager: {
+          getReadableChannelIds: () => ["text-1"],
+          getVoiceChannelId: () => "voice-1",
+          isConnected: () => true,
+          play: async () => undefined
+        } as never,
+        voicevox: {
+          synthesize: async () => Buffer.from("audio")
+        }
+      }
+    );
+
+    assert.equal(replyCalled, 1);
+  });
+
   it("enqueues accepted messages before synthesis and playback", async () => {
     const queuedGuilds: string[] = [];
     const played: string[] = [];
@@ -411,4 +611,5 @@ describe("handleTtsMessage", () => {
     assert.deepEqual(queuedGuilds, ["guild-1"]);
     assert.deepEqual(played, ["first"]);
   });
+
 });

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { getLocale } from "@discord-bot/shared";
+
 import {
   appendVoiceStatusChannelMarker,
   createVoiceStatusMessage,
@@ -8,6 +10,8 @@ import {
   resolveVoiceStatusDisplayState,
   voiceStatusChannelTopicMarker
 } from "./voice-status-channel.js";
+
+const loc = getLocale("en");
 
 describe("voice status channel marker", () => {
   it("detects marked channel topics", () => {
@@ -60,10 +64,11 @@ describe("voice status display", () => {
     );
   });
 
-  it("renders duration in the status message", () => {
+  it("renders ended state with duration and voice channel mention", () => {
     const message = createVoiceStatusMessage({
       channelId: "voice-1",
       endedAt: new Date("2026-06-03T00:02:30.000Z"),
+      loc,
       memberCount: 0,
       now: new Date("2026-06-03T00:02:30.000Z"),
       sessionId: "session-1",
@@ -71,8 +76,24 @@ describe("voice status display", () => {
     });
     const serialized = JSON.stringify(message);
 
-    assert.match(serialized, /Ended/);
-    assert.match(serialized, /Duration: 2m 30s/);
-    assert.match(serialized, /Voice channel: <#voice-1>/);
+    assert.match(serialized, /Voice Session Ended/);
+    assert.match(serialized, /0:02/);
+    assert.match(serialized, /<#voice-1>/);
+  });
+
+  it("renders member mentions when memberIds are provided", () => {
+    const message = createVoiceStatusMessage({
+      channelId: "voice-1",
+      loc,
+      memberCount: 2,
+      memberIds: ["user-1", "user-2"],
+      now: new Date("2026-06-03T00:00:30.000Z"),
+      sessionId: "session-1",
+      startedAt: new Date("2026-06-03T00:00:00.000Z")
+    });
+    const serialized = JSON.stringify(message);
+
+    assert.match(serialized, /<@user-1>/);
+    assert.match(serialized, /<@user-2>/);
   });
 });

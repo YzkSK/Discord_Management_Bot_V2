@@ -223,8 +223,8 @@ export async function handleJoinCommand(
   }
 
   await replyPrivate(interaction, loc.ttsConnected, [
-    loc.ttsVoiceChannel({ id: target.voiceChannelId }),
-    loc.ttsReadingChannel({ id: target.textChannelId })
+    `${loc.ttsVoiceChannel({ id: target.voiceChannelId })}  ·  ${loc.ttsReadingChannel({ id: target.textChannelId })}`,
+    loc.ttsTipMutePrefix
   ], EVENT_COLORS.green);
 
   if (result.status === "joined") {
@@ -267,16 +267,14 @@ export async function handleForceJoinCommand(
 
   if (currentVoiceChannelId && currentVoiceChannelId !== target.voiceChannelId) {
     await interaction.reply(
-      createForceJoinConfirmation({ ...target, userId: interaction.user.id }, loc)
+      createForceJoinConfirmation({ ...target, userId: interaction.user.id, currentVoiceChannelId }, loc)
     );
     return;
   }
 
   const result = await context.ttsSessionManager.forceJoin(target);
   await replyPrivate(interaction, loc.ttsConnected, [
-    result.status === "moved" ? loc.ttsMoved : loc.ttsReady,
-    loc.ttsVoiceChannel({ id: target.voiceChannelId }),
-    loc.ttsReadingChannel({ id: target.textChannelId })
+    `${loc.ttsVoiceChannel({ id: target.voiceChannelId })}  ·  ${loc.ttsReadingChannel({ id: target.textChannelId })}`
   ], EVENT_COLORS.green);
 
   if (result.status !== "already-connected") {
@@ -309,7 +307,7 @@ export async function handleLeaveCommand(
   const voiceChannelId = context.ttsSessionManager.getVoiceChannelId(guildId);
   const wasConnected = context.ttsSessionManager.isConnected(guildId);
   context.ttsSessionManager.leave(guildId);
-  await replyPrivate(interaction, loc.ttsDisconnected, [loc.ttsChannelsCleared], EVENT_COLORS.green);
+  await replyPrivate(interaction, loc.ttsDisconnected, [loc.ttsChannelsCleared], EVENT_COLORS.gray);
 
   if (wasConnected) {
     await writeTtsLog(
@@ -438,8 +436,7 @@ export async function handleForceJoinButtonInteraction(
   });
   await interaction.update(
     createUpdateMessage(loc.ttsMovedTitle, [
-      loc.ttsVoiceChannel({ id: target.voiceChannelId }),
-      loc.ttsReadingChannel({ id: target.textChannelId })
+      `${loc.ttsVoiceChannel({ id: target.voiceChannelId })}  ·  ${loc.ttsReadingChannel({ id: target.textChannelId })}`
     ], EVENT_COLORS.green)
   );
 
@@ -525,7 +522,7 @@ function getMemberRoleIds(member: GuildMember) {
 }
 
 function createForceJoinConfirmation(
-  input: ForceJoinCustomIdInput,
+  input: ForceJoinCustomIdInput & { currentVoiceChannelId: string },
   loc: Loc
 ): InteractionReplyOptions {
   const confirm = new ButtonBuilder()
@@ -544,6 +541,7 @@ function createForceJoinConfirmation(
   const message = createComponentsV2TextMessage({
     title: loc.ttsForceJoinConfirmTitle,
     lines: [
+      loc.ttsForceJoinCurrentChannel({ id: input.currentVoiceChannelId }),
       loc.ttsForceJoinAlreadyConnected,
       loc.ttsForceJoinMoveTo({ id: input.voiceChannelId })
     ],

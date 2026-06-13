@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { resolveRecruitmentStatus } from "./recruitments.js";
+import {
+  resolveRecruitmentStatus,
+  updateRecruitmentAutoClose
+} from "./recruitments.js";
 
 describe("resolveRecruitmentStatus", () => {
   it("keeps closed recruitments closed", () => {
@@ -47,5 +50,31 @@ describe("resolveRecruitmentStatus", () => {
       }),
       "open"
     );
+  });
+});
+
+describe("updateRecruitmentAutoClose", () => {
+  it("calls update with the new autoClose value", async () => {
+    let capturedSet: Record<string, unknown> | null = null;
+    const db = {
+      update: () => ({
+        set: (values: Record<string, unknown>) => {
+          capturedSet = values;
+          return {
+            where: () => ({
+              returning: async () => [{ id: "r1", autoClose: false } as never]
+            })
+          };
+        }
+      })
+    } as never;
+
+    const result = await updateRecruitmentAutoClose(db, {
+      recruitmentId: "r1",
+      autoClose: false
+    });
+
+    assert.equal((result as any)?.id, "r1");
+    assert.equal((capturedSet as any)?.autoClose, false);
   });
 });

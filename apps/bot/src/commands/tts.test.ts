@@ -4,6 +4,8 @@ import { describe, it } from "node:test";
 import {
   buildSpeakerAutocompleteChoices,
   forceJoinCommand,
+  handleForceJoinCommand,
+  handleJoinCommand,
   handleSpeakerCommand,
   joinCommand,
   leaveCommand,
@@ -218,6 +220,79 @@ describe("buildSpeakerAutocompleteChoices", () => {
     const choices = buildSpeakerAutocompleteChoices(manySpeakers, "");
 
     assert.equal(choices.length, 25);
+  });
+});
+
+describe("handleJoinCommand — mute tip", () => {
+  it("includes the mute-prefix tip in the joined success reply", async () => {
+    let replyComponents = "";
+
+    await handleJoinCommand(
+      {
+        guildId: "guild-1",
+        channelId: "text-1",
+        user: { id: "user-1" },
+        guild: {
+          voiceAdapterCreator: {},
+          members: {
+            fetch: async () => ({ voice: { channel: { id: "voice-1" } } })
+          }
+        },
+        reply: async (msg: { components?: unknown[] }) => {
+          replyComponents = JSON.stringify(msg.components ?? []);
+        }
+      } as never,
+      {
+        db: createSpeakerCommandDb() as never,
+        ttsSessionManager: {
+          join: async () => ({ status: "joined" as const }),
+          isConnected: () => false,
+          getVoiceChannelId: () => null,
+          getReadableChannelIds: () => []
+        } as never
+      }
+    );
+
+    assert.match(replyComponents, /\/\//);
+  });
+});
+
+describe("handleForceJoinCommand — confirmation shows current channel", () => {
+  it("includes the current voice channel id in the confirmation lines", async () => {
+    let replyComponents = "";
+
+    await handleForceJoinCommand(
+      {
+        guildId: "guild-1",
+        channelId: "text-1",
+        user: { id: "owner-1" },
+        guild: {
+          ownerId: "owner-1",
+          voiceAdapterCreator: {},
+          members: {
+            fetch: async () => ({
+              voice: { channel: { id: "voice-new" } },
+              roles: { cache: { map: () => [] } }
+            })
+          }
+        },
+        reply: async (msg: { components?: unknown[] }) => {
+          replyComponents = JSON.stringify(msg.components ?? []);
+        }
+      } as never,
+      {
+        db: createSpeakerCommandDb() as never,
+        ttsSessionManager: {
+          join: async () => ({ status: "joined" as const }),
+          isConnected: () => true,
+          getVoiceChannelId: () => "voice-current",
+          getReadableChannelIds: () => [],
+          forceJoin: async () => ({ status: "joined" as const })
+        } as never
+      }
+    );
+
+    assert.match(replyComponents, /voice-current/);
   });
 });
 

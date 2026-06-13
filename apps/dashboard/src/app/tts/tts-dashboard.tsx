@@ -23,6 +23,11 @@ import {
   TableRow
 } from "../../components/ui/table";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
+import { ErrorAlert } from "../../components/error-alert";
+import { useDashboardData } from "../../hooks/use-dashboard-data";
+
+const DICTIONARY_DISPLAY_LIMIT = 8;
+const USER_SPEAKER_DISPLAY_LIMIT = 8;
 
 type TtsDictionaryScope = "guild" | "user";
 
@@ -64,33 +69,24 @@ interface TtsResponse {
 }
 
 export function TtsDashboard({ guildId }: { guildId: string }) {
-  const [data, setData] = useState<TtsResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [uiLang] = useState<GuildLanguage>(detectBrowserLanguage);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [uiLang, setUiLang] = useState<GuildLanguage>("en");
   const loc = getDashboardLocale(uiLang);
+  const { data, loading, error, reload: refresh } = useDashboardData(
+    () => fetchTtsSummary(guildId),
+    [guildId],
+    "TTS request failed"
+  );
 
   useEffect(() => {
-    setLoading(true);
-    fetchTtsSummary(guildId)
-      .then(setData)
-      .catch((e: unknown) => setError(toErrorMessage(e)))
-      .finally(() => setLoading(false));
-  }, [guildId, refreshKey]);
-
-  const refresh = () => setRefreshKey((k) => k + 1);
+    setUiLang(detectBrowserLanguage());
+  }, []);
 
   if (loading) {
     return <p className="text-sm text-zinc-500">{loc.loading}...</p>;
   }
 
   if (!data) {
-    return (
-      <div className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-        {error ?? loc.failedToLoadSettings}
-      </div>
-    );
+    return <ErrorAlert message={error ?? loc.failedToLoadSettings} />;
   }
 
   return (
@@ -270,7 +266,8 @@ function GuildDefaultSpeakerPreview({ speakerId }: { speakerId: number }) {
       audio.onended = () => { URL.revokeObjectURL(url); setPlaying(false); audioRef.current = null; };
       audio.onerror = () => { URL.revokeObjectURL(url); setPlaying(false); audioRef.current = null; };
       void audio.play();
-    } catch {
+    } catch (e: unknown) {
+      console.error("TTS preview failed", e);
       setPlaying(false);
     }
   }
@@ -296,7 +293,7 @@ function DictionaryTable({
   entries: TtsDictionaryEntry[];
   loc: ReturnType<typeof getDashboardLocale>;
 }) {
-  const visibleEntries = entries.slice(0, 8);
+  const visibleEntries = entries.slice(0, DICTIONARY_DISPLAY_LIMIT);
 
   return (
     <div className="overflow-hidden rounded-md border border-zinc-800">
@@ -378,7 +375,10 @@ function DictionaryAddForm({
       });
 
       if (!res.ok) {
-        const body = await res.json().catch(() => ({})) as { error?: string };
+        const body = await res.json().catch((e: unknown) => {
+          console.error("Failed to parse error response", e);
+          return {} as { error?: string };
+        }) as { error?: string };
         setFormError(body.error ?? "登録に失敗しました");
         return;
       }
@@ -387,7 +387,8 @@ function DictionaryAddForm({
       setToText("");
       setPriority(0);
       onSuccess();
-    } catch {
+    } catch (e: unknown) {
+      console.error("Dictionary add failed", e);
       setFormError("登録に失敗しました");
     } finally {
       setSubmitting(false);
@@ -463,7 +464,7 @@ function UserSpeakerTable({
   loc: ReturnType<typeof getDashboardLocale>;
   userSpeakers: TtsUserSpeaker[];
 }) {
-  const visibleSpeakers = userSpeakers.slice(0, 8);
+  const visibleSpeakers = userSpeakers.slice(0, USER_SPEAKER_DISPLAY_LIMIT);
   const [playingId, setPlayingId] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -596,6 +597,3 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-function toErrorMessage(e: unknown) {
-  return e instanceof Error ? e.message : "TTS request failed";
-}

@@ -2,9 +2,9 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: discord_bot
-      POSTGRES_USER: discord_bot
-      POSTGRES_PASSWORD: discord_bot
+      POSTGRES_DB: ${POSTGRES_DB:-discord_bot}
+      POSTGRES_USER: ${POSTGRES_USER:-discord_bot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-discord_bot}
     ports:
       - "5432:5432"
     volumes:
@@ -47,7 +47,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgres://discord_bot:discord_bot@postgres:5432/discord_bot
+      DATABASE_URL: postgres://${POSTGRES_USER:-discord_bot}:${POSTGRES_PASSWORD:-discord_bot}@postgres:5432/${POSTGRES_DB:-discord_bot}
       REDIS_URL: redis://redis:6379
       VOICEVOX_URL: http://voicevox:50021
       VOICEVOX_SPEAKER_ID: ${VOICEVOX_SPEAKER_ID:-2}
@@ -70,7 +70,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgres://discord_bot:discord_bot@postgres:5432/discord_bot
+      DATABASE_URL: postgres://${POSTGRES_USER:-discord_bot}:${POSTGRES_PASSWORD:-discord_bot}@postgres:5432/${POSTGRES_DB:-discord_bot}
       REDIS_URL: redis://redis:6379
       VOICEVOX_URL: http://voicevox:50021
       VOICEVOX_SPEAKER_ID: ${VOICEVOX_SPEAKER_ID:-2}
@@ -95,7 +95,7 @@ services:
   backup:
     image: postgres:17-alpine
     environment:
-      DATABASE_URL: postgres://discord_bot:discord_bot@postgres:5432/discord_bot
+      DATABASE_URL: postgres://${POSTGRES_USER:-discord_bot}:${POSTGRES_PASSWORD:-discord_bot}@postgres:5432/${POSTGRES_DB:-discord_bot}
       BACKUP_DIR: /backups/postgres
     volumes:
       - ./scripts/backup-postgres.sh:/usr/local/bin/backup-postgres.sh:ro

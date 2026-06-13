@@ -5,8 +5,10 @@ import {
   type DbClient,
   type EffectiveTtsDictionaryEntry
 } from "@discord-bot/db";
+import { getLocale, isGuildLanguage } from "@discord-bot/shared";
 import { Events, type Client, type Message } from "discord.js";
 
+import { createComponentsV2TextMessage, EVENT_COLORS } from "./components-v2.js";
 import type { DiscordLogWriter } from "./log-writer.js";
 import {
   createTtsMessageSkippedEvent,
@@ -16,6 +18,8 @@ import { LocalTtsPlaybackQueue, type TtsPlaybackQueue } from "./tts-queue.js";
 import type { TtsSessionManager } from "./tts-session.js";
 import { normalizeTtsText, type VoicevoxClient } from "./voicevox.js";
 
+const RATE_LIMIT_NOTIFY_COOLDOWN_MS = 5_000;
+
 export interface InstallTtsMessageReaderOptions {
   db: DbClient;
   loadDictionaryEntries?: (
@@ -24,6 +28,7 @@ export interface InstallTtsMessageReaderOptions {
   loadSpeakerId?: (input: LoadTtsSpeakerIdInput) => Promise<number>;
   logWriter: DiscordLogWriter;
   rateLimiter?: TtsRateLimiter;
+  rateLimitNotifyCooldowns?: Map<string, number>;
   speakerId: number;
   ttsQueue?: TtsPlaybackQueue;
   ttsSessionManager: TtsSessionManager;
@@ -89,6 +94,7 @@ export function installTtsMessageReader(
   const readerOptions: InstallTtsMessageReaderOptions = {
     ...options,
     rateLimiter: options.rateLimiter ?? new TtsMessageRateLimiter(),
+    rateLimitNotifyCooldowns: options.rateLimitNotifyCooldowns ?? new Map<string, number>(),
     ttsQueue: options.ttsQueue ?? new LocalTtsPlaybackQueue()
   };
 
@@ -234,7 +240,27 @@ export function applyTtsDictionaryEntries(
 
 export function sanitizeTtsText(text: string) {
   return text
+    // コードブロック (Markdown 処理より先に除去)
+    .replace(/```[\s\S]*?```/g, " ")
+    // インラインコード
+    .replace(/`[^`\n]+`/g, " ")
+    // Discord カスタム/アニメ絵文字 <:name:id> / <a:name:id>
+    .replace(/<a?:[a-zA-Z0-9_]+:\d+>/g, " ")
+    // Unicode 絵文字
+    .replace(/\p{Extended_Pictographic}/gu, " ")
+    // Markdown (記号を除去・本文は残す)
+    .replace(/\*\*([^*\n]+)\*\*/g, "$1")
+    .replace(/~~([^~\n]+)~~/g, "$1")
+    .replace(/\*([^*\n]+)\*/g, "$1")
+    .replace(/__([^_\n]+)__/g, "$1")
+    // 引用行の > を除去
+    .replace(/^>\s?/gm, "")
+    // 顔文字ヒューリスティック: 括弧内に日本語・英数字を含まない記号列
+    // ぁ-ゞ=ひらがな, ァ-ヺ=カタカナ(・U+30FBは除外範囲外=顔文字に使用可)
+    .replace(/[（(][^ぁ-ゞァ-ヺ一-鿿（）()\w\n]{2,20}[）)]/g, " ")
+    // URL 除去
     .replace(/https?:\/\/\S+|www\.\S+/gi, " ")
+    // Discord メンション除去
     .replace(/<@!?\d+>|<@&\d+>|<#\d+>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -310,6 +336,25 @@ export async function handleTtsMessage(
         voiceChannelId
       })
     );
+    const cooldowns = options.rateLimitNotifyCooldowns;
+    if (cooldowns) {
+      const now = Date.now();
+      const lastNotified = cooldowns.get(message.author.id) ?? 0;
+      if (now - lastNotified >= RATE_LIMIT_NOTIFY_COOLDOWN_MS) {
+        cooldowns.set(message.author.id, now);
+        const config = await getGuildConfigByGuildId(options.db, message.guildId);
+        const lang = config?.language && isGuildLanguage(config.language) ? config.language : "en";
+        const loc = getLocale(lang);
+        await message.reply(
+          createComponentsV2TextMessage({
+            title: loc.ttsRateLimited,
+            lines: [loc.ttsRateLimitedHint],
+            accentColor: EVENT_COLORS.yellow,
+            privateResponse: false
+          })
+        );
+      }
+    }
     return;
   }
 
@@ -338,6 +383,8 @@ export async function handleTtsMessage(
     return;
   }
 
+  const readableText = sanitizedText;
+
   const loadDictionaryEntries =
     options.loadDictionaryEntries ??
     ((input: LoadTtsDictionaryEntriesInput) =>
@@ -352,7 +399,7 @@ export async function handleTtsMessage(
     userId: message.author.id
   });
   const text = applyTtsDictionaryEntries(
-    sanitizedText,
+    readableText,
     await loadDictionaryEntries({
       guildId: message.guildId,
       userId: message.author.id

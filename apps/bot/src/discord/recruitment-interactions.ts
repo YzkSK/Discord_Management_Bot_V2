@@ -1,6 +1,10 @@
 import {
   type ButtonInteraction,
-  PermissionFlagsBits
+  ButtonStyle,
+  ComponentType,
+  MessageFlags,
+  PermissionFlagsBits,
+  type TextChannel
 } from "discord.js";
 import type { DbClient } from "@discord-bot/db";
 import {
@@ -10,12 +14,14 @@ import {
   getRecruitmentById,
   joinRecruitment,
   leaveRecruitment,
+  updateRecruitmentAutoClose,
   updateRecruitmentStatus
 } from "@discord-bot/db";
 import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/shared";
 
 import { createComponentsV2TextMessage, EVENT_COLORS } from "./components-v2.js";
 import {
+  createRecruitmentCustomId,
   createRecruitmentPostMessage,
   parseRecruitmentCustomId
 } from "./recruitment-channel.js";
@@ -67,6 +73,16 @@ export async function handleRecruitmentButtonInteraction(
 
   if (parsed.action === "leave") {
     await handleLeave(interaction, context, recruitment, loc);
+    return true;
+  }
+
+  if (parsed.action === "settings") {
+    await handleSettings(interaction, context, recruitment, loc);
+    return true;
+  }
+
+  if (parsed.action === "toggle-auto-close") {
+    await handleToggleAutoClose(interaction, context, recruitment, loc);
     return true;
   }
 
@@ -122,6 +138,23 @@ async function handleJoin(
   await interaction.message.edit(
     createRecruitmentPostMessage(updatedRecruitment ?? recruitment, loc, nextCount)
   );
+
+  if (nextStatus === "closed" && recruitment.autoClose) {
+    const loc2 = await resolveLocale(context.db, interaction.guildId);
+    await (interaction.channel as TextChannel | null)?.send({
+      ...createComponentsV2TextMessage({
+        title: loc2.recruitmentAutoClosedTitle,
+        lines: [
+          `<@${recruitment.creatorId}>`,
+          loc2.recruitmentAutoClosedHint
+        ],
+        accentColor: EVENT_COLORS.gray
+      })
+    }).catch((err: unknown) => {
+      console.warn("failed to send recruitment auto-close notification", err);
+    });
+  }
+
   const loggedRecruitment = updatedRecruitment ?? recruitment;
   if (context.logWriter && nextStatus !== "open") {
     writeRecruitmentLifecycleLog(
@@ -178,6 +211,20 @@ async function handleLeave(
   await interaction.message.edit(
     createRecruitmentPostMessage(updatedRecruitment, loc, nextCount)
   );
+
+  if (shouldReopen) {
+    const loc2 = await resolveLocale(context.db, interaction.guildId);
+    await (interaction.channel as TextChannel | null)?.send({
+      ...createComponentsV2TextMessage({
+        title: loc2.recruitmentReopenedTitle,
+        lines: [`<@${recruitment.creatorId}>`],
+        accentColor: EVENT_COLORS.green
+      })
+    }).catch((err: unknown) => {
+      console.warn("failed to send recruitment reopen notification", err);
+    });
+  }
+
   await interaction.reply({
     ...createComponentsV2TextMessage({
       title: loc.recruitmentLeft({ current: nextCount, max: recruitment.capacity }),
@@ -234,6 +281,95 @@ async function handleClose(
   await interaction.reply({
     ...createComponentsV2TextMessage({
       title: loc.recruitmentClosedSuccess,
+      accentColor: EVENT_COLORS.teal,
+      privateResponse: true
+    })
+  });
+}
+
+async function handleSettings(
+  interaction: ButtonInteraction,
+  context: RecruitmentInteractionContext,
+  recruitment: NonNullable<Awaited<ReturnType<typeof getRecruitmentById>>>,
+  loc: ReturnType<typeof getLocale>
+) {
+  if (interaction.user.id !== recruitment.creatorId) {
+    await interaction.reply({
+      ...createComponentsV2TextMessage({
+        title: loc.recruitmentNotCreator,
+        lines: [],
+        accentColor: EVENT_COLORS.red,
+        privateResponse: true
+      })
+    });
+    return;
+  }
+
+  const toggleLabel = recruitment.autoClose
+    ? loc.recruitmentAutoCloseToggleOff
+    : loc.recruitmentAutoCloseToggleOn;
+
+  await interaction.reply({
+    flags: MessageFlags.IsComponentsV2,
+    ephemeral: true,
+    components: [
+      {
+        type: ComponentType.Container,
+        accent_color: EVENT_COLORS.teal,
+        components: [
+          {
+            type: ComponentType.TextDisplay,
+            content: `## ${loc.recruitmentSettingsTitle}`
+          },
+          {
+            type: ComponentType.TextDisplay,
+            content: loc.recruitmentAutoCloseStatus({ enabled: recruitment.autoClose })
+          }
+        ]
+      },
+      {
+        type: ComponentType.ActionRow,
+        components: [
+          {
+            type: ComponentType.Button,
+            customId: createRecruitmentCustomId("toggle-auto-close", recruitment.id),
+            label: toggleLabel,
+            style: ButtonStyle.Secondary
+          }
+        ]
+      }
+    ]
+  });
+}
+
+async function handleToggleAutoClose(
+  interaction: ButtonInteraction,
+  context: RecruitmentInteractionContext,
+  recruitment: NonNullable<Awaited<ReturnType<typeof getRecruitmentById>>>,
+  loc: ReturnType<typeof getLocale>
+) {
+  if (interaction.user.id !== recruitment.creatorId) {
+    await interaction.reply({
+      ...createComponentsV2TextMessage({
+        title: loc.recruitmentNotCreator,
+        lines: [],
+        accentColor: EVENT_COLORS.red,
+        privateResponse: true
+      })
+    });
+    return;
+  }
+
+  const newAutoClose = !recruitment.autoClose;
+  await updateRecruitmentAutoClose(context.db, {
+    recruitmentId: recruitment.id,
+    autoClose: newAutoClose
+  });
+
+  await interaction.reply({
+    ...createComponentsV2TextMessage({
+      title: loc.recruitmentAutoCloseUpdated({ enabled: newAutoClose }),
+      lines: [],
       accentColor: EVENT_COLORS.teal,
       privateResponse: true
     })

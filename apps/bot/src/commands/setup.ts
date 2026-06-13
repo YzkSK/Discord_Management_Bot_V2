@@ -14,10 +14,10 @@ import {
 import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/shared";
 
 import { createComponentsV2TextMessage, EVENT_COLORS } from "../discord/components-v2.js";
-import { logChannelTopicMarker, markLogChannel } from "../discord/log-channel.js";
+import { findMarkedLogChannel, markLogChannel } from "../discord/log-channel.js";
 import {
-  markVoiceStatusChannel,
-  voiceStatusChannelTopicMarker
+  findMarkedVoiceStatusChannel,
+  markVoiceStatusChannel
 } from "../discord/voice-status-channel.js";
 
 type Loc = ReturnType<typeof getLocale>;
@@ -81,6 +81,12 @@ export const setupCommand = new SlashCommandBuilder()
           .addChannelTypes(ChannelType.GuildText)
           .setRequired(true)
       )
+  )
+  .addSubcommand((subcommand) =>
+    subcommand
+      .setName("status")
+      .setDescription("Show current bot configuration for this guild.")
+      .setDescriptionLocalization("ja", "このサーバーの現在のBot設定を表示します。")
   );
 
 export interface SetupCommandContext {
@@ -143,6 +149,9 @@ export async function handleSetupCommand(
       return;
     case "voice-status":
       await handleVoiceStatusSetup(interaction, context, guildId, loc);
+      return;
+    case "status":
+      await handleStatusSetup(interaction, context, guildId, loc);
       return;
     default:
       await interaction.reply({
@@ -249,6 +258,34 @@ async function handleLogsSetup(
         loc.logsChannel({ id: channel.id }),
       ],
       accentColor: EVENT_COLORS.green,
+      privateResponse: true
+    })
+  });
+}
+
+async function handleStatusSetup(
+  interaction: ChatInputCommandInteraction,
+  context: SetupCommandContext,
+  guildId: string,
+  loc: Loc
+) {
+  const config = await getGuildConfigByGuildId(context.db, guildId).catch(() => null);
+  const guild = interaction.guild;
+
+  const [logChannel, voiceStatusChannel] = await Promise.all([
+    guild ? findMarkedLogChannel(guild).catch(() => null) : Promise.resolve(null),
+    guild ? findMarkedVoiceStatusChannel(guild).catch(() => null) : Promise.resolve(null)
+  ]);
+
+  await interaction.reply({
+    ...createComponentsV2TextMessage({
+      title: loc.setupStatusTitle,
+      lines: [
+        loc.setupStatusTempVc({ id: config?.tempVoiceCreateChannelId ?? null }),
+        loc.setupStatusLogs({ id: logChannel?.id ?? null }),
+        loc.setupStatusVoiceStatus({ id: voiceStatusChannel?.id ?? null })
+      ],
+      accentColor: EVENT_COLORS.gray,
       privateResponse: true
     })
   });

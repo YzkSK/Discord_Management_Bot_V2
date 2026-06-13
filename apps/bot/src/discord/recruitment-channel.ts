@@ -18,7 +18,7 @@ export const recruitmentChannelTopicMarker =
 type Recruitment = Awaited<ReturnType<typeof createRecruitment>>;
 type Loc = ReturnType<typeof getLocale>;
 
-export type RecruitmentAction = "close" | "join" | "leave";
+export type RecruitmentAction = "close" | "join" | "leave" | "settings" | "toggle-auto-close";
 
 export const recruitmentCustomIdPrefix = "recruitment";
 
@@ -97,6 +97,11 @@ export function createRecruitmentPostMessage(
   loc: Loc,
   activeParticipantCount = 0
 ): MessageCreateOptions & MessageEditOptions {
+  const isClosed = recruitment.status === "closed";
+  const vcText = recruitment.voiceChannelId
+    ? loc.recruitmentPostVc({ id: recruitment.voiceChannelId })
+    : loc.recruitmentPostNoVc;
+
   return {
     flags: MessageFlags.IsComponentsV2,
     components: [
@@ -106,33 +111,25 @@ export function createRecruitmentPostMessage(
         components: [
           {
             type: ComponentType.TextDisplay,
-            content: `## ${loc.recruitmentPostTitle({ genre: recruitment.genre })}`
+            content: `## ${loc.recruitmentPostTitle({ title: recruitment.genre })}`
           },
           {
             type: ComponentType.TextDisplay,
-            content: localizeStatus(recruitment.status, loc)
+            content: `${localizeStatus(recruitment.status, loc)}  ·  👥 ${activeParticipantCount} / ${recruitment.capacity}`
           },
+          { type: ComponentType.Separator },
           {
             type: ComponentType.TextDisplay,
-            content: loc.recruitmentPostCapacity({ current: activeParticipantCount, max: recruitment.capacity })
+            content: recruitment.content
           },
+          { type: ComponentType.Separator },
           {
             type: ComponentType.TextDisplay,
             content: loc.recruitmentPostCreator({ id: recruitment.creatorId })
           },
           {
             type: ComponentType.TextDisplay,
-            content: recruitment.voiceChannelId
-              ? loc.recruitmentPostVc({ id: recruitment.voiceChannelId })
-              : loc.recruitmentPostNoVc
-          },
-          {
-            type: ComponentType.TextDisplay,
-            content: loc.recruitmentPostAutoClose({ enabled: recruitment.autoClose })
-          },
-          {
-            type: ComponentType.TextDisplay,
-            content: recruitment.content
+            content: `${vcText}  ·  ${loc.recruitmentPostAutoClose({ enabled: recruitment.autoClose })}`
           }
         ]
       },
@@ -144,7 +141,7 @@ export function createRecruitmentPostMessage(
             customId: createRecruitmentCustomId("join", recruitment.id),
             label: loc.recruitmentButtonJoin,
             style: ButtonStyle.Primary,
-            disabled: recruitment.status === "closed"
+            disabled: isClosed
           },
           {
             type: ComponentType.Button,
@@ -157,7 +154,13 @@ export function createRecruitmentPostMessage(
             customId: createRecruitmentCustomId("close", recruitment.id),
             label: loc.recruitmentButtonClose,
             style: ButtonStyle.Danger,
-            disabled: recruitment.status === "closed"
+            disabled: isClosed
+          },
+          {
+            type: ComponentType.Button,
+            customId: createRecruitmentCustomId("settings", recruitment.id),
+            label: loc.recruitmentButtonSettings,
+            style: ButtonStyle.Secondary
           }
         ]
       }
@@ -166,5 +169,8 @@ export function createRecruitmentPostMessage(
 }
 
 function isRecruitmentAction(value: string | undefined): value is RecruitmentAction {
-  return value === "close" || value === "join" || value === "leave";
+  return (
+    value === "close" || value === "join" || value === "leave" ||
+    value === "settings" || value === "toggle-auto-close"
+  );
 }

@@ -26,7 +26,6 @@ import {
   speakerCommand,
   type TtsCommandContext
 } from "./tts.js";
-
 export type CommandContext = RecruitmentCommandContext &
   SetupCommandContext &
   TtsCommandContext & {

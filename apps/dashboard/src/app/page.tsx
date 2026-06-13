@@ -22,11 +22,11 @@ export default async function HomePage() {
   return (
     <DashboardShell
       currentPath="/"
-      description="サーバーのアクティビティと KPI"
+      description="Server activity and KPIs"
       guildId={guildId}
       guildName={guildName}
       session={session}
-      title="概要"
+      title="Overview"
     >
       <OverviewClient guildId={guildId} />
     </DashboardShell>
