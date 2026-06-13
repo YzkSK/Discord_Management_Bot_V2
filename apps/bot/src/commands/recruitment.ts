@@ -224,7 +224,10 @@ async function handleRecruitmentCreate(
   await interaction.reply({
     ...createComponentsV2TextMessage({
       title: loc.recruitmentCreated,
-      lines: [loc.recruitmentPostLink({ url: message.url })],
+      lines: [
+        loc.recruitmentPostLink({ url: message.url }),
+        loc.recruitmentAutoCloseStatus({ enabled: recruitment.autoClose })
+      ],
       accentColor: EVENT_COLORS.teal,
       privateResponse: true
     })

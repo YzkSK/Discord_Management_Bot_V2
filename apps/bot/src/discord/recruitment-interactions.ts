@@ -1,6 +1,7 @@
 import {
   type ButtonInteraction,
-  PermissionFlagsBits
+  PermissionFlagsBits,
+  type TextChannel
 } from "discord.js";
 import type { DbClient } from "@discord-bot/db";
 import {
@@ -122,6 +123,23 @@ async function handleJoin(
   await interaction.message.edit(
     createRecruitmentPostMessage(updatedRecruitment ?? recruitment, loc, nextCount)
   );
+
+  if (nextStatus === "closed" && recruitment.autoClose) {
+    const loc2 = await resolveLocale(context.db, interaction.guildId);
+    await (interaction.channel as TextChannel | null)?.send({
+      ...createComponentsV2TextMessage({
+        title: loc2.recruitmentAutoClosedTitle,
+        lines: [
+          `<@${recruitment.creatorId}>`,
+          loc2.recruitmentAutoClosedHint
+        ],
+        accentColor: EVENT_COLORS.gray
+      })
+    }).catch((err: unknown) => {
+      console.warn("failed to send recruitment auto-close notification", err);
+    });
+  }
+
   const loggedRecruitment = updatedRecruitment ?? recruitment;
   if (context.logWriter && nextStatus !== "open") {
     writeRecruitmentLifecycleLog(
@@ -178,6 +196,20 @@ async function handleLeave(
   await interaction.message.edit(
     createRecruitmentPostMessage(updatedRecruitment, loc, nextCount)
   );
+
+  if (shouldReopen) {
+    const loc2 = await resolveLocale(context.db, interaction.guildId);
+    await (interaction.channel as TextChannel | null)?.send({
+      ...createComponentsV2TextMessage({
+        title: loc2.recruitmentReopenedTitle,
+        lines: [`<@${recruitment.creatorId}>`],
+        accentColor: EVENT_COLORS.green
+      })
+    }).catch((err: unknown) => {
+      console.warn("failed to send recruitment reopen notification", err);
+    });
+  }
+
   await interaction.reply({
     ...createComponentsV2TextMessage({
       title: loc.recruitmentLeft({ current: nextCount, max: recruitment.capacity }),
