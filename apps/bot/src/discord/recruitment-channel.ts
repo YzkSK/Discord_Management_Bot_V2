@@ -18,7 +18,7 @@ export const recruitmentChannelTopicMarker =
 type Recruitment = Awaited<ReturnType<typeof createRecruitment>>;
 type Loc = ReturnType<typeof getLocale>;
 
-export type RecruitmentAction = "close" | "join" | "leave";
+export type RecruitmentAction = "close" | "join" | "leave" | "settings" | "toggle-auto-close";
 
 export const recruitmentCustomIdPrefix = "recruitment";
 
@@ -155,6 +155,12 @@ export function createRecruitmentPostMessage(
             label: loc.recruitmentButtonClose,
             style: ButtonStyle.Danger,
             disabled: isClosed
+          },
+          {
+            type: ComponentType.Button,
+            customId: createRecruitmentCustomId("settings", recruitment.id),
+            label: loc.recruitmentButtonSettings,
+            style: ButtonStyle.Secondary
           }
         ]
       }
@@ -163,5 +169,8 @@ export function createRecruitmentPostMessage(
 }
 
 function isRecruitmentAction(value: string | undefined): value is RecruitmentAction {
-  return value === "close" || value === "join" || value === "leave";
+  return (
+    value === "close" || value === "join" || value === "leave" ||
+    value === "settings" || value === "toggle-auto-close"
+  );
 }
