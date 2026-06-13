@@ -14,8 +14,9 @@ import {
 import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/shared";
 
 import { createComponentsV2TextMessage, EVENT_COLORS } from "../discord/components-v2.js";
-import { logChannelTopicMarker, markLogChannel } from "../discord/log-channel.js";
+import { hasLogChannelMarker, logChannelTopicMarker, markLogChannel } from "../discord/log-channel.js";
 import {
+  hasVoiceStatusChannelMarker,
   markVoiceStatusChannel,
   voiceStatusChannelTopicMarker
 } from "../discord/voice-status-channel.js";
@@ -81,6 +82,12 @@ export const setupCommand = new SlashCommandBuilder()
           .addChannelTypes(ChannelType.GuildText)
           .setRequired(true)
       )
+  )
+  .addSubcommand((subcommand) =>
+    subcommand
+      .setName("status")
+      .setDescription("Show current bot configuration for this guild.")
+      .setDescriptionLocalization("ja", "このサーバーの現在のBot設定を表示します。")
   );
 
 export interface SetupCommandContext {
@@ -143,6 +150,9 @@ export async function handleSetupCommand(
       return;
     case "voice-status":
       await handleVoiceStatusSetup(interaction, context, guildId, loc);
+      return;
+    case "status":
+      await handleStatusSetup(interaction, context, guildId, loc);
       return;
     default:
       await interaction.reply({
@@ -249,6 +259,47 @@ async function handleLogsSetup(
         loc.logsChannel({ id: channel.id }),
       ],
       accentColor: EVENT_COLORS.green,
+      privateResponse: true
+    })
+  });
+}
+
+async function handleStatusSetup(
+  interaction: ChatInputCommandInteraction,
+  context: SetupCommandContext,
+  guildId: string,
+  loc: Loc
+) {
+  const config = await getGuildConfigByGuildId(context.db, guildId).catch(() => null);
+
+  const guild = interaction.guild;
+  let logChannelId: string | null = null;
+  let voiceStatusChannelId: string | null = null;
+
+  if (guild) {
+    const channels = await guild.channels.fetch();
+    for (const channel of channels.values()) {
+      if (channel?.type === ChannelType.GuildText) {
+        const textChannel = channel as TextChannel;
+        if (hasLogChannelMarker(textChannel.topic)) {
+          logChannelId = textChannel.id;
+        }
+        if (hasVoiceStatusChannelMarker(textChannel.topic)) {
+          voiceStatusChannelId = textChannel.id;
+        }
+      }
+    }
+  }
+
+  await interaction.reply({
+    ...createComponentsV2TextMessage({
+      title: loc.setupStatusTitle,
+      lines: [
+        loc.setupStatusTempVc({ id: config?.tempVoiceCreateChannelId ?? null }),
+        loc.setupStatusLogs({ id: logChannelId }),
+        loc.setupStatusVoiceStatus({ id: voiceStatusChannelId })
+      ],
+      accentColor: EVENT_COLORS.gray,
       privateResponse: true
     })
   });
