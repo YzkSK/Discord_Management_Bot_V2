@@ -111,7 +111,7 @@ export function createRecruitmentPostMessage(
         components: [
           {
             type: ComponentType.TextDisplay,
-            content: `## ${loc.recruitmentPostTitle({ genre: recruitment.genre })}`
+            content: `## ${loc.recruitmentPostTitle({ title: recruitment.genre })}`
           },
           {
             type: ComponentType.TextDisplay,

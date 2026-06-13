@@ -53,7 +53,7 @@ type Locale = {
   recruitmentSetupRequiredMessage: string;
   recruitmentCreated: string;
   recruitmentPostLink: (vars: { url: string }) => string;
-  recruitmentPostTitle: (vars: { genre: string }) => string;
+  recruitmentPostTitle: (vars: { title: string }) => string;
   recruitmentStatusOpen: string;
   recruitmentStatusFull: string;
   recruitmentStatusClosed: string;
@@ -126,6 +126,17 @@ type Locale = {
   recruitmentAutoClosedTitle: string;
   recruitmentAutoClosedHint: string;
   recruitmentReopenedTitle: string;
+  recruitmentModalTitle: string;
+  recruitmentModalFieldTitle: string;
+  recruitmentModalFieldCapacity: string;
+  recruitmentModalFieldContent: string;
+  recruitmentButtonSettings: string;
+  recruitmentSettingsTitle: string;
+  recruitmentAutoCloseToggleOn: string;
+  recruitmentAutoCloseToggleOff: string;
+  recruitmentAutoCloseUpdated: (vars: { enabled: boolean }) => string;
+  recruitmentNotCreator: string;
+  recruitmentCapacityInvalid: string;
   setupStatusTitle: string;
   setupStatusTempVc: (vars: { id: string | null }) => string;
   setupStatusLogs: (vars: { id: string | null }) => string;
@@ -184,7 +195,7 @@ const locales: Record<GuildLanguage, Locale> = {
       "Run `/setup recruitment channel:<text channel>` first.",
     recruitmentCreated: "✅ Recruitment created",
     recruitmentPostLink: ({ url }) => `Post: ${url}`,
-    recruitmentPostTitle: ({ genre }) => `🎮 Recruitment: ${genre}`,
+    recruitmentPostTitle: ({ title }) => `🎮 Recruitment: ${title}`,
     recruitmentStatusOpen: "🟢 Open",
     recruitmentStatusFull: "🟡 Full",
     recruitmentStatusClosed: "🔴 Closed",
@@ -338,6 +349,17 @@ const locales: Record<GuildLanguage, Locale> = {
     recruitmentAutoClosedTitle: "🔒 Recruitment closed",
     recruitmentAutoClosedHint: "Capacity reached — the recruitment has been automatically closed.",
     recruitmentReopenedTitle: "🟢 Recruitment reopened",
+    recruitmentModalTitle: "Create Recruitment",
+    recruitmentModalFieldTitle: "Title",
+    recruitmentModalFieldCapacity: "Capacity (1–99)",
+    recruitmentModalFieldContent: "Details",
+    recruitmentButtonSettings: "⚙️ Settings",
+    recruitmentSettingsTitle: "⚙️ Recruitment Settings",
+    recruitmentAutoCloseToggleOn: "✅ Enable auto-close",
+    recruitmentAutoCloseToggleOff: "🔕 Disable auto-close",
+    recruitmentAutoCloseUpdated: ({ enabled }) => `✅ Auto-close ${enabled ? "enabled" : "disabled"}`,
+    recruitmentNotCreator: "Only the creator can change recruitment settings.",
+    recruitmentCapacityInvalid: "Capacity must be an integer between 1 and 99.",
     setupStatusTitle: "📋 Server Configuration",
     setupStatusTempVc: ({ id }) => `Temp VC: ${id ? `<#${id}>` : "Not configured"}`,
     setupStatusLogs: ({ id }) => `Logs: ${id ? `<#${id}>` : "Not configured"}`,
@@ -392,7 +414,7 @@ const locales: Record<GuildLanguage, Locale> = {
       "先に `/setup recruitment channel:<テキストチャンネル>` を実行してください。",
     recruitmentCreated: "✅ 募集を作成しました",
     recruitmentPostLink: ({ url }) => `投稿: ${url}`,
-    recruitmentPostTitle: ({ genre }) => `🎮 募集: ${genre}`,
+    recruitmentPostTitle: ({ title }) => `🎮 募集: ${title}`,
     recruitmentStatusOpen: "🟢 募集中",
     recruitmentStatusFull: "🟡 満員",
     recruitmentStatusClosed: "🔴 締切済み",
@@ -553,6 +575,17 @@ const locales: Record<GuildLanguage, Locale> = {
     recruitmentAutoClosedTitle: "🔒 募集がクローズしました",
     recruitmentAutoClosedHint: "定員に達したため、募集が自動的にクローズされました。",
     recruitmentReopenedTitle: "🟢 募集が再オープンしました",
+    recruitmentModalTitle: "募集を作成",
+    recruitmentModalFieldTitle: "タイトル",
+    recruitmentModalFieldCapacity: "定員（1〜99）",
+    recruitmentModalFieldContent: "内容",
+    recruitmentButtonSettings: "⚙️ 設定",
+    recruitmentSettingsTitle: "⚙️ 募集設定",
+    recruitmentAutoCloseToggleOn: "✅ 自動締め切りをONにする",
+    recruitmentAutoCloseToggleOff: "🔕 自動締め切りをOFFにする",
+    recruitmentAutoCloseUpdated: ({ enabled }) => `✅ 自動締め切りを${enabled ? "ON" : "OFF"}にしました`,
+    recruitmentNotCreator: "この操作は作成者のみが行えます。",
+    recruitmentCapacityInvalid: "定員は1〜99の整数を入力してください。",
     setupStatusTitle: "📋 サーバー設定",
     setupStatusTempVc: ({ id }) => `一時VC: ${id ? `<#${id}>` : "未設定"}`,
     setupStatusLogs: ({ id }) => `ログ: ${id ? `<#${id}>` : "未設定"}`,
