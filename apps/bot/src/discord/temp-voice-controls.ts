@@ -92,7 +92,7 @@ export function parseTempVoiceControlCustomId(customId: string) {
   return {
     action: action as TempVoiceControlAction,
     channelId,
-    targetUserId: targetUserId ?? null
+    ...(targetUserId != null ? { targetUserId } : {})
   };
 }
 
