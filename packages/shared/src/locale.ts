@@ -118,6 +118,19 @@ type Locale = {
   voiceSessionTitleEnded: string;
   voiceSessionStartedAt: (vars: { timestamp: string; duration: string }) => string;
   voiceSessionEndedAt: (vars: { timestamp: string; duration: string }) => string;
+  ttsTipMutePrefix: string;
+  ttsRateLimited: string;
+  ttsRateLimitedHint: string;
+  ttsForceJoinCurrentChannel: (vars: { id: string }) => string;
+  recruitmentAutoCloseStatus: (vars: { enabled: boolean }) => string;
+  recruitmentAutoClosedTitle: string;
+  recruitmentAutoClosedHint: string;
+  recruitmentReopenedTitle: string;
+  setupStatusTitle: string;
+  setupStatusTempVc: (vars: { id: string | null }) => string;
+  setupStatusLogs: (vars: { id: string | null }) => string;
+  setupStatusVoiceStatus: (vars: { id: string | null }) => string;
+  setupStatusNotConfigured: string;
 };
 
 const locales: Record<GuildLanguage, Locale> = {
@@ -317,6 +330,19 @@ const locales: Record<GuildLanguage, Locale> = {
     voiceSessionTitleEnded: "⚫ Voice Session Ended",
     voiceSessionStartedAt: ({ timestamp, duration }) => `Started: ${timestamp}  ·  ${duration}`,
     voiceSessionEndedAt: ({ timestamp, duration }) => `Ended: ${timestamp}  ·  ${duration}`,
+    ttsTipMutePrefix: "Prefix messages with `//` to skip TTS.",
+    ttsRateLimited: "⚡ Slow down",
+    ttsRateLimitedHint: "Messages are rate-limited. Wait a moment before sending more.",
+    ttsForceJoinCurrentChannel: ({ id }) => `Currently in <#${id}>`,
+    recruitmentAutoCloseStatus: ({ enabled }) => `Auto-close at capacity: ${enabled ? "ON" : "OFF"}`,
+    recruitmentAutoClosedTitle: "🔒 Recruitment closed",
+    recruitmentAutoClosedHint: "Capacity reached — the recruitment has been automatically closed.",
+    recruitmentReopenedTitle: "🟢 Recruitment reopened",
+    setupStatusTitle: "📋 Server Configuration",
+    setupStatusTempVc: ({ id }) => `Temp VC: ${id ? `<#${id}>` : "Not configured"}`,
+    setupStatusLogs: ({ id }) => `Logs: ${id ? `<#${id}>` : "Not configured"}`,
+    setupStatusVoiceStatus: ({ id }) => `Voice Status: ${id ? `<#${id}>` : "Not configured"}`,
+    setupStatusNotConfigured: "Not configured",
   },
   ja: {
     logTitle: ({ eventName }) => `ログ: ${eventName}`,
@@ -518,7 +544,20 @@ const locales: Record<GuildLanguage, Locale> = {
       "通話状態チャンネルはテキストチャンネルにしてください。",
     voiceStatusSetupComplete: "✅ 通話状態セットアップ完了",
     voiceStatusChannel: ({ id }) => `通話状態チャンネル: <#${id}>`,
-    voiceStatusMarker: ({ marker }) => `マーカー: ${marker}`
+    voiceStatusMarker: ({ marker }) => `マーカー: ${marker}`,
+    ttsTipMutePrefix: "`//` で始まるメッセージは読み上げをスキップします。",
+    ttsRateLimited: "⚡ 送信が速すぎます",
+    ttsRateLimitedHint: "メッセージの読み上げにはレート制限があります。少し待ってから再送信してください。",
+    ttsForceJoinCurrentChannel: ({ id }) => `現在 <#${id}> に接続中`,
+    recruitmentAutoCloseStatus: ({ enabled }) => `定員到達で自動クローズ: ${enabled ? "ON" : "OFF"}`,
+    recruitmentAutoClosedTitle: "🔒 募集がクローズしました",
+    recruitmentAutoClosedHint: "定員に達したため、募集が自動的にクローズされました。",
+    recruitmentReopenedTitle: "🟢 募集が再オープンしました",
+    setupStatusTitle: "📋 サーバー設定",
+    setupStatusTempVc: ({ id }) => `一時VC: ${id ? `<#${id}>` : "未設定"}`,
+    setupStatusLogs: ({ id }) => `ログ: ${id ? `<#${id}>` : "未設定"}`,
+    setupStatusVoiceStatus: ({ id }) => `通話状態: ${id ? `<#${id}>` : "未設定"}`,
+    setupStatusNotConfigured: "未設定",
   }
 };
 
