@@ -1,14 +1,20 @@
 import {
+  AudioPlayerStatus,
   createAudioPlayer,
   createAudioResource,
+  entersState,
   getVoiceConnection,
   joinVoiceChannel,
   NoSubscriberBehavior,
   StreamType,
+  VoiceConnectionStatus,
   type DiscordGatewayAdapterCreator,
   type VoiceConnection
 } from "@discordjs/voice";
 import { Readable } from "node:stream";
+
+const TTS_VOICE_CONNECT_TIMEOUT_MS = 30_000;
+const TTS_PLAYBACK_TIMEOUT_MS = 300_000;
 
 export type TtsJoinStatus = "joined" | "already-connected" | "blocked";
 export type TtsForceJoinStatus = "joined" | "already-connected" | "moved";
@@ -123,8 +129,12 @@ export class TtsSessionManager {
 function createDiscordVoiceAdapter(): TtsVoiceAdapter {
   const connections = new Map<string, VoiceConnection>();
 
+  function resolveConnection(guildId: string) {
+    return connections.get(guildId) ?? getVoiceConnection(guildId);
+  }
+
   return {
-    join(input) {
+    async join(input) {
       if (!input.adapterCreator) {
         throw new Error("Missing Discord voice adapter creator.");
       }
@@ -136,14 +146,21 @@ function createDiscordVoiceAdapter(): TtsVoiceAdapter {
         selfDeaf: false
       });
       connections.set(input.guildId, connection);
+      try {
+        await entersState(connection, VoiceConnectionStatus.Ready, TTS_VOICE_CONNECT_TIMEOUT_MS);
+      } catch (err) {
+        connection.destroy();
+        connections.delete(input.guildId);
+        throw err;
+      }
     },
     leave(guildId) {
-      const connection = connections.get(guildId) ?? getVoiceConnection(guildId);
+      const connection = resolveConnection(guildId);
       connection?.destroy();
       connections.delete(guildId);
     },
     async play(guildId, audio) {
-      const connection = connections.get(guildId) ?? getVoiceConnection(guildId);
+      const connection = resolveConnection(guildId);
 
       if (!connection) {
         return;
@@ -159,6 +176,12 @@ function createDiscordVoiceAdapter(): TtsVoiceAdapter {
       });
       connection.subscribe(player);
       player.play(resource);
+      try {
+        await entersState(player, AudioPlayerStatus.Idle, TTS_PLAYBACK_TIMEOUT_MS);
+      } catch (err) {
+        player.stop(true);
+        throw err;
+      }
     }
   };
 }
