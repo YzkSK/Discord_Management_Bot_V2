@@ -265,3 +265,15 @@ export function resolveRecruitmentStatus(input: {
 
   return "open";
 }
+
+export async function updateRecruitmentAutoClose(
+  db: DbClient,
+  input: { recruitmentId: string; autoClose: boolean }
+) {
+  const [recruitment] = await db
+    .update(recruitments)
+    .set({ autoClose: input.autoClose, updatedAt: sql`now()` })
+    .where(eq(recruitments.id, input.recruitmentId))
+    .returning();
+  return recruitment ?? null;
+}
