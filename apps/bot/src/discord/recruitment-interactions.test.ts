@@ -424,3 +424,105 @@ describe("recruitmentAutoCloseStatus locale string", () => {
     assert.match(locJa.recruitmentAutoCloseStatus({ enabled: false }), /OFF/);
   });
 });
+
+function makeSettingsDb(recruitment: ReturnType<typeof makeRecruitment>) {
+  return {
+    select: (sel?: Record<string, unknown>) => {
+      const isGuildConfig = sel && "language" in sel;
+      if (isGuildConfig) {
+        return { from: () => ({ innerJoin: () => ({ where: () => ({ limit: async () => [] }) }) }) };
+      }
+      return { from: () => ({ where: () => ({ limit: async () => [recruitment] }) }) };
+    },
+    update: () => ({
+      set: () => ({
+        where: () => ({
+          returning: async () => [{ ...recruitment, autoClose: !recruitment.autoClose }]
+        })
+      })
+    })
+  };
+}
+
+describe("handleRecruitmentButtonInteraction — settings (non-creator)", () => {
+  it("replies with error ephemeral when non-creator presses settings", async () => {
+    const recruitment = makeRecruitment({ creatorId: "creator-1" });
+    let replied = false;
+    const interaction = {
+      customId: `recruitment:settings:${recruitment.id}`,
+      guildId: "guild-1",
+      user: { id: "other-user" },
+      memberPermissions: { has: () => false },
+      reply: async () => { replied = true; }
+    };
+
+    await handleRecruitmentButtonInteraction(interaction as never, { db: makeSettingsDb(recruitment) as never });
+    assert.equal(replied, true);
+  });
+});
+
+describe("handleRecruitmentButtonInteraction — settings (creator)", () => {
+  it("shows toggle button ephemeral when creator presses settings", async () => {
+    const recruitment = makeRecruitment({ creatorId: "creator-1", autoClose: true });
+    let replyPayload: unknown = null;
+    const interaction = {
+      customId: `recruitment:settings:${recruitment.id}`,
+      guildId: "guild-1",
+      user: { id: "creator-1" },
+      memberPermissions: { has: () => false },
+      reply: async (p: unknown) => { replyPayload = p; }
+    };
+
+    await handleRecruitmentButtonInteraction(interaction as never, { db: makeSettingsDb(recruitment) as never });
+    assert.ok(replyPayload !== null);
+    const payloadStr = JSON.stringify(replyPayload);
+    assert.ok(payloadStr.includes("toggle-auto-close"), "should include toggle-auto-close button customId");
+  });
+});
+
+describe("handleRecruitmentButtonInteraction — toggle-auto-close", () => {
+  it("updates autoClose in DB when creator toggles", async () => {
+    const recruitment = makeRecruitment({ creatorId: "creator-1", autoClose: true });
+    let updateCalled = false;
+    const db = {
+      select: (sel?: Record<string, unknown>) => {
+        const isGuildConfig = sel && "language" in sel;
+        if (isGuildConfig) {
+          return { from: () => ({ innerJoin: () => ({ where: () => ({ limit: async () => [] }) }) }) };
+        }
+        return { from: () => ({ where: () => ({ limit: async () => [recruitment] }) }) };
+      },
+      update: () => ({
+        set: (v: Record<string, unknown>) => {
+          updateCalled = true;
+          return { where: () => ({ returning: async () => [{ ...recruitment, autoClose: v["autoClose"] }] }) };
+        }
+      })
+    };
+    const interaction = {
+      customId: `recruitment:toggle-auto-close:${recruitment.id}`,
+      guildId: "guild-1",
+      user: { id: "creator-1" },
+      memberPermissions: { has: () => false },
+      reply: async () => {}
+    };
+
+    await handleRecruitmentButtonInteraction(interaction as never, { db: db as never });
+    assert.equal(updateCalled, true);
+  });
+
+  it("replies with error when non-creator presses toggle", async () => {
+    const recruitment = makeRecruitment({ creatorId: "creator-1", autoClose: true });
+    let replied = false;
+    const interaction = {
+      customId: `recruitment:toggle-auto-close:${recruitment.id}`,
+      guildId: "guild-1",
+      user: { id: "other-user" },
+      memberPermissions: { has: () => false },
+      reply: async () => { replied = true; }
+    };
+
+    await handleRecruitmentButtonInteraction(interaction as never, { db: makeSettingsDb(recruitment) as never });
+    assert.equal(replied, true);
+  });
+});
