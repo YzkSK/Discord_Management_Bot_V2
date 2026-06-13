@@ -14,11 +14,10 @@ import {
 import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/shared";
 
 import { createComponentsV2TextMessage, EVENT_COLORS } from "../discord/components-v2.js";
-import { hasLogChannelMarker, logChannelTopicMarker, markLogChannel } from "../discord/log-channel.js";
+import { findMarkedLogChannel, markLogChannel } from "../discord/log-channel.js";
 import {
-  hasVoiceStatusChannelMarker,
-  markVoiceStatusChannel,
-  voiceStatusChannelTopicMarker
+  findMarkedVoiceStatusChannel,
+  markVoiceStatusChannel
 } from "../discord/voice-status-channel.js";
 
 type Loc = ReturnType<typeof getLocale>;
@@ -271,33 +270,20 @@ async function handleStatusSetup(
   loc: Loc
 ) {
   const config = await getGuildConfigByGuildId(context.db, guildId).catch(() => null);
-
   const guild = interaction.guild;
-  let logChannelId: string | null = null;
-  let voiceStatusChannelId: string | null = null;
 
-  if (guild) {
-    const channels = await guild.channels.fetch();
-    for (const channel of channels.values()) {
-      if (channel?.type === ChannelType.GuildText) {
-        const textChannel = channel as TextChannel;
-        if (hasLogChannelMarker(textChannel.topic)) {
-          logChannelId = textChannel.id;
-        }
-        if (hasVoiceStatusChannelMarker(textChannel.topic)) {
-          voiceStatusChannelId = textChannel.id;
-        }
-      }
-    }
-  }
+  const [logChannel, voiceStatusChannel] = await Promise.all([
+    guild ? findMarkedLogChannel(guild).catch(() => null) : Promise.resolve(null),
+    guild ? findMarkedVoiceStatusChannel(guild).catch(() => null) : Promise.resolve(null)
+  ]);
 
   await interaction.reply({
     ...createComponentsV2TextMessage({
       title: loc.setupStatusTitle,
       lines: [
         loc.setupStatusTempVc({ id: config?.tempVoiceCreateChannelId ?? null }),
-        loc.setupStatusLogs({ id: logChannelId }),
-        loc.setupStatusVoiceStatus({ id: voiceStatusChannelId })
+        loc.setupStatusLogs({ id: logChannel?.id ?? null }),
+        loc.setupStatusVoiceStatus({ id: voiceStatusChannel?.id ?? null })
       ],
       accentColor: EVENT_COLORS.gray,
       privateResponse: true

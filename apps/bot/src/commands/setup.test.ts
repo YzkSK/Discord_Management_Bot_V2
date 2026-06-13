@@ -52,9 +52,20 @@ describe("handleSetupCommand — status", () => {
         options: { getSubcommand: () => "status", getChannel: () => null },
         guild: {
           channels: {
-            fetch: async () => new Map([
-              ["vs-456", { id: "vs-456", type: 0, topic: "[discord-management-bot:voice-status]" }]
-            ])
+            fetch: async () => {
+              const entries: [string, { id: string; type: number; topic: string }][] = [
+                ["vs-456", { id: "vs-456", type: 0, topic: "[discord-management-bot:voice-status]" }]
+              ];
+              const map = new Map(entries);
+              return Object.assign(map, {
+                find: (predicate: (value: { id: string; type: number; topic: string } | null) => boolean) => {
+                  for (const value of map.values()) {
+                    if (predicate(value)) return value;
+                  }
+                  return undefined;
+                }
+              });
+            }
           }
         },
         reply: async (msg: unknown) => { replyPayload = msg; }
