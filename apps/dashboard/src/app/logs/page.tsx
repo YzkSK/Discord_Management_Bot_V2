@@ -22,11 +22,11 @@ export default async function LogsPage() {
   return (
     <DashboardShell
       currentPath="/logs"
-      description="イベント履歴とリアルタイム通知"
+      description="Event history and real-time notifications"
       guildId={guildId}
       guildName={guildName}
       session={session}
-      title="ログ"
+      title="Logs"
     >
       <LogsExplorer />
     </DashboardShell>
