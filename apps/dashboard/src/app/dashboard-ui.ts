@@ -11,25 +11,25 @@ export interface DashboardNavGroup {
 
 const dashboardNavGroups: DashboardNavGroup[] = [
   {
-    label: "アクティビティ",
+    label: "Activity",
     items: [
-      { href: "/", label: "概要", description: "KPIと最近のアクティビティ" },
-      { href: "/logs", label: "ログ", description: "イベント履歴とリアルタイム通知" },
+      { href: "/", label: "Overview", description: "KPIs and recent activity" },
+      { href: "/logs", label: "Logs", description: "Event history and real-time notifications" },
     ],
   },
   {
-    label: "機能",
+    label: "Features",
     items: [
-      { href: "/voice", label: "音声", description: "VCセッションと一時VC管理" },
-      { href: "/recruitment", label: "募集", description: "募集投稿とステータス管理" },
-      { href: "/tts", label: "TTS", description: "テキスト読み上げの設定" },
+      { href: "/voice", label: "Voice", description: "VC sessions and temporary VC management" },
+      { href: "/recruitment", label: "Recruitment", description: "Recruitment posts and status management" },
+      { href: "/tts", label: "TTS", description: "Text-to-speech configuration" },
     ],
   },
   {
-    label: "システム",
+    label: "System",
     items: [
-      { href: "/settings", label: "設定", description: "サーバー設定とアクセス管理" },
-      { href: "/health", label: "ヘルス", description: "依存サービスの状態" },
+      { href: "/settings", label: "Settings", description: "Server settings and access management" },
+      { href: "/health", label: "Health", description: "Dependency service status" },
     ],
   },
 ];

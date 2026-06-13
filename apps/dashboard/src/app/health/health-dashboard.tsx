@@ -14,6 +14,7 @@ import {
 
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
+import { ErrorAlert } from "../../components/error-alert";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import { buildHealthSummary, type HealthDashboardSummary } from "../api/health/summary";
 
@@ -32,8 +33,12 @@ export function HealthDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [uiLang] = useState<GuildLanguage>(detectBrowserLanguage);
+  const [uiLang, setUiLang] = useState<GuildLanguage>("en");
   const loc = getDashboardLocale(uiLang);
+
+  useEffect(() => {
+    setUiLang(detectBrowserLanguage());
+  }, []);
 
   const loadHealth = useCallback(async () => {
     setError(null);
@@ -61,9 +66,7 @@ export function HealthDashboard() {
   if (!summary) {
     return (
       <section className="grid max-w-6xl gap-4">
-        <div className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-          {error ?? loc.healthFailedToLoad}
-        </div>
+        <ErrorAlert message={error ?? loc.healthFailedToLoad} />
         <Button onClick={() => void loadHealth()} type="button" variant="outline">
           <RefreshCw className="h-4 w-4" />
           {loc.healthRefresh}
@@ -99,11 +102,7 @@ export function HealthDashboard() {
         </Button>
       </div>
 
-      {error && (
-        <div className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-          {error}
-        </div>
-      )}
+      {error && <ErrorAlert message={error} />}
 
       <div className="grid gap-3 md:grid-cols-4">
         <HealthMetric
@@ -213,6 +212,7 @@ function getServiceIcon(name: string) {
 
 async function fetchHealthReport(): Promise<HealthReportResponse> {
   const response = await fetch("/api/health", { cache: "no-store" });
+  // 503 はサービス起動中の部分故障を表す — JSON レスポンスは返るので続行
   if (!response.ok && response.status !== 503) {
     throw new Error(`Failed to load health state (${response.status})`);
   }

@@ -33,6 +33,11 @@ interface DiscordRole {
   name: string;
 }
 
+interface DiscordChannel {
+  id: string;
+  name: string;
+}
+
 interface SettingsResponse {
   guildId: string;
   guildName: string | null;
@@ -44,6 +49,9 @@ interface SettingsResponse {
   dashboardManagementRoleIds: string[];
   features: DashboardSettingsFeatures;
   availableRoles?: DiscordRole[];
+  availableTextChannels: DiscordChannel[];
+  availableVoiceChannels: DiscordChannel[];
+  availableCategories: DiscordChannel[];
 }
 
 interface TtsDictionaryEntry {
@@ -70,6 +78,42 @@ interface TtsSettingsResponse {
   userSpeakers: TtsSpeakerSetting[];
 }
 
+function ChannelSelect({
+  value,
+  onChange,
+  channels,
+  placeholder
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  channels: DiscordChannel[];
+  placeholder?: string;
+}) {
+  if (channels.length === 0) {
+    return (
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder ?? "Channel ID"}
+      />
+    );
+  }
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+    >
+      <option value="">-- {placeholder ?? "チャンネルを選択"} --</option>
+      {channels.map((ch) => (
+        <option key={ch.id} value={ch.id}>
+          #{ch.name}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export function SettingsPanel({ guildId }: { guildId: string }) {
   const [settings, setSettings] = useState<SettingsResponse | null>(null);
   const [logMode, setLogMode] = useState("full");
@@ -77,6 +121,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   const [tempVcCreateChannelId, setTempVcCreateChannelId] = useState("");
   const [tempVcCategoryId, setTempVcCategoryId] = useState("");
   const [ttsTextChannelId, setTtsTextChannelId] = useState("");
+  const [recruitmentChannelId, setRecruitmentChannelId] = useState("");
   const [ttsSettings, setTtsSettings] = useState<TtsSettingsResponse | null>(null);
   const [ttsDefaultSpeakerId, setTtsDefaultSpeakerId] = useState("");
   const [ttsUserSpeakerUserId, setTtsUserSpeakerUserId] = useState("");
@@ -87,7 +132,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   const [ttsDictionaryToText, setTtsDictionaryToText] = useState("");
   const [ttsDictionaryPriority, setTtsDictionaryPriority] = useState("0");
   const [ttsDictionaryEnabled, setTtsDictionaryEnabled] = useState(true);
-  const [uiLang, setUiLang] = useState<GuildLanguage>(detectBrowserLanguage);
+  const [uiLang, setUiLang] = useState<GuildLanguage>("en");
   const [managementRoleIds, setManagementRoleIds] = useState<string[]>([]);
   const [accessGrants, setAccessGrants] = useState<DashboardAccessGrant[]>([]);
   const [grantTargetType, setGrantTargetType] = useState<"user" | "role">("user");
@@ -102,7 +147,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   const [deletingGrantKey, setDeletingGrantKey] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"logs" | "voice" | "tts" | "access">("logs");
+  const [activeTab, setActiveTab] = useState<"logs" | "voice" | "tts" | "recruitment" | "access">("logs");
   const [confirmRoleRemoval, setConfirmRoleRemoval] = useState(false);
 
   const loc = getDashboardLocale(uiLang);
@@ -119,6 +164,10 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   ];
 
   useEffect(() => {
+    setUiLang(detectBrowserLanguage());
+  }, []);
+
+  useEffect(() => {
     fetchSettings(guildId)
       .then((data) => {
         setSettings(data);
@@ -127,6 +176,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
         setTempVcCreateChannelId(data.features.tempVc.createChannelId ?? "");
         setTempVcCategoryId(data.features.tempVc.categoryId ?? "");
         setTtsTextChannelId(data.features.tts.textChannelId ?? "");
+        setRecruitmentChannelId(data.features.recruitment.channelId ?? "");
         if (isGuildLanguage(data.language)) {
           setUiLang(data.language);
         }
@@ -149,6 +199,18 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
       .finally(() => setLoading(false));
   }, [guildId]);
 
+  const dirtyCount = useMemo(() => {
+    if (!settings) return 0;
+    return [
+      logMode !== settings.logMode,
+      language !== settings.language,
+      tempVcCreateChannelId !== (settings.features.tempVc.createChannelId ?? ""),
+      tempVcCategoryId !== (settings.features.tempVc.categoryId ?? ""),
+      ttsTextChannelId !== (settings.features.tts.textChannelId ?? ""),
+      recruitmentChannelId !== (settings.features.recruitment.channelId ?? ""),
+    ].filter(Boolean).length;
+  }, [logMode, language, tempVcCreateChannelId, tempVcCategoryId, ttsTextChannelId, recruitmentChannelId, settings]);
+
   async function saveAllChanges() {
     if (!settings) return;
     setSaving(true); setError(null); setMessage(null);
@@ -159,6 +221,8 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
         tempVcCategoryId !== (settings.features.tempVc.categoryId ?? "");
       const ttsChannelDirty =
         ttsTextChannelId !== (settings.features.tts.textChannelId ?? "");
+      const recruitmentDirty =
+        recruitmentChannelId !== (settings.features.recruitment.channelId ?? "");
 
       const updates = await Promise.all([
         logsDirty ? updateSettings(settings.guildId, logMode, language) : null,
@@ -166,6 +230,9 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
           ? updateTempVcSettings(settings.guildId, tempVcCreateChannelId, tempVcCategoryId)
           : null,
         ttsChannelDirty ? updateTtsSettings(settings.guildId, ttsTextChannelId) : null,
+        recruitmentDirty
+          ? updateRecruitmentSettings(settings.guildId, { channelId: recruitmentChannelId || null })
+          : null,
       ]);
 
       setSettings((s) => {
@@ -187,6 +254,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
     setTempVcCreateChannelId(settings.features.tempVc.createChannelId ?? "");
     setTempVcCategoryId(settings.features.tempVc.categoryId ?? "");
     setTtsTextChannelId(settings.features.tts.textChannelId ?? "");
+    setRecruitmentChannelId(settings.features.recruitment.channelId ?? "");
   }
 
   async function saveTtsDefaultSpeaker() {
@@ -372,23 +440,14 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   const canEditTts = settings.accessRole !== "viewer";
   const summaries = buildSettingsSectionSummaries(settings.features);
 
-  const dirtyCount = useMemo(() => {
-    return [
-      logMode !== settings.logMode,
-      language !== settings.language,
-      tempVcCreateChannelId !== (settings.features.tempVc.createChannelId ?? ""),
-      tempVcCategoryId !== (settings.features.tempVc.categoryId ?? ""),
-      ttsTextChannelId !== (settings.features.tts.textChannelId ?? ""),
-    ].filter(Boolean).length;
-  }, [logMode, language, tempVcCreateChannelId, tempVcCategoryId, ttsTextChannelId, settings]);
-
   const isDirty = dirtyCount > 0;
 
   const tabDefs = [
-    { key: "logs",   label: "ログ設定" },
-    { key: "voice",  label: "音声" },
-    { key: "tts",    label: "TTS" },
-    { key: "access", label: "アクセス管理" },
+    { key: "logs",        label: "ログ設定" },
+    { key: "voice",       label: "音声" },
+    { key: "tts",         label: "TTS" },
+    { key: "recruitment", label: "募集" },
+    { key: "access",      label: "アクセス管理" },
   ] as const;
 
   return (
@@ -507,9 +566,11 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
               </label>
               <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
                 {loc.tempVcCategoryId}
-                <Input
-                  onChange={(e) => setTempVcCategoryId(e.target.value)}
+                <ChannelSelect
                   value={tempVcCategoryId}
+                  onChange={setTempVcCategoryId}
+                  channels={settings.availableCategories ?? []}
+                  placeholder="カテゴリを選択"
                 />
               </label>
             </CardContent>
@@ -530,9 +591,11 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
             />
             <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
               {loc.ttsTextChannelId}
-              <Input
-                onChange={(e) => setTtsTextChannelId(e.target.value)}
+              <ChannelSelect
                 value={ttsTextChannelId}
+                onChange={setTtsTextChannelId}
+                channels={settings.availableTextChannels ?? []}
+                placeholder="TTSチャンネルを選択"
               />
             </label>
             <div className="grid gap-3 border-t border-zinc-800 pt-3">
@@ -736,6 +799,31 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
           </CardContent>
         </Card>
 
+        )}
+
+        {/* 募集タブ */}
+        {activeTab === "recruitment" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>募集設定</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3">
+              <FeatureStatus
+                configured={settings.features.recruitment.configured}
+                label="募集"
+                loc={loc}
+              />
+              <div>
+                <label className="block text-sm font-medium mb-1">募集チャンネル</label>
+                <ChannelSelect
+                  value={recruitmentChannelId}
+                  onChange={setRecruitmentChannelId}
+                  channels={settings.availableTextChannels ?? []}
+                  placeholder="募集チャンネルを選択（未設定時はコマンドチャンネルを使用）"
+                />
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* アクセス管理タブ */}
@@ -1031,6 +1119,18 @@ async function updateTtsSettings(guildId: string, textChannelId: string) {
   });
   if (!r.ok) throw new Error(`Failed to save TTS settings (${r.status})`);
   return (await r.json()) as SettingsResponse;
+}
+
+async function updateRecruitmentSettings(
+  guildId: string,
+  values: { channelId: string | null }
+) {
+  const res = await fetch("/api/settings", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ guildId, section: "recruitment", values })
+  });
+  if (!res.ok) throw new Error("Failed to save recruitment settings");
 }
 
 async function fetchTtsSettings(guildId: string): Promise<TtsSettingsResponse> {

@@ -16,7 +16,7 @@ describe("buildSettingsSectionSummaries", () => {
         configured: true
       },
       recruitment: {
-        channelMarker: "[discord-management-bot:recruitment]",
+        channelId: null,
         configured: false
       },
       tts: {
@@ -48,7 +48,7 @@ describe("buildSettingsSectionSummaries", () => {
         configured: false
       },
       recruitment: {
-        channelMarker: "[discord-management-bot:recruitment]",
+        channelId: null,
         configured: false
       },
       tts: {

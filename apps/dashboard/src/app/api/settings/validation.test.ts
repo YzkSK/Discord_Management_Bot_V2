@@ -49,14 +49,47 @@ describe("parseSettingsPatchBody", () => {
     );
   });
 
-  it("rejects unsupported recruitment writes until a persisted setting exists", () => {
+  it("accepts a recruitment channel settings payload", () => {
     assert.deepEqual(
       parseSettingsPatchBody({
         guildId: "guild-1",
         section: "recruitment",
-        values: {}
+        values: {
+          channelId: "recruit-ch-1"
+        }
       }),
-      { ok: false, error: "Recruitment settings are read-only for now." }
+      {
+        ok: true,
+        value: {
+          guildId: "guild-1",
+          section: "recruitment",
+          values: {
+            channelId: "recruit-ch-1"
+          }
+        }
+      }
+    );
+  });
+
+  it("accepts null channelId to clear recruitment channel", () => {
+    assert.deepEqual(
+      parseSettingsPatchBody({
+        guildId: "guild-1",
+        section: "recruitment",
+        values: {
+          channelId: null
+        }
+      }),
+      {
+        ok: true,
+        value: {
+          guildId: "guild-1",
+          section: "recruitment",
+          values: {
+            channelId: null
+          }
+        }
+      }
     );
   });
 });

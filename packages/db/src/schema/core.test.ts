@@ -14,6 +14,11 @@ describe("guildConfigs schema", () => {
     assert.notEqual(columns.ttsTextChannelId, undefined);
   });
 
+  it("exposes a recruitment channel id column", () => {
+    const columns = guildConfigs as unknown as Record<string, unknown>;
+    assert.notEqual(columns.recruitmentChannelId, undefined);
+  });
+
   it("exposes a language column", () => {
     const columns = guildConfigs as unknown as Record<string, unknown>;
     assert.notEqual(columns.language, undefined);

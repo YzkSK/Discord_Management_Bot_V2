@@ -21,6 +21,7 @@ import { installTtsMessageReader } from "./discord/tts-message-reader.js";
 import { installTtsAutoLeaveHandler } from "./discord/tts-auto-leave.js";
 import { installTtsAnnounceHandler } from "./discord/tts-announce.js";
 import { TtsSessionManager } from "./discord/tts-session.js";
+import { LocalTtsPlaybackQueue } from "./discord/tts-queue.js";
 import { installVoiceActivityHandlers } from "./discord/voice-activity.js";
 import { createVoicevoxClient, getVoicevoxSpeakers } from "./discord/voicevox.js";
 
@@ -36,14 +37,82 @@ export interface BotRuntimeOptions {
   createDiscord?: () => Client;
 }
 
+interface RuntimeDeps {
+  db: DbConnection;
+  discordClient: Client;
+  env: AppEnv;
+  redis: RedisConnection;
+  ttsPlaybackQueue: LocalTtsPlaybackQueue;
+  ttsSessionManager: TtsSessionManager;
+  voicevox: ReturnType<typeof createVoicevoxClient>;
+  voicevoxBaseUrl: string;
+  logWriter: ReturnType<typeof createDiscordLogWriter>;
+}
+
+async function buildDeps(
+  env: AppEnv,
+  options: Required<Omit<BotRuntimeOptions, "env">>
+): Promise<RuntimeDeps> {
+  const db = options.createDb(env.DATABASE_URL);
+  const redis = await options.createRedis(env.REDIS_URL);
+  const discordClient = options.createDiscord();
+  const ttsSessionManager = new TtsSessionManager();
+  const ttsPlaybackQueue = new LocalTtsPlaybackQueue();
+  const logWriter = createDiscordLogWriter(discordClient, {
+    db: db.db,
+    redis: redis.client
+  });
+  const voicevoxBaseUrl = env.VOICEVOX_URL;
+  const voicevox = createVoicevoxClient({
+    baseUrl: voicevoxBaseUrl,
+    speaker: env.VOICEVOX_SPEAKER_ID
+  });
+  return { db, discordClient, env, redis, ttsPlaybackQueue, ttsSessionManager, voicevox, voicevoxBaseUrl, logWriter };
+}
+
+function installHandlers(deps: RuntimeDeps) {
+  const { db, discordClient, env, redis, ttsPlaybackQueue, ttsSessionManager, voicevox, voicevoxBaseUrl, logWriter } = deps;
+
+  installDiscordLifecycleLogging(discordClient);
+  installGuildRegistrationHandlers(discordClient, { db: db.db });
+  installInteractionRouter(discordClient, {
+    db: db.db,
+    logWriter,
+    redis: redis.client,
+    ttsSessionManager,
+    getSpeakers: () => getVoicevoxSpeakers(voicevoxBaseUrl)
+  });
+  installMessageLogHandlers(discordClient, { db: db.db, redis: redis.client });
+  installGatewayLogHandlers(discordClient, { db: db.db, redis: redis.client });
+  installTempVoiceHandlers(discordClient, { db: db.db, redis: redis.client });
+  installVoiceActivityHandlers(discordClient, { db: db.db, logWriter });
+  installTtsAutoLeaveHandler(discordClient, { logWriter, ttsSessionManager });
+  installTtsAnnounceHandler(discordClient, {
+    db: db.db,
+    fallbackSpeakerId: env.VOICEVOX_SPEAKER_ID,
+    ttsQueue: ttsPlaybackQueue,
+    ttsSessionManager,
+    voicevox
+  });
+
+  installTtsMessageReader(discordClient, {
+    db: db.db,
+    logWriter,
+    speakerId: env.VOICEVOX_SPEAKER_ID,
+    ttsQueue: ttsPlaybackQueue,
+    ttsSessionManager,
+    voicevox
+  });
+}
+
 export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
   const env = options.env ?? parseAppEnv();
-  const createDb = options.createDb ?? createDbConnection;
-  const createRedis = options.createRedis ?? createRedisConnection;
-  const createDiscord = options.createDiscord ?? createDiscordClient;
-  let dbConnection: DbConnection | null = null;
-  let redisConnection: RedisConnection | null = null;
-  let discordClient: Client | null = null;
+  const resolvedOptions = {
+    createDb: options.createDb ?? createDbConnection,
+    createRedis: options.createRedis ?? createRedisConnection,
+    createDiscord: options.createDiscord ?? createDiscordClient,
+  };
+  let deps: RuntimeDeps | null = null;
   let started = false;
 
   return {
@@ -52,63 +121,10 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
         return;
       }
 
-      dbConnection = createDb(env.DATABASE_URL);
-      redisConnection = await createRedis(env.REDIS_URL);
-      discordClient = createDiscord();
-      const ttsSessionManager = new TtsSessionManager();
-      const logWriter = createDiscordLogWriter(discordClient, {
-        db: dbConnection.db,
-        redis: redisConnection.client
-      });
-      const voicevoxBaseUrl = env.VOICEVOX_URL;
-      const voicevox = createVoicevoxClient({
-        baseUrl: voicevoxBaseUrl,
-        speaker: env.VOICEVOX_SPEAKER_ID
-      });
-      installDiscordLifecycleLogging(discordClient);
-      installGuildRegistrationHandlers(discordClient, { db: dbConnection.db });
-      installInteractionRouter(discordClient, {
-        db: dbConnection.db,
-        logWriter,
-        redis: redisConnection.client,
-        ttsSessionManager,
-        getSpeakers: () => getVoicevoxSpeakers(voicevoxBaseUrl)
-      });
-      installMessageLogHandlers(discordClient, {
-        db: dbConnection.db,
-        redis: redisConnection.client
-      });
-      installGatewayLogHandlers(discordClient, {
-        db: dbConnection.db,
-        redis: redisConnection.client
-      });
-      installTempVoiceHandlers(discordClient, {
-        db: dbConnection.db,
-        redis: redisConnection.client
-      });
-      installVoiceActivityHandlers(discordClient, {
-        db: dbConnection.db,
-        logWriter
-      });
-      installTtsAutoLeaveHandler(discordClient, {
-        logWriter,
-        ttsSessionManager
-      });
-      installTtsAnnounceHandler(discordClient, {
-        db: dbConnection.db,
-        fallbackSpeakerId: env.VOICEVOX_SPEAKER_ID,
-        ttsSessionManager,
-        voicevox
-      });
-      installTtsMessageReader(discordClient, {
-        db: dbConnection.db,
-        logWriter,
-        speakerId: env.VOICEVOX_SPEAKER_ID,
-        ttsSessionManager,
-        voicevox
-      });
-      await discordClient.login(env.DISCORD_BOT_TOKEN);
-      await recordStartupLog(dbConnection, env).catch((error: unknown) => {
+      deps = await buildDeps(env, resolvedOptions);
+      installHandlers(deps);
+      await deps.discordClient.login(env.DISCORD_BOT_TOKEN);
+      await recordStartupLog(deps.db, env).catch((error: unknown) => {
         console.error("failed to record bot startup log", error);
       });
       started = true;
@@ -126,12 +142,14 @@ export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
       }
 
       started = false;
-      discordClient?.destroy();
-      discordClient = null;
-      await redisConnection?.close();
-      redisConnection = null;
-      await dbConnection?.close();
-      dbConnection = null;
+      deps?.discordClient.destroy();
+      await deps?.redis.close().catch((error: unknown) => {
+        console.error("failed to close redis connection", error);
+      });
+      await deps?.db.close().catch((error: unknown) => {
+        console.error("failed to close db connection", error);
+      });
+      deps = null;
 
       console.log("bot runtime stopped", { reason });
     }

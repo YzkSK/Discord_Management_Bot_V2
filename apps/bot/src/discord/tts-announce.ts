@@ -7,7 +7,13 @@ import {
   type VoiceStateTransitionContext
 } from "./voice-state.js";
 import type { TtsSessionManager } from "./tts-session.js";
+import { LocalTtsPlaybackQueue, type TtsPlaybackQueue } from "./tts-queue.js";
 import type { VoicevoxClient } from "./voicevox.js";
+
+const ANNOUNCE_TEXT = {
+  join: (name: string) => `${name}が参加しました`,
+  leave: (name: string) => `${name}が退出しました`,
+} as const;
 
 export interface ResolveAnnounceActionInput {
   connectedVoiceChannelId: string | null;
@@ -27,6 +33,7 @@ export function resolveAnnounceAction(
 export interface InstallTtsAnnounceHandlerOptions {
   db: DbClient;
   fallbackSpeakerId: number;
+  ttsQueue?: TtsPlaybackQueue;
   ttsSessionManager: TtsSessionManager;
   voicevox: VoicevoxClient;
 }
@@ -35,15 +42,31 @@ export function installTtsAnnounceHandler(
   client: Client,
   options: InstallTtsAnnounceHandlerOptions
 ) {
+  const ttsQueue = options.ttsQueue ?? new LocalTtsPlaybackQueue();
+
   installVoiceStateHandlers(client, {
     onTransition(transition, context) {
-      return handleAnnounceTransition(options, transition, context);
+      return handleAnnounceTransition({ ...options, ttsQueue }, transition, context);
     }
   });
 }
 
+async function fetchAnnounceSpeakerId(
+  db: DbClient,
+  guildId: string,
+  fallbackSpeakerId: number
+): Promise<number> {
+  const guildDefault = await getGuildDefaultTtsSpeaker(db, guildId).catch(
+    (error: unknown) => {
+      console.warn("tts announce failed to fetch guild speaker", { guildId, error });
+      return null;
+    }
+  );
+  return guildDefault?.speakerId ?? fallbackSpeakerId;
+}
+
 async function handleAnnounceTransition(
-  options: InstallTtsAnnounceHandlerOptions,
+  options: InstallTtsAnnounceHandlerOptions & { ttsQueue: TtsPlaybackQueue },
   transition: VoiceStateTransition,
   context: VoiceStateTransitionContext
 ) {
@@ -64,30 +87,28 @@ async function handleAnnounceTransition(
       ? (context.newState.member?.displayName ?? transition.userId)
       : (context.oldState.member?.displayName ?? transition.userId);
 
-  const text =
-    action === "join"
-      ? `${displayName}が参加しました`
-      : `${displayName}が退出しました`;
+  const text = ANNOUNCE_TEXT[action](displayName);
 
-  const guildDefault = await getGuildDefaultTtsSpeaker(
+  const speakerId = await fetchAnnounceSpeakerId(
     options.db,
-    transition.guildId
-  ).catch(() => null);
-
-  const speakerId = guildDefault?.speakerId ?? options.fallbackSpeakerId;
-
-  const audio = await options.voicevox.synthesize(text, speakerId).catch(
-    (error: unknown) => {
-      console.warn("tts announce synthesis failed", { guildId: transition.guildId, error });
-      return null;
-    }
+    transition.guildId,
+    options.fallbackSpeakerId
   );
 
-  if (!audio) return;
+  await options.ttsQueue.enqueue({ guildId: transition.guildId }, async () => {
+    const audio = await options.voicevox.synthesize(text, speakerId).catch(
+      (error: unknown) => {
+        console.warn("tts announce synthesis failed", { guildId: transition.guildId, error });
+        return null;
+      }
+    );
 
-  await options.ttsSessionManager.play(transition.guildId, audio).catch(
-    (error: unknown) => {
-      console.warn("tts announce playback failed", { guildId: transition.guildId, error });
-    }
-  );
+    if (!audio) return;
+
+    await options.ttsSessionManager.play(transition.guildId, audio).catch(
+      (error: unknown) => {
+        console.warn("tts announce playback failed", { guildId: transition.guildId, error });
+      }
+    );
+  });
 }

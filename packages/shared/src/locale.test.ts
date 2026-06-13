@@ -46,6 +46,6 @@ describe("getLocale('ja')", () => {
 
   it("interpolates channel id in Japanese force-join message", () => {
     const loc = getLocale("ja");
-    assert.equal(loc.ttsForceJoinMoveTo({ id: "456" }), "TTSを <#456> に移動しますか？");
+    assert.equal(loc.ttsForceJoinMoveTo({ id: "456" }), "→ <#456> に移動しますか？");
   });
 });

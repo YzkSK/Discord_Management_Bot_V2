@@ -28,6 +28,13 @@ export type SettingsPatchValue =
       values: {
         textChannelId?: string | null;
       };
+    }
+  | {
+      guildId: string;
+      section: "recruitment";
+      values: {
+        channelId?: string | null;
+      };
     };
 
 type ParseResult =
@@ -89,7 +96,18 @@ export function parseSettingsPatchBody(body: unknown): ParseResult {
   }
 
   if (section === "recruitment") {
-    return { ok: false, error: "Recruitment settings are read-only for now." };
+    const valuesPatch = omitUndefined({
+      channelId: readOptionalNullableString(values.channelId)
+    });
+
+    return {
+      ok: true,
+      value: {
+        guildId: guildId.value,
+        section,
+        values: valuesPatch
+      }
+    };
   }
 
   return { ok: false, error: "Invalid settings section." };

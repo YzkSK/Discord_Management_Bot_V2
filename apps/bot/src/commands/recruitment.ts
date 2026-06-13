@@ -1,9 +1,16 @@
 import {
+  ActionRowBuilder,
   ChannelType,
   type ChatInputCommandInteraction,
+  type Guild,
+  ModalBuilder,
+  type ModalSubmitInteraction,
   PermissionFlagsBits,
   SlashCommandBuilder,
-  type VoiceChannel
+  type TextBasedChannel,
+  type TextChannel,
+  TextInputBuilder,
+  TextInputStyle
 } from "discord.js";
 import type { DbClient } from "@discord-bot/db";
 import {
@@ -15,8 +22,7 @@ import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/sha
 
 import { createComponentsV2TextMessage, EVENT_COLORS } from "../discord/components-v2.js";
 import {
-  createRecruitmentPostMessage,
-  findMarkedRecruitmentChannel
+  createRecruitmentPostMessage
 } from "../discord/recruitment-channel.js";
 import type { DiscordLogWriter } from "../discord/log-writer.js";
 import { writeRecruitmentLifecycleLog } from "../discord/recruitment-logs.js";
@@ -33,56 +39,12 @@ export const recruitmentCommand = new SlashCommandBuilder()
       .setName("create")
       .setDescription("Create a recruitment post.")
       .setDescriptionLocalization("ja", "募集投稿を作成します。")
-      .addStringOption((option) =>
-        option
-          .setName("genre")
-          .setNameLocalization("ja", "ジャンル")
-          .setDescription("Recruitment genre.")
-          .setDescriptionLocalization("ja", "募集のジャンル。")
-          .setRequired(true)
-          .setMaxLength(80)
-      )
-      .addIntegerOption((option) =>
-        option
-          .setName("capacity")
-          .setNameLocalization("ja", "定員")
-          .setDescription("Maximum participant count.")
-          .setDescriptionLocalization("ja", "最大参加人数。")
-          .setRequired(true)
-          .setMinValue(1)
-          .setMaxValue(99)
-      )
-      .addStringOption((option) =>
-        option
-          .setName("content")
-          .setNameLocalization("ja", "内容")
-          .setDescription("Recruitment details.")
-          .setDescriptionLocalization("ja", "募集の詳細。")
-          .setRequired(true)
-          .setMaxLength(1000)
-      )
-      .addChannelOption((option) =>
-        option
-          .setName("vc")
-          .setNameLocalization("ja", "vc")
-          .setDescription("Optional voice channel.")
-          .setDescriptionLocalization("ja", "任意のボイスチャンネル。")
-          .addChannelTypes(ChannelType.GuildVoice)
-          .setRequired(false)
-      )
-      .addBooleanOption((option) =>
-        option
-          .setName("auto-close")
-          .setNameLocalization("ja", "自動締め切り")
-          .setDescription("Close automatically when capacity is reached.")
-          .setDescriptionLocalization("ja", "定員に達したら自動的に締め切ります。")
-          .setRequired(false)
-      )
   );
 
 export interface RecruitmentCommandContext {
   db: DbClient;
   logWriter?: DiscordLogWriter;
+  loadRecruitmentChannelId?: (guildId: string) => Promise<string | null>;
 }
 
 async function resolveGuildLocale(db: DbClient, guildId: string) {
@@ -95,6 +57,28 @@ async function resolveGuildLocale(db: DbClient, guildId: string) {
       ? config.language
       : "en";
   return getLocale(lang);
+}
+
+export async function resolveRecruitmentChannel(input: {
+  guildId: string;
+  guild: Guild;
+  interactionChannel: TextBasedChannel | null;
+  loadChannelId: (guildId: string) => Promise<string | null>;
+}): Promise<TextChannel | null> {
+  const configuredId = await input.loadChannelId(input.guildId);
+
+  if (configuredId) {
+    const fetched = await input.guild.channels.fetch(configuredId).catch(() => null);
+    if (fetched?.type === ChannelType.GuildText) {
+      return fetched as TextChannel;
+    }
+  }
+
+  if (input.interactionChannel?.type === ChannelType.GuildText) {
+    return input.interactionChannel as TextChannel;
+  }
+
+  return null;
 }
 
 export async function handleRecruitmentCommand(
@@ -137,47 +121,154 @@ async function handleRecruitmentCreate(
   context: RecruitmentCommandContext,
   loc: Loc
 ) {
-  if (!interaction.guildId || !interaction.guild) {
-    return;
-  }
+  if (!interaction.guildId || !interaction.guild) return;
 
-  const recruitmentChannel = await findMarkedRecruitmentChannel(
-    interaction.guild
-  );
+  const loadChannelId = context.loadRecruitmentChannelId ??
+    ((guildId: string) =>
+      getGuildConfigByGuildId(context.db, guildId)
+        .then((c) => c?.recruitmentChannelId ?? null)
+        .catch(() => null));
+
+  const recruitmentChannel = await resolveRecruitmentChannel({
+    guildId: interaction.guildId,
+    guild: interaction.guild,
+    interactionChannel: interaction.channel,
+    loadChannelId
+  });
 
   if (!recruitmentChannel) {
     await interaction.reply({
       ...createComponentsV2TextMessage({
-        title: loc.recruitmentSetupRequired,
-        lines: [loc.recruitmentSetupRequiredMessage],
-        accentColor: EVENT_COLORS.yellow,
+        title: loc.recruitmentFailed,
+        lines: [loc.notInGuild],
+        accentColor: EVENT_COLORS.red,
         privateResponse: true
       })
     });
     return;
   }
 
-  const voiceChannel = interaction.options.getChannel("vc") as
-    | VoiceChannel
-    | null;
+  const modal = new ModalBuilder()
+    .setCustomId("recruitment-create-modal")
+    .setTitle(loc.recruitmentModalTitle);
+
+  const titleInput = new TextInputBuilder()
+    .setCustomId("title")
+    .setLabel(loc.recruitmentModalFieldTitle)
+    .setStyle(TextInputStyle.Short)
+    .setMaxLength(80)
+    .setRequired(true);
+
+  const capacityInput = new TextInputBuilder()
+    .setCustomId("capacity")
+    .setLabel(loc.recruitmentModalFieldCapacity)
+    .setStyle(TextInputStyle.Short)
+    .setMaxLength(2)
+    .setRequired(true);
+
+  const contentInput = new TextInputBuilder()
+    .setCustomId("content")
+    .setLabel(loc.recruitmentModalFieldContent)
+    .setStyle(TextInputStyle.Paragraph)
+    .setMaxLength(1000)
+    .setRequired(true);
+
+  modal.addComponents(
+    new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
+    new ActionRowBuilder<TextInputBuilder>().addComponents(capacityInput),
+    new ActionRowBuilder<TextInputBuilder>().addComponents(contentInput)
+  );
+
+  await interaction.showModal(modal);
+}
+
+export async function handleRecruitmentModalSubmit(
+  interaction: ModalSubmitInteraction,
+  context: RecruitmentCommandContext
+): Promise<boolean> {
+  if (interaction.customId !== "recruitment-create-modal") return false;
+
+  if (!interaction.guildId || !interaction.guild) {
+    const loc = getLocale("en");
+    await interaction.reply({
+      ...createComponentsV2TextMessage({
+        title: loc.recruitmentFailed,
+        lines: [loc.notInGuild],
+        accentColor: EVENT_COLORS.red,
+        privateResponse: true
+      })
+    });
+    return true;
+  }
+
+  const loc = await resolveGuildLocale(context.db, interaction.guildId);
+
+  const capacityRaw = interaction.fields.getTextInputValue("capacity");
+  const capacity = parseInt(capacityRaw, 10);
+  if (isNaN(capacity) || capacity < 1 || capacity > 99) {
+    await interaction.reply({
+      ...createComponentsV2TextMessage({
+        title: loc.recruitmentFailed,
+        lines: [loc.recruitmentCapacityInvalid],
+        accentColor: EVENT_COLORS.red,
+        privateResponse: true
+      })
+    });
+    return true;
+  }
+
+  const loadChannelId = context.loadRecruitmentChannelId ??
+    ((guildId: string) =>
+      getGuildConfigByGuildId(context.db, guildId)
+        .then((c) => c?.recruitmentChannelId ?? null)
+        .catch(() => null));
+
+  const recruitmentChannel = await resolveRecruitmentChannel({
+    guildId: interaction.guildId,
+    guild: interaction.guild,
+    interactionChannel: interaction.channel,
+    loadChannelId
+  });
+
+  if (!recruitmentChannel) {
+    await interaction.reply({
+      ...createComponentsV2TextMessage({
+        title: loc.recruitmentFailed,
+        lines: [loc.notInGuild],
+        accentColor: EVENT_COLORS.red,
+        privateResponse: true
+      })
+    });
+    return true;
+  }
+
+  const voiceChannelId = await interaction.guild.members
+    .fetch(interaction.user.id)
+    .then((m) => m.voice.channelId ?? null)
+    .catch(() => null);
+
+  const title = interaction.fields.getTextInputValue("title");
+  const content = interaction.fields.getTextInputValue("content");
+
   const recruitment = await createRecruitment(context.db, {
     guildId: interaction.guildId,
     channelId: recruitmentChannel.id,
     creatorId: interaction.user.id,
-    genre: interaction.options.getString("genre", true),
-    capacity: interaction.options.getInteger("capacity", true),
-    content: interaction.options.getString("content", true),
-    voiceChannelId: voiceChannel?.id ?? null,
-    autoClose: interaction.options.getBoolean("auto-close") ?? true
+    genre: title,
+    capacity,
+    content,
+    voiceChannelId,
+    autoClose: true
   });
+
   const message = await recruitmentChannel.send(
     createRecruitmentPostMessage(recruitment, loc)
   );
 
   const recruitmentWithMessage =
     (await setRecruitmentMessageId(context.db, {
-    recruitmentId: recruitment.id,
-    messageId: message.id
+      recruitmentId: recruitment.id,
+      messageId: message.id
     })) ?? recruitment;
 
   if (context.logWriter) {
@@ -192,11 +283,15 @@ async function handleRecruitmentCreate(
   await interaction.reply({
     ...createComponentsV2TextMessage({
       title: loc.recruitmentCreated,
-      lines: [loc.recruitmentPostLink({ url: message.url })],
+      lines: [
+        loc.recruitmentPostLink({ url: message.url }),
+        loc.recruitmentAutoCloseStatus({ enabled: true })
+      ],
       accentColor: EVENT_COLORS.teal,
       privateResponse: true
     })
   });
+  return true;
 }
 
 export function canManageRecruitmentSetup(

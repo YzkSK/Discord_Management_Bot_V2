@@ -14,6 +14,12 @@ export interface DiscordRole {
   name: string;
 }
 
+export interface DiscordChannel {
+  id: string;
+  name: string;
+  type: number;
+}
+
 const discordApiBaseUrl = "https://discord.com/api/v10";
 
 export class DiscordApiError extends Error {
@@ -108,4 +114,24 @@ export async function fetchGuildRoles(
   }
   const roles = (await response.json()) as DiscordRole[];
   return roles.filter((r) => r.name !== "@everyone");
+}
+
+export async function fetchGuildChannels(
+  botToken: string,
+  guildId: string
+): Promise<DiscordChannel[]> {
+  const response = await fetch(
+    `${discordApiBaseUrl}/guilds/${guildId}/channels`,
+    {
+      headers: { Authorization: `Bot ${botToken}` },
+      cache: "no-store"
+    }
+  );
+  if (!response.ok) {
+    throw new DiscordApiError(
+      `Failed to load guild channels (${response.status}).`,
+      response.status
+    );
+  }
+  return (await response.json()) as DiscordChannel[];
 }
