@@ -223,7 +223,8 @@ export async function handleJoinCommand(
   }
 
   await replyPrivate(interaction, loc.ttsConnected, [
-    `${loc.ttsVoiceChannel({ id: target.voiceChannelId })}  ·  ${loc.ttsReadingChannel({ id: target.textChannelId })}`
+    `${loc.ttsVoiceChannel({ id: target.voiceChannelId })}  ·  ${loc.ttsReadingChannel({ id: target.textChannelId })}`,
+    loc.ttsTipMutePrefix
   ], EVENT_COLORS.green);
 
   if (result.status === "joined") {
@@ -266,7 +267,7 @@ export async function handleForceJoinCommand(
 
   if (currentVoiceChannelId && currentVoiceChannelId !== target.voiceChannelId) {
     await interaction.reply(
-      createForceJoinConfirmation({ ...target, userId: interaction.user.id }, loc)
+      createForceJoinConfirmation({ ...target, userId: interaction.user.id, currentVoiceChannelId }, loc)
     );
     return;
   }
@@ -521,7 +522,7 @@ function getMemberRoleIds(member: GuildMember) {
 }
 
 function createForceJoinConfirmation(
-  input: ForceJoinCustomIdInput,
+  input: ForceJoinCustomIdInput & { currentVoiceChannelId: string },
   loc: Loc
 ): InteractionReplyOptions {
   const confirm = new ButtonBuilder()
@@ -540,6 +541,7 @@ function createForceJoinConfirmation(
   const message = createComponentsV2TextMessage({
     title: loc.ttsForceJoinConfirmTitle,
     lines: [
+      loc.ttsForceJoinCurrentChannel({ id: input.currentVoiceChannelId }),
       loc.ttsForceJoinAlreadyConnected,
       loc.ttsForceJoinMoveTo({ id: input.voiceChannelId })
     ],
