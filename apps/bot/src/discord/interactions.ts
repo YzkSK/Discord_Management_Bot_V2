@@ -9,6 +9,7 @@ import { createDiscordLogWriter } from "./log-writer.js";
 import { handleRecruitmentButtonInteraction } from "./recruitment-interactions.js";
 import { handleForceJoinButtonInteraction } from "../commands/tts.js";
 import { handleTempVoiceControlInteraction } from "./temp-voice-controls.js";
+import { handleRecruitmentModalSubmit } from "../commands/recruitment.js";
 
 export function installInteractionRouter(client: Client, context: CommandContext) {
   const commandContext: CommandContext = {
@@ -40,15 +41,19 @@ export function installInteractionRouter(client: Client, context: CommandContext
     }
 
     if (interaction.isModalSubmit()) {
-      void handleTempVoiceControlInteraction(interaction, commandContext).catch(
-        (error: unknown) => {
+      void handleRecruitmentModalSubmit(interaction, commandContext)
+        .then((handled) =>
+          handled
+            ? undefined
+            : handleTempVoiceControlInteraction(interaction, commandContext)
+        )
+        .catch((error: unknown) => {
           console.error("modal interaction handler failed", {
             customId: interaction.customId,
             guildId: interaction.guildId,
             error
           });
-        }
-      );
+        });
       return;
     }
 
