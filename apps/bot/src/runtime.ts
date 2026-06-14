@@ -23,6 +23,7 @@ import { installTtsAnnounceHandler } from "./discord/tts-announce.js";
 import { TtsSessionManager } from "./discord/tts-session.js";
 import { LocalTtsPlaybackQueue } from "./discord/tts-queue.js";
 import { installVoiceActivityHandlers } from "./discord/voice-activity.js";
+import { installChannelNameHandlers } from "./discord/channel-names.js";
 import { installVoiceReconciliation } from "./discord/voice-reconciliation.js";
 import { createVoicevoxClient, getVoicevoxSpeakers } from "./discord/voicevox.js";
 
@@ -105,6 +106,7 @@ function installHandlers(deps: RuntimeDeps) {
     ttsSessionManager,
     voicevox
   });
+  installChannelNameHandlers(discordClient, db.db);
 }
 
 export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {
