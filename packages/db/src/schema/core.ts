@@ -158,6 +158,11 @@ export const callSessions = pgTable(
     callSessionsChannelStatusIdx: index(
       "call_sessions_channel_status_idx"
     ).on(table.channelId, table.status),
+    callSessionsActiveChannelIdx: uniqueIndex(
+      "call_sessions_active_channel_idx"
+    )
+      .on(table.guildId, table.channelId)
+      .where(sql`${table.status} = 'active'`),
     statusCheck: check(
       "call_sessions_status_check",
       sql`${table.status} in ('active', 'ended')`
@@ -246,9 +251,7 @@ export const recruitments = pgTable(
     capacity: integer("capacity").notNull(),
     content: text("content").notNull(),
     voiceChannelId: text("voice_channel_id"),
-    autoClose: boolean("auto_close").notNull().default(true),
     status: text("status").notNull().default("open"),
-    autoClosed: boolean("auto_closed").notNull().default(false),
     closedAt: timestamp("closed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -287,6 +290,8 @@ export const recruitmentParticipants = pgTable(
     joinedAt: timestamp("joined_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    isQueued: boolean("is_queued").notNull().default(false),
+    queuedAt: timestamp("queued_at", { withTimezone: true }),
     leftAt: timestamp("left_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
