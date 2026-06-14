@@ -75,6 +75,7 @@ type Locale = {
   recruitmentPromoted: (vars: { userId: string }) => string;
   recruitmentButtonReopen: string;
   recruitmentReopenedSuccess: string;
+  recruitmentAlreadyOpen: string;
   recruitmentNotJoined: string;
   recruitmentParticipantsLabel: string;
   recruitmentNoParticipants: string;
@@ -82,12 +83,14 @@ type Locale = {
   recruitmentJoined: (vars: { current: number; max: number }) => string;
   recruitmentLeft: (vars: { current: number; max: number }) => string;
   recruitmentClosedSuccess: string;
+  recruitmentAlreadyClosed: string;
   recruitmentCannotClose: string;
   recruitmentCannotCloseMessage: string;
   ttsJoinFailed: string;
   ttsJoinVoiceFirst: string;
   ttsAlreadyConnected: string;
   ttsAlreadyConnectedMessage: string;
+  ttsAlreadyConnectedHere: string;
   ttsForceJoinSuggestion: string;
   ttsConnected: string;
   ttsVoiceChannel: (vars: { id: string }) => string;
@@ -109,9 +112,11 @@ type Locale = {
   ttsLeaveFailed: string;
   ttsLeaveNotInGuild: string;
   ttsDisconnected: string;
+  ttsNotConnected: string;
   ttsChannelsCleared: string;
   ttsSpeakerFailed: string;
   ttsSpeakerUpdated: string;
+  ttsSpeakerAlreadySet: string;
   ttsSpeakerUser: (vars: { id: number }) => string;
   ttsSpeakerServerDefault: (vars: { id: number }) => string;
   logEventTitle: (vars: { eventName: string }) => string;
@@ -121,6 +126,7 @@ type Locale = {
   logRecruitmentGenre: (vars: { genre: string }) => string;
   logFieldLabel: (field: string) => string | null;
   logChangeField: (vars: { label: string; before: string; after: string }) => string;
+  logContentChange: (vars: { before: string; after: string }) => string;
   commandSuccess: (vars: { operation: string }) => string;
   commandError: (vars: { reason: string }) => string;
   voiceTempCreatedTitle: string;
@@ -219,6 +225,7 @@ const locales: Record<GuildLanguage, Locale> = {
     recruitmentPromoted: ({ userId }) => `<@${userId}> A spot opened up!`,
     recruitmentButtonReopen: "🔓 Reopen",
     recruitmentReopenedSuccess: "✅ Recruitment reopened",
+    recruitmentAlreadyOpen: "This recruitment is already open.",
     recruitmentNotJoined: "You haven't joined this recruitment.",
     recruitmentParticipantsLabel: "Participants:",
     recruitmentNoParticipants: "Participants: none",
@@ -226,6 +233,7 @@ const locales: Record<GuildLanguage, Locale> = {
     recruitmentJoined: ({ current, max }) => `✅ Joined! (${current}/${max})`,
     recruitmentLeft: ({ current, max }) => `✅ Left. (${current}/${max})`,
     recruitmentClosedSuccess: "✅ Recruitment closed",
+    recruitmentAlreadyClosed: "This recruitment is already closed.",
     recruitmentCannotClose: "❌ Cannot close recruitment",
     recruitmentCannotCloseMessage: "Only the creator or a server manager can close this.",
     ttsJoinFailed: "❌ TTS join failed",
@@ -233,6 +241,7 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsAlreadyConnected: "⚠️ TTS already connected",
     ttsAlreadyConnectedMessage:
       "The bot is already connected to another voice channel.",
+    ttsAlreadyConnectedHere: "Already connected to this channel.",
     ttsForceJoinSuggestion:
       "Ask a Dashboard admin or owner to use `/force-join`.",
     ttsConnected: "✅ 🔊 TTS connected",
@@ -258,9 +267,11 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsLeaveFailed: "❌ TTS leave failed",
     ttsLeaveNotInGuild: "This command can only be used in a guild.",
     ttsDisconnected: "🔇 TTS disconnected",
+    ttsNotConnected: "TTS is not connected.",
     ttsChannelsCleared: "Temporary TTS text channels were cleared.",
     ttsSpeakerFailed: "❌ TTS speaker update failed",
     ttsSpeakerUpdated: "✅ TTS speaker updated",
+    ttsSpeakerAlreadySet: "That speaker is already selected.",
     ttsSpeakerUser: ({ id }) => `Your TTS speaker: ${id}`,
     ttsSpeakerServerDefault: ({ id }) => `Server default TTS speaker: ${id}`,
     logEventTitle: ({ eventName }) => {
@@ -347,6 +358,7 @@ const locales: Record<GuildLanguage, Locale> = {
       ownerId: "Owner",
     } as Record<string, string>)[field] ?? null,
     logChangeField: ({ label, before, after }) => `${label}: ${before} → ${after}`,
+    logContentChange: ({ before, after }) => `Content: ${before} → ${after}`,
     commandSuccess: ({ operation }) => `✅ ${operation} completed`,
     commandError: ({ reason }) => `❌ ${reason}`,
     voiceTempCreatedTitle: "✨ Temp VC Created",
@@ -441,6 +453,7 @@ const locales: Record<GuildLanguage, Locale> = {
     recruitmentPromoted: ({ userId }) => `<@${userId}> 参加枠が空きました！`,
     recruitmentButtonReopen: "🔓 再オープン",
     recruitmentReopenedSuccess: "✅ 募集を再オープンしました",
+    recruitmentAlreadyOpen: "この募集は既に再開されています。",
     recruitmentNotJoined: "参加していません。",
     recruitmentParticipantsLabel: "参加者:",
     recruitmentNoParticipants: "参加者: なし",
@@ -448,6 +461,7 @@ const locales: Record<GuildLanguage, Locale> = {
     recruitmentJoined: ({ current, max }) => `✅ 参加しました！（${current}/${max}人）`,
     recruitmentLeft: ({ current, max }) => `✅ 退出しました。（${current}/${max}人）`,
     recruitmentClosedSuccess: "✅ 募集を締め切りました",
+    recruitmentAlreadyClosed: "この募集は既に締め切られています。",
     recruitmentCannotClose: "❌ 締め切れません",
     recruitmentCannotCloseMessage: "作成者またはサーバー管理者のみが締め切れます。",
     ttsJoinFailed: "❌ TTS参加失敗",
@@ -455,6 +469,7 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsAlreadyConnected: "⚠️ TTS接続中",
     ttsAlreadyConnectedMessage:
       "ボットはすでに別のボイスチャンネルに接続されています。",
+    ttsAlreadyConnectedHere: "既にこのチャンネルに接続しています。",
     ttsForceJoinSuggestion:
       "ダッシュボード管理者またはオーナーが `/force-join` を使用してください。",
     ttsConnected: "✅ 🔊 TTS接続完了",
@@ -481,9 +496,11 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsLeaveFailed: "❌ TTS退出失敗",
     ttsLeaveNotInGuild: "このコマンドはサーバー内でのみ使用できます。",
     ttsDisconnected: "🔇 TTS切断完了",
+    ttsNotConnected: "TTSは接続していません。",
     ttsChannelsCleared: "一時TTSテキストチャンネルをクリアしました。",
     ttsSpeakerFailed: "❌ TTS話者変更失敗",
     ttsSpeakerUpdated: "✅ TTS話者を更新しました",
+    ttsSpeakerAlreadySet: "既にそのスピーカーが選択されています。",
     ttsSpeakerUser: ({ id }) => `あなたのTTS話者: ${id}`,
     ttsSpeakerServerDefault: ({ id }) => `サーバーデフォルトTTS話者: ${id}`,
     logEventTitle: ({ eventName }) => {
@@ -570,6 +587,7 @@ const locales: Record<GuildLanguage, Locale> = {
       ownerId: "オーナー",
     } as Record<string, string>)[field] ?? null,
     logChangeField: ({ label, before, after }) => `${label}: ${before} → ${after}`,
+    logContentChange: ({ before, after }) => `内容: ${before} → ${after}`,
     commandSuccess: ({ operation }) => `✅ ${operation}が完了しました`,
     commandError: ({ reason }) => `❌ ${reason}`,
     voiceTempCreatedTitle: "✨ 一時VCが作成された",

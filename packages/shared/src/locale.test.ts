@@ -49,3 +49,21 @@ describe("getLocale('ja')", () => {
     assert.equal(loc.ttsForceJoinMoveTo({ id: "456" }), "→ <#456> に移動しますか？");
   });
 });
+
+describe("logContentChange", () => {
+  it("formats before/after content in English", () => {
+    const loc = getLocale("en");
+    assert.equal(
+      loc.logContentChange({ before: "old text", after: "new text" }),
+      "Content: old text → new text"
+    );
+  });
+
+  it("formats before/after content in Japanese", () => {
+    const loc = getLocale("ja");
+    assert.equal(
+      loc.logContentChange({ before: "旧テキスト", after: "新テキスト" }),
+      "内容: 旧テキスト → 新テキスト"
+    );
+  });
+});
