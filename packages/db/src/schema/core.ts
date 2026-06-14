@@ -305,6 +305,27 @@ export const recruitmentParticipants = pgTable(
   })
 );
 
+export const discordChannels = pgTable(
+  "discord_channels",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    channelId: text("channel_id").notNull(),
+    guildId: text("guild_id").notNull(),
+    name: text("name").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  (table) => ({
+    discordChannelsChannelIdIdx: uniqueIndex("discord_channels_channel_id_idx").on(
+      table.channelId
+    ),
+    discordChannelsGuildIdx: index("discord_channels_guild_id_idx").on(
+      table.guildId
+    )
+  })
+);
+
 export const ttsDictionaryEntries = pgTable(
   "tts_dictionary_entries",
   {

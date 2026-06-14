@@ -92,6 +92,13 @@
       "when": 1781331046412,
       "tag": "0012_romantic_rogue",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1781401684177,
+      "tag": "0013_real_vindicator",
+      "breakpoints": true
     }
   ]
 }
