@@ -4,6 +4,7 @@ import type { DbClient } from "../client.js";
 import {
   callSessionMembers,
   callSessions,
+  discordChannels,
   tempVoiceChannels
 } from "../schema/index.js";
 
@@ -19,6 +20,7 @@ export async function listVoiceDashboardState(
   const sessionRows = await db
     .select({
       channelId: callSessions.channelId,
+      channelName: discordChannels.name,
       endedAt: callSessions.endedAt,
       id: callSessions.id,
       memberCount: sql<number>`count(${callSessionMembers.id})::int`,
@@ -33,13 +35,18 @@ export async function listVoiceDashboardState(
         isNull(callSessionMembers.leftAt)
       )
     )
+    .leftJoin(
+      discordChannels,
+      eq(discordChannels.channelId, callSessions.channelId)
+    )
     .where(eq(callSessions.guildId, input.guildId))
     .groupBy(
       callSessions.id,
       callSessions.channelId,
       callSessions.endedAt,
       callSessions.startedAt,
-      callSessions.status
+      callSessions.status,
+      discordChannels.name
     )
     .orderBy(desc(callSessions.startedAt))
     .limit(clampRecentLimit(input.recentLimit));
@@ -47,21 +54,36 @@ export async function listVoiceDashboardState(
   const tempVoiceRows = await db
     .select({
       channelId: tempVoiceChannels.channelId,
+      channelName: discordChannels.name,
       controlChannelId: tempVoiceChannels.controlChannelId,
       creationChannelId: tempVoiceChannels.creationChannelId,
       deleteScheduledAt: tempVoiceChannels.deleteScheduledAt,
       ownerId: tempVoiceChannels.ownerId
     })
     .from(tempVoiceChannels)
+    .leftJoin(
+      discordChannels,
+      eq(discordChannels.channelId, tempVoiceChannels.channelId)
+    )
     .where(eq(tempVoiceChannels.guildId, input.guildId))
     .orderBy(desc(tempVoiceChannels.createdAt));
 
   return {
-    sessions: sessionRows.map((session) => ({
-      ...session,
-      status: session.status === "ended" ? ("ended" as const) : ("active" as const)
-    })),
-    tempVoiceChannels: tempVoiceRows
+    sessions: sessionRows.map((session) => {
+      const { channelName, ...rest } = session;
+      return {
+        ...rest,
+        ...(channelName !== null ? { channelName } : {}),
+        status: rest.status === "ended" ? ("ended" as const) : ("active" as const)
+      };
+    }),
+    tempVoiceChannels: tempVoiceRows.map((vc) => {
+      const { channelName, ...rest } = vc;
+      return {
+        ...rest,
+        ...(channelName !== null ? { channelName } : {})
+      };
+    })
   };
 }
 
