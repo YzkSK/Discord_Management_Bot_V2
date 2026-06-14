@@ -175,11 +175,14 @@ function formatLogPayload(payload: NormalizedEvent["payload"], loc: Locale): str
     return lines.length > 0 ? lines.join("\n") : null;
   }
 
-  // message.create / message.delete — show content if present (empty string → "(empty)")
+  // message.create / message.delete — show content if non-empty (attachment-only messages have no text to show)
   const content = typeof payload.content === "string" ? payload.content : null;
-  if (content !== null) {
-    lines.push(loc.logContent({ content: truncateForDiscord(content || "(empty)", 800) }));
+  if (content) {
+    lines.push(loc.logContent({ content: truncateForDiscord(content, 800) }));
     return lines.length > 0 ? lines.join("\n") : null;
+  }
+  if (content !== null) {
+    return null;
   }
 
   // Other events — recruitment fields, role/channel changes, etc.

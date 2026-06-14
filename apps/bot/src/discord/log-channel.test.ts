@@ -79,7 +79,7 @@ describe("log event formatting (en)", () => {
     ]);
   });
 
-  it("shows (empty) for message.create with no text content", () => {
+  it("omits content line for message.create with no text content (attachment-only)", () => {
     const event: NormalizedEvent = {
       eventName: "message.create",
       eventTimestamp: new Date("2026-05-12T00:00:00.000Z"),
@@ -95,8 +95,7 @@ describe("log event formatting (en)", () => {
       "Actor: <@user-1>",
       "Channel: <#channel-1>",
       "Message ID: message-1",
-      "Event time: <t:1778544000:f>",
-      "Content: (empty)"
+      "Event time: <t:1778544000:f>"
     ]);
   });
 
