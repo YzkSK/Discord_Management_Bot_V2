@@ -121,6 +121,47 @@ describe("log event formatting (en)", () => {
     ]);
   });
 
+  it("shows dash for null oldContent on message.update", () => {
+    const event: NormalizedEvent = {
+      eventName: "message.update",
+      eventTimestamp: new Date("2026-05-12T00:00:00.000Z"),
+      receivedAt: new Date("2026-05-12T00:00:01.000Z"),
+      guildId: "guild-1",
+      actorId: "user-1",
+      channelId: "channel-1",
+      messageId: "message-1",
+      payload: { content: "new text", oldContent: null, newContent: "new text" }
+    };
+
+    assert.deepEqual(formatLogEventLines(event, enLoc), [
+      "Actor: <@user-1>",
+      "Channel: <#channel-1>",
+      "Message ID: message-1",
+      "Event time: <t:1778544000:f>",
+      "Content: – → new text"
+    ]);
+  });
+
+  it("omits content line for message.delete when content is null (partial)", () => {
+    const event: NormalizedEvent = {
+      eventName: "message.delete",
+      eventTimestamp: new Date("2026-05-12T00:00:00.000Z"),
+      receivedAt: new Date("2026-05-12T00:00:01.000Z"),
+      guildId: "guild-1",
+      actorId: "user-1",
+      channelId: "channel-1",
+      messageId: "message-1",
+      payload: { content: null }
+    };
+
+    assert.deepEqual(formatLogEventLines(event, enLoc), [
+      "Actor: <@user-1>",
+      "Channel: <#channel-1>",
+      "Message ID: message-1",
+      "Event time: <t:1778544000:f>"
+    ]);
+  });
+
   it("formats a temp voice event with the channel name", () => {
     const event: NormalizedEvent = {
       eventName: "voice.temp.deleted",
