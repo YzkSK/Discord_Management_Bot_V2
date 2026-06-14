@@ -309,9 +309,12 @@ export const discordChannels = pgTable(
   "discord_channels",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    channelId: text("channel_id").notNull(),
     guildId: text("guild_id").notNull(),
+    channelId: text("channel_id").notNull(),
     name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow()

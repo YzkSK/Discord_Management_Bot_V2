@@ -99,6 +99,13 @@
       "when": 1781401684177,
       "tag": "0013_real_vindicator",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1781401840164,
+      "tag": "0014_premium_goblin_queen",
+      "breakpoints": true
     }
   ]
 }
