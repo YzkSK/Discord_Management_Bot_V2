@@ -4,21 +4,10 @@ import { describe, it } from "node:test";
 import { handleRecruitmentButtonInteraction } from "./recruitment-interactions.js";
 
 function makeRecruitment(overrides: Partial<{
-  id: string;
-  guildId: string;
-  channelId: string;
-  messageId: string | null;
-  creatorId: string;
-  genre: string;
-  capacity: number;
-  content: string;
-  voiceChannelId: string | null;
-  autoClose: boolean;
-  autoClosed: boolean;
-  status: string;
-  closedAt: Date | null;
-  updatedAt: Date;
-  createdAt: Date;
+  id: string; guildId: string; channelId: string; messageId: string | null;
+  creatorId: string; genre: string; capacity: number; content: string;
+  voiceChannelId: string | null; status: string;
+  closedAt: Date | null; updatedAt: Date; createdAt: Date;
 }> = {}) {
   return {
     id: overrides.id ?? "recruitment-1",
@@ -30,211 +19,10 @@ function makeRecruitment(overrides: Partial<{
     capacity: overrides.capacity ?? 4,
     content: overrides.content ?? "Let's play",
     voiceChannelId: overrides.voiceChannelId ?? null,
-    autoClose: overrides.autoClose ?? true,
-    autoClosed: overrides.autoClosed ?? false,
     status: overrides.status ?? "open",
     closedAt: overrides.closedAt ?? null,
     updatedAt: new Date(),
     createdAt: new Date()
-  };
-}
-
-/**
- * Builds a minimal fake db for handleJoin tests.
- *
- * DB calls in handleJoin order:
- * 1. resolveLocale → getGuildConfigByGuildId → select({language,...}).from().innerJoin().where().limit() → []
- * 2. getRecruitmentById → select().from().where().limit() → [recruitment]
- * 3. countActiveRecruitmentParticipants (before join) → select({value:count()}).from().where() → [{value: N}]
- * 4. joinRecruitment → insert().values().onConflictDoUpdate().returning() → [participant]
- * 5. countActiveRecruitmentParticipants (after join) → select({value:count()}).from().where() → [{value: M}]
- * 6. updateRecruitmentStatus → update().set().where().returning() → [updatedRecruitment]
- * 7. resolveLocale (for notification, only if auto-close) → same as #1 → []
- */
-function makeJoinDb(opts: {
-  recruitment: ReturnType<typeof makeRecruitment>;
-  beforeCount: number;
-  afterCount: number;
-  updatedRecruitment?: ReturnType<typeof makeRecruitment>;
-}) {
-  const updatedRecruitment = opts.updatedRecruitment ?? {
-    ...opts.recruitment,
-    status: opts.afterCount >= opts.recruitment.capacity
-      ? (opts.recruitment.autoClose ? "closed" : "full")
-      : "open"
-  };
-
-  let selectCallCount = 0;
-
-  return {
-    select: (selection?: Record<string, unknown>) => {
-      // Detect guild config lookup (has 'language' field in selection)
-      const isGuildConfig = selection && "language" in selection;
-      // Detect count query (has 'value' field)
-      const isCountQuery = selection && "value" in selection;
-      selectCallCount++;
-
-      if (isGuildConfig) {
-        return {
-          from: () => ({
-            innerJoin: () => ({
-              where: () => ({ limit: async () => [] })
-            })
-          })
-        };
-      }
-
-      if (isCountQuery) {
-        // Called twice: before join and after join
-        // We track via closure which call this is
-        const countValue = selectCallCount <= 2 ? opts.beforeCount : opts.afterCount;
-        return {
-          from: () => ({
-            where: async () => [{ value: countValue }]
-          })
-        };
-      }
-
-      // getRecruitmentById: select().from().where().limit()
-      return {
-        from: () => ({
-          where: () => ({
-            limit: async () => [opts.recruitment]
-          })
-        })
-      };
-    },
-    insert: () => ({
-      values: () => ({
-        onConflictDoUpdate: () => ({
-          returning: async () => [{
-            recruitmentId: opts.recruitment.id,
-            userId: "user-1",
-            joinedAt: new Date(),
-            leftAt: null,
-            updatedAt: new Date()
-          }]
-        }),
-        returning: async () => []
-      })
-    }),
-    update: () => ({
-      set: () => ({
-        where: () => ({
-          returning: async () => [updatedRecruitment]
-        })
-      })
-    })
-  };
-}
-
-/**
- * Builds a minimal fake db for handleLeave tests.
- *
- * DB calls in handleLeave order:
- * 1. resolveLocale → getGuildConfigByGuildId → select({language,...}).from().innerJoin().where().limit() → []
- * 2. getRecruitmentById → select().from().where().limit() → [recruitment]
- * 3. leaveRecruitment → update().set().where() → returns participant (but not used)
- * 4. countActiveRecruitmentParticipants → select({value:count()}).from().where() → [{value: N}]
- * 5. updateRecruitmentStatus (only if shouldReopen) → update().set().where().returning() → [updated]
- * 6. resolveLocale (for notification, only if shouldReopen) → same as #1 → []
- */
-function makeLeaveDb(opts: {
-  recruitment: ReturnType<typeof makeRecruitment>;
-  afterCount: number;
-  updatedRecruitment?: ReturnType<typeof makeRecruitment>;
-}) {
-  const updatedRecruitment = opts.updatedRecruitment ?? {
-    ...opts.recruitment,
-    status: "open",
-    autoClosed: false,
-    closedAt: null
-  };
-
-  let updateCallCount = 0;
-
-  return {
-    select: (selection?: Record<string, unknown>) => {
-      const isGuildConfig = selection && "language" in selection;
-      const isCountQuery = selection && "value" in selection;
-
-      if (isGuildConfig) {
-        return {
-          from: () => ({
-            innerJoin: () => ({
-              where: () => ({ limit: async () => [] })
-            })
-          })
-        };
-      }
-
-      if (isCountQuery) {
-        return {
-          from: () => ({
-            where: async () => [{ value: opts.afterCount }]
-          })
-        };
-      }
-
-      // getRecruitmentById
-      return {
-        from: () => ({
-          where: () => ({
-            limit: async () => [opts.recruitment]
-          })
-        })
-      };
-    },
-    insert: () => ({
-      values: () => ({
-        onConflictDoUpdate: () => ({ returning: async () => [] }),
-        returning: async () => []
-      })
-    }),
-    update: () => ({
-      set: () => ({
-        where: () => {
-          updateCallCount++;
-          // leaveRecruitment update returns participant (not .returning() chained differently)
-          // updateRecruitmentStatus uses .returning()
-          return {
-            returning: async () => [updatedRecruitment]
-          };
-        }
-      })
-    })
-  };
-}
-
-function makeButtonInteraction(opts: {
-  action: "join" | "leave" | "close";
-  recruitmentId?: string;
-  userId?: string;
-  guildId?: string;
-  onChannelSend?: (payload: unknown) => void;
-}) {
-  const recruitmentId = opts.recruitmentId ?? "recruitment-1";
-  const customId = `recruitment:${opts.action}:${recruitmentId}`;
-  const channelSends: string[] = [];
-
-  return {
-    customId,
-    guildId: opts.guildId ?? "guild-1",
-    user: { id: opts.userId ?? "user-1" },
-    memberPermissions: { has: () => false },
-    message: {
-      edit: async () => {}
-    },
-    channel: {
-      send: async (payload: unknown) => {
-        const serialized = JSON.stringify(payload);
-        channelSends.push(serialized);
-        opts.onChannelSend?.(payload);
-        return {};
-      }
-    },
-    reply: async () => {},
-    _channelSends: channelSends
   };
 }
 
@@ -248,281 +36,375 @@ describe("handleRecruitmentButtonInteraction — unknown custom id", () => {
   });
 });
 
-describe("handleRecruitmentButtonInteraction — join auto-close notification", () => {
-  it("sends a channel notification when join triggers auto-close", async () => {
-    // capacity=1, beforeCount=0, afterCount=1 → hits capacity with autoClose=true → "closed"
-    const recruitment = makeRecruitment({ capacity: 1, autoClose: true, status: "open" });
-    const interaction = makeButtonInteraction({ action: "join" });
-
-    const db = makeJoinDb({
-      recruitment,
-      beforeCount: 0,
-      afterCount: 1,
-      updatedRecruitment: { ...recruitment, status: "closed", autoClosed: true, closedAt: new Date(), updatedAt: new Date(), createdAt: new Date() }
-    });
-
-    // Override count to be sequential: first call returns 0, second returns 1
-    let countCall = 0;
-    const dbWithSequentialCount = {
-      ...db,
-      select: (selection?: Record<string, unknown>) => {
-        const isGuildConfig = selection && "language" in selection;
-        const isCountQuery = selection && "value" in selection;
-
-        if (isGuildConfig) {
-          return {
-            from: () => ({
-              innerJoin: () => ({
-                where: () => ({ limit: async () => [] })
-              })
-            })
-          };
-        }
-
-        if (isCountQuery) {
-          countCall++;
-          const val = countCall === 1 ? 0 : 1;
-          return {
-            from: () => ({
-              where: async () => [{ value: val }]
-            })
-          };
-        }
-
-        return {
-          from: () => ({
-            where: () => ({
-              limit: async () => [recruitment]
-            })
-          })
-        };
+describe("handleRecruitmentButtonInteraction — join: already joined", () => {
+  it("replies with already-joined message when user is active participant", async () => {
+    const recruitment = makeRecruitment({ capacity: 4 });
+    let replyTitle = "";
+    const interaction = {
+      customId: `recruitment:join:${recruitment.id}`,
+      guildId: "guild-1",
+      user: { id: "user-1" },
+      memberPermissions: { has: () => false },
+      message: { edit: async () => {} },
+      channel: { send: async () => ({}) },
+      reply: async (p: unknown) => {
+        const text = JSON.stringify(p);
+        replyTitle = text;
       }
     };
 
-    await handleRecruitmentButtonInteraction(interaction as never, { db: dbWithSequentialCount as never });
-
-    assert.ok(interaction._channelSends.length > 0, "channel.send should be called when auto-close triggers");
-    const payload = interaction._channelSends[0] ?? "";
-    assert.ok(
-      payload.includes("closed") || payload.includes("クローズ"),
-      `notification should mention close, got: ${payload}`
-    );
-  });
-
-  it("does not send a channel notification when join succeeds without reaching capacity", async () => {
-    // capacity=4, beforeCount=0, afterCount=1 → below capacity → "open"
-    const recruitment = makeRecruitment({ capacity: 4, autoClose: true, status: "open" });
-    const interaction = makeButtonInteraction({ action: "join" });
-
-    let countCall = 0;
+    let selectCallCount = 0;
     const db = {
       select: (selection?: Record<string, unknown>) => {
         const isGuildConfig = selection && "language" in selection;
-        const isCountQuery = selection && "value" in selection;
+        const isCount = selection && "value" in selection;
 
-        if (isGuildConfig) {
-          return {
-            from: () => ({
-              innerJoin: () => ({
-                where: () => ({ limit: async () => [] })
-              })
-            })
-          };
-        }
-
-        if (isCountQuery) {
-          countCall++;
-          const val = countCall === 1 ? 0 : 1;
-          return {
-            from: () => ({
-              where: async () => [{ value: val }]
-            })
-          };
-        }
-
-        return {
-          from: () => ({
-            where: () => ({
-              limit: async () => [recruitment]
-            })
-          })
-        };
-      },
-      insert: () => ({
-        values: () => ({
-          onConflictDoUpdate: () => ({
-            returning: async () => [{ recruitmentId: "recruitment-1", userId: "user-1", joinedAt: new Date(), leftAt: null, updatedAt: new Date() }]
-          })
-        })
-      }),
-      update: () => ({
-        set: () => ({
-          where: () => ({
-            returning: async () => [{ ...recruitment, status: "open" }]
-          })
-        })
-      })
-    };
-
-    await handleRecruitmentButtonInteraction(interaction as never, { db: db as never });
-
-    assert.equal(interaction._channelSends.length, 0, "channel.send should NOT be called when capacity not reached");
-  });
-});
-
-describe("handleRecruitmentButtonInteraction — leave reopen notification", () => {
-  it("sends a channel notification when leave triggers a reopen", async () => {
-    // recruitment was auto-closed: status="closed", autoClosed=true, capacity=1
-    // after leave: afterCount=0, which is < capacity → shouldReopen = true
-    const recruitment = makeRecruitment({
-      capacity: 1,
-      autoClose: true,
-      autoClosed: true,
-      status: "closed"
-    });
-    const interaction = makeButtonInteraction({ action: "leave" });
-
-    const db = makeLeaveDb({ recruitment, afterCount: 0 });
-
-    await handleRecruitmentButtonInteraction(interaction as never, { db: db as never });
-
-    assert.ok(interaction._channelSends.length > 0, "channel.send should be called when recruitment reopens");
-    const payload = interaction._channelSends[0] ?? "";
-    assert.ok(
-      payload.includes("reopen") || payload.includes("再オープン"),
-      `notification should mention reopen, got: ${payload}`
-    );
-  });
-
-  it("does not send a channel notification when leave from a non-auto-closed recruitment", async () => {
-    // recruitment is open (not auto-closed), leave should not trigger reopen notification
-    const recruitment = makeRecruitment({
-      capacity: 4,
-      autoClose: true,
-      autoClosed: false,
-      status: "open"
-    });
-    const interaction = makeButtonInteraction({ action: "leave" });
-
-    const db = makeLeaveDb({ recruitment, afterCount: 2 });
-
-    await handleRecruitmentButtonInteraction(interaction as never, { db: db as never });
-
-    assert.equal(interaction._channelSends.length, 0, "channel.send should NOT be called when no reopen occurs");
-  });
-});
-
-describe("recruitmentAutoCloseStatus locale string", () => {
-  it("shows ON for enabled auto-close", async () => {
-    const { getLocale } = await import("@discord-bot/shared");
-    const locEn = getLocale("en");
-    const locJa = getLocale("ja");
-
-    assert.match(locEn.recruitmentAutoCloseStatus({ enabled: true }), /ON/);
-    assert.match(locEn.recruitmentAutoCloseStatus({ enabled: false }), /OFF/);
-    assert.match(locJa.recruitmentAutoCloseStatus({ enabled: true }), /ON/);
-    assert.match(locJa.recruitmentAutoCloseStatus({ enabled: false }), /OFF/);
-  });
-});
-
-function makeSettingsDb(recruitment: ReturnType<typeof makeRecruitment>) {
-  return {
-    select: (sel?: Record<string, unknown>) => {
-      const isGuildConfig = sel && "language" in sel;
-      if (isGuildConfig) {
-        return { from: () => ({ innerJoin: () => ({ where: () => ({ limit: async () => [] }) }) }) };
-      }
-      return { from: () => ({ where: () => ({ limit: async () => [recruitment] }) }) };
-    },
-    update: () => ({
-      set: () => ({
-        where: () => ({
-          returning: async () => [{ ...recruitment, autoClose: !recruitment.autoClose }]
-        })
-      })
-    })
-  };
-}
-
-describe("handleRecruitmentButtonInteraction — settings (non-creator)", () => {
-  it("replies with error ephemeral when non-creator presses settings", async () => {
-    const recruitment = makeRecruitment({ creatorId: "creator-1" });
-    let replied = false;
-    const interaction = {
-      customId: `recruitment:settings:${recruitment.id}`,
-      guildId: "guild-1",
-      user: { id: "other-user" },
-      memberPermissions: { has: () => false },
-      reply: async () => { replied = true; }
-    };
-
-    await handleRecruitmentButtonInteraction(interaction as never, { db: makeSettingsDb(recruitment) as never });
-    assert.equal(replied, true);
-  });
-});
-
-describe("handleRecruitmentButtonInteraction — settings (creator)", () => {
-  it("shows toggle button ephemeral when creator presses settings", async () => {
-    const recruitment = makeRecruitment({ creatorId: "creator-1", autoClose: true });
-    let replyPayload: unknown = null;
-    const interaction = {
-      customId: `recruitment:settings:${recruitment.id}`,
-      guildId: "guild-1",
-      user: { id: "creator-1" },
-      memberPermissions: { has: () => false },
-      reply: async (p: unknown) => { replyPayload = p; }
-    };
-
-    await handleRecruitmentButtonInteraction(interaction as never, { db: makeSettingsDb(recruitment) as never });
-    assert.ok(replyPayload !== null);
-    const payloadStr = JSON.stringify(replyPayload);
-    assert.ok(payloadStr.includes("toggle-auto-close"), "should include toggle-auto-close button customId");
-  });
-});
-
-describe("handleRecruitmentButtonInteraction — toggle-auto-close", () => {
-  it("updates autoClose in DB when creator toggles", async () => {
-    const recruitment = makeRecruitment({ creatorId: "creator-1", autoClose: true });
-    let updateCalled = false;
-    const db = {
-      select: (sel?: Record<string, unknown>) => {
-        const isGuildConfig = sel && "language" in sel;
         if (isGuildConfig) {
           return { from: () => ({ innerJoin: () => ({ where: () => ({ limit: async () => [] }) }) }) };
         }
-        return { from: () => ({ where: () => ({ limit: async () => [recruitment] }) }) };
-      },
-      update: () => ({
-        set: (v: Record<string, unknown>) => {
-          updateCalled = true;
-          return { where: () => ({ returning: async () => [{ ...recruitment, autoClose: v["autoClose"] }] }) };
+
+        // Not a guild config select, increment counter
+        selectCallCount++;
+
+        if (isCount) {
+          return {
+            from: () => ({
+              where: () => ({
+                limit: async () => [{ value: 1 }]
+              })
+            })
+          };
         }
-      })
+
+        // selectCallCount 1 = getRecruitmentById
+        // selectCallCount 2 = getActiveParticipant
+        // selectCallCount 3+ = listActiveRecruitmentParticipants, listQueuedParticipants
+        if (selectCallCount === 1) {
+          return { from: () => ({ where: () => ({ limit: async () => [recruitment] }) }) };
+        }
+
+        if (selectCallCount === 2) {
+          // getActiveParticipant: user exists and is not queued
+          return {
+            from: () => ({
+              where: () => ({
+                limit: async () => [{ userId: "user-1", recruitmentId: recruitment.id, isQueued: false, leftAt: null }]
+              })
+            })
+          };
+        }
+
+        // listActiveRecruitmentParticipants, listQueuedParticipants
+        return { from: () => ({ where: () => ({ orderBy: async () => [] }) }) };
+      },
+      insert: () => ({ values: () => ({ onConflictDoUpdate: () => ({ returning: async () => [] }) }) }),
+      update: () => ({ set: () => ({ where: () => ({ returning: async () => [] }) }) })
     };
+
+    await handleRecruitmentButtonInteraction(interaction as never, { db: db as never });
+
+    assert.ok(
+      replyTitle.includes("参加済") || replyTitle.includes("already joined"),
+      `expected already-joined message, got: ${replyTitle}`
+    );
+  });
+
+  it("replies with already-queued message when user is in queue", async () => {
+    const recruitment = makeRecruitment({ capacity: 2 });
+    let replyTitle = "";
     const interaction = {
-      customId: `recruitment:toggle-auto-close:${recruitment.id}`,
+      customId: `recruitment:join:${recruitment.id}`,
       guildId: "guild-1",
-      user: { id: "creator-1" },
+      user: { id: "user-1" },
       memberPermissions: { has: () => false },
+      message: { edit: async () => {} },
+      channel: { send: async () => ({}) },
+      reply: async (p: unknown) => { replyTitle = JSON.stringify(p); }
+    };
+
+    let selectCallCount = 0;
+    const db = {
+      select: (selection?: Record<string, unknown>) => {
+        const isGuildConfig = selection && "language" in selection;
+        const isCount = selection && "value" in selection;
+
+        if (isGuildConfig) {
+          return { from: () => ({ innerJoin: () => ({ where: () => ({ limit: async () => [] }) }) }) };
+        }
+
+        selectCallCount++;
+
+        if (isCount) {
+          return { from: () => ({ where: () => ({ limit: async () => [{ value: 2 }] }) }) };
+        }
+
+        if (selectCallCount === 1) {
+          return { from: () => ({ where: () => ({ limit: async () => [recruitment] }) }) };
+        }
+
+        if (selectCallCount === 2) {
+          // getActiveParticipant: user exists and IS queued
+          return {
+            from: () => ({
+              where: () => ({
+                limit: async () => [{ userId: "user-1", recruitmentId: recruitment.id, isQueued: true, leftAt: null }]
+              })
+            })
+          };
+        }
+
+        return { from: () => ({ where: () => ({ orderBy: async () => [] }) }) };
+      },
+      insert: () => ({ values: () => ({ onConflictDoUpdate: () => ({ returning: async () => [] }) }) }),
+      update: () => ({ set: () => ({ where: () => ({ returning: async () => [] }) }) })
+    };
+
+    await handleRecruitmentButtonInteraction(interaction as never, { db: db as never });
+
+    assert.ok(
+      replyTitle.includes("待機") || replyTitle.includes("queue"),
+      `expected already-queued message, got: ${replyTitle}`
+    );
+  });
+});
+
+describe("handleRecruitmentButtonInteraction — join: queue when full", () => {
+  it("adds user to queue when recruitment is full", async () => {
+    const recruitment = makeRecruitment({ capacity: 2, status: "full" });
+    let insertCalledWithQueue = false;
+
+    let selectCallCount = 0;
+    const db = {
+      select: (selection?: Record<string, unknown>) => {
+        const isGuildConfig = selection && "language" in selection;
+        const isCount = selection && "value" in selection;
+
+        if (isGuildConfig) {
+          return { from: () => ({ innerJoin: () => ({ where: () => ({ limit: async () => [] }) }) }) };
+        }
+
+        selectCallCount++;
+
+        if (isCount) {
+          // countActiveRecruitmentParticipants returns count of 2 (at capacity)
+          // Drizzle ORM chain: db.select({value: count()}).from().where() <- awaits this
+          return { from: () => ({ where: async () => [{ value: 2 }] }) };
+        }
+
+        if (selectCallCount === 1) {
+          return { from: () => ({ where: () => ({ limit: async () => [recruitment] }) }) };
+        }
+
+        if (selectCallCount === 2) {
+          // getActiveParticipant: user doesn't exist yet
+          return { from: () => ({ where: () => ({ limit: async () => [] }) }) };
+        }
+
+        // listActiveRecruitmentParticipants, listQueuedParticipants
+        return { from: () => ({ where: () => ({ orderBy: async () => [] }) }) };
+      },
+      insert: () => ({
+        values: (v: { isQueued?: boolean }) => {
+          if (v.isQueued === true) {
+            insertCalledWithQueue = true;
+          }
+          return {
+            onConflictDoUpdate: () => ({
+              returning: async () => [{ userId: "user-1", isQueued: true }]
+            })
+          };
+        }
+      }),
+      update: () => ({ set: () => ({ where: () => ({ returning: async () => [recruitment] }) }) })
+    };
+
+    const interaction = {
+      customId: `recruitment:join:${recruitment.id}`,
+      guildId: "guild-1",
+      user: { id: "user-1" },
+      memberPermissions: { has: () => false },
+      message: { edit: async () => {} },
+      channel: { send: async () => ({}) },
       reply: async () => {}
     };
 
     await handleRecruitmentButtonInteraction(interaction as never, { db: db as never });
-    assert.equal(updateCalled, true);
-  });
 
-  it("replies with error when non-creator presses toggle", async () => {
-    const recruitment = makeRecruitment({ creatorId: "creator-1", autoClose: true });
-    let replied = false;
-    const interaction = {
-      customId: `recruitment:toggle-auto-close:${recruitment.id}`,
-      guildId: "guild-1",
-      user: { id: "other-user" },
-      memberPermissions: { has: () => false },
-      reply: async () => { replied = true; }
+    assert.equal(insertCalledWithQueue, true, "user should be queued when recruitment is full");
+  });
+});
+
+describe("handleRecruitmentButtonInteraction — leave: not joined", () => {
+  it("replies with not-joined message when user has no record", async () => {
+    const recruitment = makeRecruitment();
+    let replyPayload = "";
+
+    let selectCallCount = 0;
+    const db = {
+      select: (selection?: Record<string, unknown>) => {
+        const isGuildConfig = selection && "language" in selection;
+        if (isGuildConfig) {
+          return { from: () => ({ innerJoin: () => ({ where: () => ({ limit: async () => [] }) }) }) };
+        }
+        selectCallCount++;
+        if (selectCallCount === 1) {
+          // getRecruitmentById
+          return { from: () => ({ where: () => ({ limit: async () => [recruitment] }) }) };
+        }
+        if (selectCallCount === 2) {
+          // getActiveParticipant: user not found
+          return { from: () => ({ where: () => ({ limit: async () => [] }) }) };
+        }
+        // listActiveRecruitmentParticipants, listQueuedParticipants
+        return { from: () => ({ where: () => ({ orderBy: async () => [] }) }) };
+      },
+      insert: () => ({ values: () => ({ onConflictDoUpdate: () => ({ returning: async () => [] }) }) }),
+      update: () => ({ set: () => ({ where: () => ({ returning: async () => [] }) }) })
     };
 
-    await handleRecruitmentButtonInteraction(interaction as never, { db: makeSettingsDb(recruitment) as never });
-    assert.equal(replied, true);
+    const interaction = {
+      customId: `recruitment:leave:${recruitment.id}`,
+      guildId: "guild-1",
+      user: { id: "user-1" },
+      memberPermissions: { has: () => false },
+      message: { edit: async () => {} },
+      channel: { send: async () => ({}) },
+      reply: async (p: unknown) => { replyPayload = JSON.stringify(p); }
+    };
+
+    await handleRecruitmentButtonInteraction(interaction as never, { db: db as never });
+
+    assert.ok(
+      replyPayload.includes("参加していません") || replyPayload.includes("haven"),
+      `expected not-joined message, got: ${replyPayload}`
+    );
+  });
+});
+
+describe("handleRecruitmentButtonInteraction — leave: promotes from queue", () => {
+  it("sends channel message when queue promotion happens", async () => {
+    const recruitment = makeRecruitment({ capacity: 1, status: "full" });
+    const channelSends: string[] = [];
+    let selectCallCount = 0;
+
+    const db = {
+      select: (selection?: Record<string, unknown>) => {
+        const isGuildConfig = selection && "language" in selection;
+        if (isGuildConfig) {
+          return { from: () => ({ innerJoin: () => ({ where: () => ({ limit: async () => [] }) }) }) };
+        }
+        selectCallCount++;
+
+        if (selectCallCount === 1) {
+          // getRecruitmentById
+          return { from: () => ({ where: () => ({ limit: async () => [recruitment] }) }) };
+        }
+        if (selectCallCount === 2) {
+          // getActiveParticipant: user IS active (not queued)
+          return {
+            from: () => ({
+              where: () => ({
+                limit: async () => [{
+                  userId: "user-1",
+                  recruitmentId: recruitment.id,
+                  isQueued: false,
+                  leftAt: null
+                }]
+              })
+            })
+          };
+        }
+        if (selectCallCount === 3) {
+          // promoteFromQueue: find first queued participant
+          return {
+            from: () => ({
+              where: () => ({
+                orderBy: () => ({
+                  limit: async () => [{ id: "p2", userId: "queued-user", isQueued: true, leftAt: null }]
+                })
+              })
+            })
+          };
+        }
+        // listActiveRecruitmentParticipants and listQueuedParticipants
+        return { from: () => ({ where: () => ({ orderBy: async () => [] }) }) };
+      },
+      update: () => ({
+        set: () => ({
+          where: () => ({ returning: async () => [{ ...recruitment, status: "full" }] })
+        })
+      })
+    };
+
+    const interaction = {
+      customId: `recruitment:leave:${recruitment.id}`,
+      guildId: "guild-1",
+      user: { id: "user-1" },
+      memberPermissions: { has: () => false },
+      message: { edit: async () => {} },
+      channel: {
+        send: async (payload: unknown) => {
+          channelSends.push(JSON.stringify(payload));
+          return {};
+        }
+      },
+      reply: async () => {}
+    };
+
+    await handleRecruitmentButtonInteraction(interaction as never, { db: db as never });
+
+    assert.ok(channelSends.length > 0, "should send promotion notification");
+    assert.ok(
+      channelSends[0]?.includes("queued-user") || channelSends[0]?.includes("参加枠"),
+      `notification should mention promoted user, got: ${channelSends[0]}`
+    );
+  });
+});
+
+describe("handleRecruitmentButtonInteraction — reopen", () => {
+  it("reopens recruitment and replies with success", async () => {
+    const recruitment = makeRecruitment({ status: "closed", creatorId: "creator-1" });
+    let replyPayload = "";
+    let updateStatus: string | undefined;
+    let selectCallCount = 0;
+
+    const db = {
+      select: (selection?: Record<string, unknown>) => {
+        const isGuildConfig = selection && "language" in selection;
+        if (isGuildConfig) {
+          return { from: () => ({ innerJoin: () => ({ where: () => ({ limit: async () => [] }) }) }) };
+        }
+        selectCallCount++;
+        if (selectCallCount === 1) {
+          // getRecruitmentById
+          return { from: () => ({ where: () => ({ limit: async () => [recruitment] }) }) };
+        }
+        return { from: () => ({ where: () => ({ orderBy: async () => [] }) }) };
+      },
+      update: () => ({
+        set: (v: { status?: string }) => {
+          updateStatus = v.status;
+          return { where: () => ({ returning: async () => [{ ...recruitment, status: v.status ?? "open" }] }) };
+        }
+      })
+    };
+
+    const interaction = {
+      customId: `recruitment:reopen:${recruitment.id}`,
+      guildId: "guild-1",
+      user: { id: "creator-1" },
+      memberPermissions: { has: () => false },
+      message: { edit: async () => {} },
+      channel: { send: async () => ({}) },
+      reply: async (p: unknown) => { replyPayload = JSON.stringify(p); }
+    };
+
+    await handleRecruitmentButtonInteraction(interaction as never, { db: db as never });
+
+    assert.equal(updateStatus, "open");
+    assert.ok(
+      replyPayload.includes("再オープン") || replyPayload.includes("reopened"),
+      `expected reopen success message, got: ${replyPayload}`
+    );
   });
 });
