@@ -744,8 +744,8 @@ function voiceStatePayload(state: VoiceState) {
   return {
     userId: state.id,
     channelId: state.channelId,
-    deaf: state.deaf ?? false,
-    mute: state.mute ?? false,
+    serverDeaf: state.serverDeaf ?? false,
+    serverMute: state.serverMute ?? false,
     selfDeaf: state.selfDeaf ?? false,
     selfMute: state.selfMute ?? false,
     selfVideo: state.selfVideo ?? false,

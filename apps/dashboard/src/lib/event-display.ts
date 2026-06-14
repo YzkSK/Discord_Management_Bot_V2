@@ -28,8 +28,8 @@ const voiceStateChangeLabels: Record<string, [string, string]> = {
   selfDeaf:                 ["スピーカーをミュート",     "スピーカーのミュートを解除"],
   selfVideo:                ["カメラ開始",               "カメラ停止"],
   streaming:                ["配信開始",                 "配信停止"],
-  mute:                     ["サーバーミュートを適用",   "サーバーミュートを解除"],
-  deaf:                     ["サーバー側でスピーカーミュートを適用", "サーバー側でスピーカーミュートを解除"],
+  serverMute:               ["サーバーミュートを適用",   "サーバーミュートを解除"],
+  serverDeaf:               ["サーバー側でスピーカーミュートを適用", "サーバー側でスピーカーミュートを解除"],
   suppress:                 ["ステージ発言権なし",       "ステージ発言権あり"],
   requestToSpeakTimestamp:  ["発言リクエスト",           "発言リクエスト取消"],
 };
