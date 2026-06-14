@@ -20,7 +20,33 @@ export type EventVars = {
   count?: number | null;
   name?: string | null;
   genre?: string | null;
+  voiceStateChanges?: Record<string, { before: unknown; after: unknown }> | null;
 };
+
+const voiceStateChangeLabels: Record<string, [string, string]> = {
+  selfMute:                 ["ミュート",               "ミュート解除"],
+  selfDeaf:                 ["スピーカーミュート",      "スピーカーミュート解除"],
+  selfVideo:                ["カメラ開始",              "カメラ停止"],
+  streaming:                ["配信開始",                "配信停止"],
+  mute:                     ["サーバーミュート",        "サーバーミュート解除"],
+  deaf:                     ["サーバースピーカーミュート", "サーバースピーカーミュート解除"],
+  suppress:                 ["ステージ発言権なし",      "ステージ発言権あり"],
+  requestToSpeakTimestamp:  ["発言リクエスト",          "発言リクエスト取消"],
+};
+
+function formatVoiceStateChanges(
+  changes: Record<string, { before: unknown; after: unknown }> | null | undefined
+): string | null {
+  if (!changes) return null;
+  const parts = Object.entries(changes)
+    .map(([key, { after }]) => {
+      const labels = voiceStateChangeLabels[key];
+      if (!labels) return null;
+      return after ? labels[0] : labels[1];
+    })
+    .filter((s): s is string => s !== null);
+  return parts.length > 0 ? parts.join("・") : null;
+}
 
 function actor(v: EventVars, fallback = "不明"): string {
   if (v.actorName) return `@${v.actorName}`;
@@ -52,7 +78,12 @@ const eventDescriptions: Record<string, (v: EventVars) => string> = {
   "voice.session.join": (v) => `🎤 ${actor(v)} が${ch(v) ? `${ch(v)}` : "VCチャンネル"} に参加`,
   "voice.session.leave": (v) => `🎤 ${actor(v)} が${ch(v) ? `${ch(v)}` : "VCチャンネル"} から退出`,
   "voice.session.move": (v) => `🎤 ${actor(v)} が${ch(v) ? `${ch(v)}` : "VCチャンネル"} に移動`,
-  "voice.state.update": (_v) => `🎤 音声状態更新`,
+  "voice.state.update": (v) => {
+    const detail = formatVoiceStateChanges(v.voiceStateChanges);
+    return detail
+      ? `🎤 ${actor(v)} が${detail}`
+      : `🎤 ${actor(v)} の音声状態が更新`;
+  },
   "call.started": (v) => `📞 ${ch(v) ? `${ch(v)} で` : ""}通話開始`,
   "call.ended": (v) => `📞 ${ch(v) ? `${ch(v)} の` : ""}通話終了`,
   "call.updated": (_v) => `📞 通話更新`,

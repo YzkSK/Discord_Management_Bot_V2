@@ -65,6 +65,21 @@ function extractChannelName(payload: unknown): string | null {
   return null;
 }
 
+function extractVoiceStateChanges(
+  payload: unknown
+): Record<string, { before: unknown; after: unknown }> | null {
+  if (!isObj(payload)) return null;
+  const changes = payload["changes"];
+  if (!isRecord(changes)) return null;
+  const result: Record<string, { before: unknown; after: unknown }> = {};
+  for (const [key, val] of Object.entries(changes)) {
+    if (isRecord(val) && "before" in val && "after" in val) {
+      result[key] = { before: val["before"], after: val["after"] };
+    }
+  }
+  return Object.keys(result).length > 0 ? result : null;
+}
+
 export function LogsExplorer() {
   const [uiLang, setUiLang] = useState<GuildLanguage>("en");
   const loc = getDashboardLocale(uiLang);
@@ -130,6 +145,7 @@ export function LogsExplorer() {
         actorName: extractActorName(log.payload),
         channelId: log.channelId,
         channelName: extractChannelName(log.payload),
+        voiceStateChanges: extractVoiceStateChanges(log.payload),
       }).toLowerCase();
       if (!desc.includes(q) && !log.eventName.includes(q)) return false;
     }
@@ -263,6 +279,7 @@ function LogEntry({
     actorName: extractActorName(log.payload),
     channelId: log.channelId,
     channelName: extractChannelName(log.payload),
+    voiceStateChanges: extractVoiceStateChanges(log.payload),
   }, guildId);
   const payload = isRecord(log.payload) ? log.payload : {};
 
