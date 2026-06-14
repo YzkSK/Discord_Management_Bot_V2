@@ -1,8 +1,5 @@
 import {
   type ButtonInteraction,
-  ButtonStyle,
-  ComponentType,
-  MessageFlags,
   PermissionFlagsBits,
   type TextChannel
 } from "discord.js";
@@ -10,18 +7,21 @@ import type { DbClient } from "@discord-bot/db";
 import {
   closeRecruitment,
   countActiveRecruitmentParticipants,
+  getActiveParticipant,
   getGuildConfigByGuildId,
   getRecruitmentById,
   joinRecruitment,
   leaveRecruitment,
-  updateRecruitmentAutoClose,
-  updateRecruitmentStatus
+  listActiveRecruitmentParticipants,
+  listQueuedParticipants,
+  promoteFromQueue,
+  updateRecruitmentStatus,
+  type RecruitmentStatus
 } from "@discord-bot/db";
 import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/shared";
 
 import { createComponentsV2TextMessage, EVENT_COLORS } from "./components-v2.js";
 import {
-  createRecruitmentCustomId,
   createRecruitmentPostMessage,
   parseRecruitmentCustomId
 } from "./recruitment-channel.js";
@@ -76,13 +76,8 @@ export async function handleRecruitmentButtonInteraction(
     return true;
   }
 
-  if (parsed.action === "settings") {
-    await handleSettings(interaction, context, recruitment, loc);
-    return true;
-  }
-
-  if (parsed.action === "toggle-auto-close") {
-    await handleToggleAutoClose(interaction, context, recruitment, loc);
+  if (parsed.action === "reopen") {
+    await handleReopen(interaction, context, recruitment, loc);
     return true;
   }
 
@@ -96,12 +91,26 @@ async function handleJoin(
   recruitment: NonNullable<Awaited<ReturnType<typeof getRecruitmentById>>>,
   loc: ReturnType<typeof getLocale>
 ) {
-  const activeCount = await countActiveRecruitmentParticipants(
-    context.db,
-    recruitment.id
-  );
+  const existing = await getActiveParticipant(context.db, {
+    recruitmentId: recruitment.id,
+    userId: interaction.user.id
+  });
 
-  if (recruitment.status === "closed" || activeCount >= recruitment.capacity) {
+  if (existing) {
+    const title = existing.isQueued
+      ? loc.recruitmentAlreadyQueued
+      : loc.recruitmentAlreadyJoined;
+    await interaction.reply({
+      ...createComponentsV2TextMessage({
+        title,
+        accentColor: EVENT_COLORS.yellow,
+        privateResponse: true
+      })
+    });
+    return;
+  }
+
+  if (recruitment.status === "closed") {
     await interaction.reply({
       ...createComponentsV2TextMessage({
         title: loc.recruitmentNotOpen,
@@ -113,69 +122,76 @@ async function handleJoin(
     return;
   }
 
+  const activeCount = await countActiveRecruitmentParticipants(context.db, recruitment.id);
+  const isQueued = activeCount >= recruitment.capacity;
+
   await joinRecruitment(context.db, {
     recruitmentId: recruitment.id,
-    userId: interaction.user.id
+    userId: interaction.user.id,
+    isQueued
   });
 
-  const nextCount = await countActiveRecruitmentParticipants(
-    context.db,
-    recruitment.id
-  );
-  const nextStatus =
-    nextCount >= recruitment.capacity
-      ? recruitment.autoClose
-        ? "closed"
-        : "full"
-      : "open";
-  const updatedRecruitment = await updateRecruitmentStatus(context.db, {
-    recruitmentId: recruitment.id,
-    status: nextStatus,
-    autoClosed: nextStatus === "closed" && recruitment.autoClose,
-    closedAt: nextStatus === "closed" ? new Date() : null
-  });
+  let updatedRecruitment = recruitment;
+  if (!isQueued) {
+    const nextActiveCount = activeCount + 1;
+    const nextStatus: RecruitmentStatus =
+      nextActiveCount >= recruitment.capacity ? "full" : "open";
+    if (nextStatus !== recruitment.status) {
+      updatedRecruitment =
+        (await updateRecruitmentStatus(context.db, {
+          recruitmentId: recruitment.id,
+          status: nextStatus
+        })) ?? recruitment;
+    }
+  }
+
+  const [participants, queued] = await Promise.all([
+    listActiveRecruitmentParticipants(context.db, recruitment.id),
+    listQueuedParticipants(context.db, recruitment.id)
+  ]);
 
   await interaction.message.edit(
-    createRecruitmentPostMessage(updatedRecruitment ?? recruitment, loc, nextCount)
+    createRecruitmentPostMessage(
+      updatedRecruitment,
+      loc,
+      participants.length,
+      participants.map((p) => p.userId),
+      queued.map((p) => p.userId)
+    )
   );
 
-  if (nextStatus === "closed" && recruitment.autoClose) {
-    const loc2 = await resolveLocale(context.db, interaction.guildId);
-    await (interaction.channel as TextChannel | null)?.send({
-      ...createComponentsV2TextMessage({
-        title: loc2.recruitmentAutoClosedTitle,
-        lines: [
-          `<@${recruitment.creatorId}>`,
-          loc2.recruitmentAutoClosedHint
-        ],
-        accentColor: EVENT_COLORS.gray
-      })
-    }).catch((err: unknown) => {
-      console.warn("failed to send recruitment auto-close notification", err);
+  if (context.logWriter && !isQueued && participants.length >= recruitment.capacity) {
+    writeRecruitmentLifecycleLog(context.logWriter, "recruitment.full", {
+      recruitment: updatedRecruitment,
+      actorId: interaction.user.id,
+      participantCount: participants.length,
+      reason: "capacity_reached"
     });
   }
 
-  const loggedRecruitment = updatedRecruitment ?? recruitment;
-  if (context.logWriter && nextStatus !== "open") {
-    writeRecruitmentLifecycleLog(
-      context.logWriter,
-      nextStatus === "closed" ? "recruitment.closed" : "recruitment.full",
-      {
-        recruitment: loggedRecruitment,
-        actorId: interaction.user.id,
-        participantCount: nextCount,
-        reason: nextStatus === "closed" ? "auto_close" : "capacity_reached"
-      }
-    );
+  if (isQueued) {
+    const position = queued.findIndex((p) => p.userId === interaction.user.id) + 1;
+    await interaction.reply({
+      ...createComponentsV2TextMessage({
+        title: loc.recruitmentQueueJoined({
+          position: position > 0 ? position : queued.length
+        }),
+        accentColor: EVENT_COLORS.yellow,
+        privateResponse: true
+      })
+    });
+  } else {
+    await interaction.reply({
+      ...createComponentsV2TextMessage({
+        title: loc.recruitmentJoined({
+          current: participants.length,
+          max: recruitment.capacity
+        }),
+        accentColor: EVENT_COLORS.green,
+        privateResponse: true
+      })
+    });
   }
-
-  await interaction.reply({
-    ...createComponentsV2TextMessage({
-      title: loc.recruitmentJoined({ current: nextCount, max: recruitment.capacity }),
-      accentColor: EVENT_COLORS.green,
-      privateResponse: true
-    })
-  });
 }
 
 async function handleLeave(
@@ -184,50 +200,76 @@ async function handleLeave(
   recruitment: NonNullable<Awaited<ReturnType<typeof getRecruitmentById>>>,
   loc: ReturnType<typeof getLocale>
 ) {
+  const existing = await getActiveParticipant(context.db, {
+    recruitmentId: recruitment.id,
+    userId: interaction.user.id
+  });
+
+  if (!existing) {
+    await interaction.reply({
+      ...createComponentsV2TextMessage({
+        title: loc.recruitmentNotJoined,
+        accentColor: EVENT_COLORS.yellow,
+        privateResponse: true
+      })
+    });
+    return;
+  }
+
   await leaveRecruitment(context.db, {
     recruitmentId: recruitment.id,
     userId: interaction.user.id
   });
 
-  const nextCount = await countActiveRecruitmentParticipants(
-    context.db,
-    recruitment.id
-  );
-  const shouldReopen =
-    recruitment.status === "closed" &&
-    recruitment.autoClosed &&
-    nextCount < recruitment.capacity;
-  const nextStatus =
-    shouldReopen || nextCount < recruitment.capacity ? "open" : "full";
-  const updatedRecruitment = shouldReopen
-    ? (await updateRecruitmentStatus(context.db, {
-        recruitmentId: recruitment.id,
-        status: nextStatus,
-        autoClosed: false,
-        closedAt: null
-      })) ?? recruitment
-    : recruitment;
+  let updatedRecruitment = recruitment;
+
+  if (!existing.isQueued) {
+    const promoted = await promoteFromQueue(context.db, recruitment.id);
+
+    if (promoted) {
+      await (interaction.channel as TextChannel | null)
+        ?.send({ content: loc.recruitmentPromoted({ userId: promoted.userId }) })
+        .catch((err: unknown) => {
+          console.warn("failed to send queue promotion notification", err);
+        });
+    }
+
+    const participants = await listActiveRecruitmentParticipants(context.db, recruitment.id);
+    const nextStatus: RecruitmentStatus =
+      recruitment.status === "closed"
+        ? "closed"
+        : participants.length >= recruitment.capacity
+          ? "full"
+          : "open";
+    if (nextStatus !== recruitment.status) {
+      updatedRecruitment =
+        (await updateRecruitmentStatus(context.db, {
+          recruitmentId: recruitment.id,
+          status: nextStatus
+        })) ?? recruitment;
+    }
+  }
+
+  const [participants, queued] = await Promise.all([
+    listActiveRecruitmentParticipants(context.db, recruitment.id),
+    listQueuedParticipants(context.db, recruitment.id)
+  ]);
 
   await interaction.message.edit(
-    createRecruitmentPostMessage(updatedRecruitment, loc, nextCount)
+    createRecruitmentPostMessage(
+      updatedRecruitment,
+      loc,
+      participants.length,
+      participants.map((p) => p.userId),
+      queued.map((p) => p.userId)
+    )
   );
-
-  if (shouldReopen) {
-    const loc2 = await resolveLocale(context.db, interaction.guildId);
-    await (interaction.channel as TextChannel | null)?.send({
-      ...createComponentsV2TextMessage({
-        title: loc2.recruitmentReopenedTitle,
-        lines: [`<@${recruitment.creatorId}>`],
-        accentColor: EVENT_COLORS.green
-      })
-    }).catch((err: unknown) => {
-      console.warn("failed to send recruitment reopen notification", err);
-    });
-  }
 
   await interaction.reply({
     ...createComponentsV2TextMessage({
-      title: loc.recruitmentLeft({ current: nextCount, max: recruitment.capacity }),
+      title: existing.isQueued
+        ? loc.recruitmentQueueLeft
+        : loc.recruitmentLeft({ current: participants.length, max: recruitment.capacity }),
       accentColor: EVENT_COLORS.gray,
       privateResponse: true
     })
@@ -257,23 +299,29 @@ async function handleClose(
   }
 
   const updatedRecruitment =
-    (await closeRecruitment(context.db, {
-      recruitmentId: recruitment.id,
-      autoClosed: false
-    })) ?? recruitment;
-  const activeCount = await countActiveRecruitmentParticipants(
-    context.db,
-    recruitment.id
-  );
+    (await closeRecruitment(context.db, { recruitmentId: recruitment.id })) ??
+    recruitment;
+
+  const [participants, queued] = await Promise.all([
+    listActiveRecruitmentParticipants(context.db, recruitment.id),
+    listQueuedParticipants(context.db, recruitment.id)
+  ]);
 
   await interaction.message.edit(
-    createRecruitmentPostMessage(updatedRecruitment, loc, activeCount)
+    createRecruitmentPostMessage(
+      updatedRecruitment,
+      loc,
+      participants.length,
+      participants.map((p) => p.userId),
+      queued.map((p) => p.userId)
+    )
   );
+
   if (context.logWriter) {
     writeRecruitmentLifecycleLog(context.logWriter, "recruitment.closed", {
       recruitment: updatedRecruitment,
       actorId: interaction.user.id,
-      participantCount: activeCount,
+      participantCount: participants.length,
       reason: "manual_close"
     });
   }
@@ -287,17 +335,21 @@ async function handleClose(
   });
 }
 
-async function handleSettings(
+async function handleReopen(
   interaction: ButtonInteraction,
   context: RecruitmentInteractionContext,
   recruitment: NonNullable<Awaited<ReturnType<typeof getRecruitmentById>>>,
   loc: ReturnType<typeof getLocale>
 ) {
-  if (interaction.user.id !== recruitment.creatorId) {
+  const canReopen =
+    interaction.user.id === recruitment.creatorId ||
+    interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild);
+
+  if (!canReopen) {
     await interaction.reply({
       ...createComponentsV2TextMessage({
-        title: loc.recruitmentNotCreator,
-        lines: [],
+        title: loc.recruitmentCannotClose,
+        lines: [loc.recruitmentCannotCloseMessage],
         accentColor: EVENT_COLORS.red,
         privateResponse: true
       })
@@ -305,72 +357,35 @@ async function handleSettings(
     return;
   }
 
-  const toggleLabel = recruitment.autoClose
-    ? loc.recruitmentAutoCloseToggleOff
-    : loc.recruitmentAutoCloseToggleOn;
+  const [participants, queued] = await Promise.all([
+    listActiveRecruitmentParticipants(context.db, recruitment.id),
+    listQueuedParticipants(context.db, recruitment.id)
+  ]);
 
-  await interaction.reply({
-    flags: MessageFlags.IsComponentsV2,
-    ephemeral: true,
-    components: [
-      {
-        type: ComponentType.Container,
-        accent_color: EVENT_COLORS.teal,
-        components: [
-          {
-            type: ComponentType.TextDisplay,
-            content: `## ${loc.recruitmentSettingsTitle}`
-          },
-          {
-            type: ComponentType.TextDisplay,
-            content: loc.recruitmentAutoCloseStatus({ enabled: recruitment.autoClose })
-          }
-        ]
-      },
-      {
-        type: ComponentType.ActionRow,
-        components: [
-          {
-            type: ComponentType.Button,
-            customId: createRecruitmentCustomId("toggle-auto-close", recruitment.id),
-            label: toggleLabel,
-            style: ButtonStyle.Secondary
-          }
-        ]
-      }
-    ]
-  });
-}
+  const nextStatus: RecruitmentStatus =
+    participants.length >= recruitment.capacity ? "full" : "open";
 
-async function handleToggleAutoClose(
-  interaction: ButtonInteraction,
-  context: RecruitmentInteractionContext,
-  recruitment: NonNullable<Awaited<ReturnType<typeof getRecruitmentById>>>,
-  loc: ReturnType<typeof getLocale>
-) {
-  if (interaction.user.id !== recruitment.creatorId) {
-    await interaction.reply({
-      ...createComponentsV2TextMessage({
-        title: loc.recruitmentNotCreator,
-        lines: [],
-        accentColor: EVENT_COLORS.red,
-        privateResponse: true
-      })
-    });
-    return;
-  }
+  const updatedRecruitment =
+    (await updateRecruitmentStatus(context.db, {
+      recruitmentId: recruitment.id,
+      status: nextStatus,
+      closedAt: null
+    })) ?? recruitment;
 
-  const newAutoClose = !recruitment.autoClose;
-  await updateRecruitmentAutoClose(context.db, {
-    recruitmentId: recruitment.id,
-    autoClose: newAutoClose
-  });
+  await interaction.message.edit(
+    createRecruitmentPostMessage(
+      updatedRecruitment,
+      loc,
+      participants.length,
+      participants.map((p) => p.userId),
+      queued.map((p) => p.userId)
+    )
+  );
 
   await interaction.reply({
     ...createComponentsV2TextMessage({
-      title: loc.recruitmentAutoCloseUpdated({ enabled: newAutoClose }),
-      lines: [],
-      accentColor: EVENT_COLORS.teal,
+      title: loc.recruitmentReopenedSuccess,
+      accentColor: EVENT_COLORS.green,
       privateResponse: true
     })
   });
