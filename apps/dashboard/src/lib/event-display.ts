@@ -24,14 +24,14 @@ export type EventVars = {
 };
 
 const voiceStateChangeLabels: Record<string, [string, string]> = {
-  selfMute:                 ["ミュート",               "ミュート解除"],
-  selfDeaf:                 ["スピーカーミュート",      "スピーカーミュート解除"],
-  selfVideo:                ["カメラ開始",              "カメラ停止"],
-  streaming:                ["配信開始",                "配信停止"],
-  mute:                     ["サーバーミュート",        "サーバーミュート解除"],
-  deaf:                     ["サーバースピーカーミュート", "サーバースピーカーミュート解除"],
-  suppress:                 ["ステージ発言権なし",      "ステージ発言権あり"],
-  requestToSpeakTimestamp:  ["発言リクエスト",          "発言リクエスト取消"],
+  selfMute:                 ["マイクをミュート",         "マイクのミュートを解除"],
+  selfDeaf:                 ["スピーカーをミュート",     "スピーカーのミュートを解除"],
+  selfVideo:                ["カメラ開始",               "カメラ停止"],
+  streaming:                ["配信開始",                 "配信停止"],
+  mute:                     ["サーバーミュートを適用",   "サーバーミュートを解除"],
+  deaf:                     ["サーバー側でスピーカーミュートを適用", "サーバー側でスピーカーミュートを解除"],
+  suppress:                 ["ステージ発言権なし",       "ステージ発言権あり"],
+  requestToSpeakTimestamp:  ["発言リクエスト",           "発言リクエスト取消"],
 };
 
 function formatVoiceStateChanges(
