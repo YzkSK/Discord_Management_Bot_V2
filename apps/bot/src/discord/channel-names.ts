@@ -1,22 +1,20 @@
-import { upsertDiscordChannel } from "@discord-bot/db";
+import { type DbClient, upsertDiscordChannel } from "@discord-bot/db";
+import type { VoiceBasedChannel } from "discord.js";
 import { Events, type Client } from "discord.js";
 
-import type { DbClient } from "@discord-bot/db";
-
 export function installChannelNameHandlers(client: Client, db: DbClient) {
-  // 誰かが VC に参加/退出するたびにチャンネル名をキャプチャ
-  client.on(Events.VoiceStateUpdate, (_oldState, newState) => {
-    const channel = newState.channel;
-    if (!channel || !("name" in channel) || typeof channel.name !== "string") {
-      return;
+  // 誰かが VC に参加/退出するたびに新旧両チャンネル名をキャプチャ
+  client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+    for (const channel of [oldState.channel, newState.channel] as Array<VoiceBasedChannel | null>) {
+      if (!channel || typeof channel.name !== "string") continue;
+      void upsertDiscordChannel(db, {
+        channelId: channel.id,
+        guildId: channel.guild.id,
+        name: channel.name
+      }).catch((error: unknown) => {
+        console.warn("failed to upsert channel name on voice update", error);
+      });
     }
-    void upsertDiscordChannel(db, {
-      channelId: channel.id,
-      guildId: newState.guild.id,
-      name: channel.name
-    }).catch((error: unknown) => {
-      console.warn("failed to upsert channel name on voice update", error);
-    });
   });
 
   // チャンネルがリネームされたときに更新
