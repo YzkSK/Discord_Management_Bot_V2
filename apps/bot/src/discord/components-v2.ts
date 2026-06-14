@@ -11,6 +11,7 @@ export interface ComponentsV2TextMessageInput {
   lines?: readonly string[];
   accentColor?: number;
   privateResponse?: boolean;
+  mediaUrls?: readonly string[];
 }
 
 export const EVENT_COLORS = {
@@ -34,18 +35,28 @@ export function discordRelative(date: Date): string {
 export function createComponentsV2TextMessage(
   input: ComponentsV2TextMessageInput
 ): InteractionReplyOptions & MessageCreateOptions {
+  const components: unknown[] = [
+    {
+      type: ComponentType.TextDisplay,
+      content: `## ${input.title}`
+    },
+    ...(input.lines ?? []).map((line) => ({
+      type: ComponentType.TextDisplay,
+      content: line
+    }))
+  ];
+
+  if (input.mediaUrls && input.mediaUrls.length > 0) {
+    const capped = input.mediaUrls.slice(0, 10);
+    components.push({
+      type: 12, // MediaGallery — not yet in ComponentType enum for discord-api-types@0.38.47
+      items: capped.map(url => ({ media: { url } }))
+    });
+  }
+
   const container: Record<string, unknown> = {
     type: ComponentType.Container,
-    components: [
-      {
-        type: ComponentType.TextDisplay,
-        content: `## ${input.title}`
-      },
-      ...(input.lines ?? []).map((line) => ({
-        type: ComponentType.TextDisplay,
-        content: line
-      }))
-    ]
+    components
   };
 
   if (input.accentColor !== undefined) {
