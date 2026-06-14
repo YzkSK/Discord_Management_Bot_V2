@@ -1,5 +1,6 @@
 export interface VoiceSummarySessionInput {
   channelId: string;
+  channelName?: string;
   endedAt: Date | null;
   id: string;
   memberCount: number;
@@ -9,6 +10,7 @@ export interface VoiceSummarySessionInput {
 
 export interface VoiceSummaryTempVoiceInput {
   channelId: string;
+  channelName?: string;
   controlChannelId: string | null;
   creationChannelId: string;
   deleteScheduledAt: Date | null;
@@ -30,6 +32,7 @@ export interface VoiceSummaryTempVoice {
 
 export interface VoiceSummarySession {
   channelId: string;
+  channelName?: string;
   durationSeconds: number;
   endedAt?: string;
   id: string;
@@ -42,7 +45,7 @@ export interface VoiceSummarySession {
 export interface VoiceSummary {
   activeSessions: VoiceSummarySession[];
   recentSessions: VoiceSummarySession[];
-  tempVoiceChannels: Array<VoiceSummaryTempVoice & { channelId: string }>;
+  tempVoiceChannels: Array<VoiceSummaryTempVoice & { channelId: string; channelName?: string }>;
 }
 
 export function buildVoiceSummary(input: VoiceSummaryInput): VoiceSummary {
@@ -54,6 +57,7 @@ export function buildVoiceSummary(input: VoiceSummaryInput): VoiceSummary {
     const tempVoice = tempVoiceByChannelId.get(session.channelId);
     return {
       channelId: session.channelId,
+      ...(session.channelName !== undefined ? { channelName: session.channelName } : {}),
       durationSeconds: getDurationSeconds(session, input.now),
       ...(session.endedAt ? { endedAt: session.endedAt.toISOString() } : {}),
       id: session.id,
@@ -75,8 +79,12 @@ export function buildVoiceSummary(input: VoiceSummaryInput): VoiceSummary {
     activeSessions: sessions.filter((session) => session.status === "active"),
     recentSessions: sessions.filter((session) => session.status === "ended"),
     tempVoiceChannels: input.tempVoiceChannels.map((tempVoice) => ({
-      ...tempVoice,
-      deleteScheduledAt: tempVoice.deleteScheduledAt?.toISOString() ?? null
+      channelId: tempVoice.channelId,
+      ...(tempVoice.channelName !== undefined ? { channelName: tempVoice.channelName } : {}),
+      controlChannelId: tempVoice.controlChannelId,
+      creationChannelId: tempVoice.creationChannelId,
+      deleteScheduledAt: tempVoice.deleteScheduledAt?.toISOString() ?? null,
+      ownerId: tempVoice.ownerId
     }))
   };
 }
