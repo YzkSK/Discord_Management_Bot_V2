@@ -87,13 +87,24 @@ export async function sendEventToConfiguredLogChannel(
       : "en";
   const loc = getLocale(lang);
 
-  await channel.send(
-    createComponentsV2TextMessage({
+  const rawAttachments = event.payload.attachments;
+  const mediaUrls: string[] = Array.isArray(rawAttachments)
+    ? rawAttachments
+        .filter((a): a is { url: string } =>
+          typeof a === "object" && a !== null &&
+          typeof (a as Record<string, unknown>).url === "string")
+        .map(a => a.url)
+    : [];
+
+  await channel.send({
+    ...createComponentsV2TextMessage({
       title: formatLogEventTitle(event.eventName, loc),
       lines: formatLogEventLines(event, loc),
-      accentColor: getEventAccentColor(event.eventName)
-    })
-  );
+      accentColor: getEventAccentColor(event.eventName),
+      ...(mediaUrls.length > 0 ? { mediaUrls } : {})
+    }),
+    allowedMentions: { parse: [] }
+  });
 }
 
 export async function findMarkedLogChannel(guild: Guild) {
@@ -149,11 +160,29 @@ function formatPayloadValue(v: unknown): string {
 }
 
 function formatLogPayload(payload: NormalizedEvent["payload"], loc: Locale): string | null {
-  const content = typeof payload.content === "string" ? payload.content : null;
-  if (content) return loc.logContent({ content: truncateForDiscord(content, 800) });
-
   const lines: string[] = [];
 
+  // message.update — show before/after comparison
+  if ("oldContent" in payload) {
+    const before = typeof payload.oldContent === "string" ? payload.oldContent : null;
+    const after  = typeof payload.newContent === "string" ? payload.newContent  : null;
+    if (before !== null || after !== null) {
+      lines.push(loc.logContentChange({
+        before: truncateForDiscord(before ?? "–", 400),
+        after:  truncateForDiscord(after  ?? "–", 400)
+      }));
+    }
+    return lines.length > 0 ? lines.join("\n") : null;
+  }
+
+  // message.create / message.delete — show content if present (empty string → "(empty)")
+  const content = typeof payload.content === "string" ? payload.content : null;
+  if (content !== null) {
+    lines.push(loc.logContent({ content: truncateForDiscord(content || "(empty)", 800) }));
+    return lines.length > 0 ? lines.join("\n") : null;
+  }
+
+  // Other events — recruitment fields, role/channel changes, etc.
   if (typeof payload.creatorId === "string") {
     lines.push(loc.logRecruitmentCreator({ id: payload.creatorId }));
   }

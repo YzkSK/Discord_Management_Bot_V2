@@ -79,6 +79,48 @@ describe("log event formatting (en)", () => {
     ]);
   });
 
+  it("shows (empty) for message.create with no text content", () => {
+    const event: NormalizedEvent = {
+      eventName: "message.create",
+      eventTimestamp: new Date("2026-05-12T00:00:00.000Z"),
+      receivedAt: new Date("2026-05-12T00:00:01.000Z"),
+      guildId: "guild-1",
+      actorId: "user-1",
+      channelId: "channel-1",
+      messageId: "message-1",
+      payload: { content: "" }
+    };
+
+    assert.deepEqual(formatLogEventLines(event, enLoc), [
+      "Actor: <@user-1>",
+      "Channel: <#channel-1>",
+      "Message ID: message-1",
+      "Event time: <t:1778544000:f>",
+      "Content: (empty)"
+    ]);
+  });
+
+  it("shows before/after for message.update", () => {
+    const event: NormalizedEvent = {
+      eventName: "message.update",
+      eventTimestamp: new Date("2026-05-12T00:00:00.000Z"),
+      receivedAt: new Date("2026-05-12T00:00:01.000Z"),
+      guildId: "guild-1",
+      actorId: "user-1",
+      channelId: "channel-1",
+      messageId: "message-1",
+      payload: { content: "new text", oldContent: "old text", newContent: "new text" }
+    };
+
+    assert.deepEqual(formatLogEventLines(event, enLoc), [
+      "Actor: <@user-1>",
+      "Channel: <#channel-1>",
+      "Message ID: message-1",
+      "Event time: <t:1778544000:f>",
+      "Content: old text → new text"
+    ]);
+  });
+
   it("formats a temp voice event with the channel name", () => {
     const event: NormalizedEvent = {
       eventName: "voice.temp.deleted",
