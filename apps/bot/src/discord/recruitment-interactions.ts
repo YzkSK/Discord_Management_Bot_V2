@@ -382,6 +382,15 @@ async function handleReopen(
     )
   );
 
+  if (context.logWriter) {
+    writeRecruitmentLifecycleLog(context.logWriter, "recruitment.reopened", {
+      recruitment: updatedRecruitment,
+      actorId: interaction.user.id,
+      participantCount: participants.length,
+      reason: "manual_reopen"
+    });
+  }
+
   await interaction.reply({
     ...createComponentsV2TextMessage({
       title: loc.recruitmentReopenedSuccess,

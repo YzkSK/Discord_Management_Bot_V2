@@ -21,7 +21,7 @@ export interface RecruitmentLogInput {
 
 export function writeRecruitmentLifecycleLog(
   logWriter: DiscordLogWriter,
-  eventName: "recruitment.created" | "recruitment.full" | "recruitment.closed",
+  eventName: "recruitment.created" | "recruitment.full" | "recruitment.closed" | "recruitment.reopened",
   input: RecruitmentLogInput
 ) {
   const event = createRecruitmentEvent(eventName, input);
