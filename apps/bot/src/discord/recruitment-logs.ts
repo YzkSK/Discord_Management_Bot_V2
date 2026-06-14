@@ -12,8 +12,6 @@ export interface RecruitmentLogInput {
     genre: string;
     capacity: number;
     voiceChannelId: string | null;
-    autoClose: boolean;
-    autoClosed: boolean;
     status: string;
   };
   actorId: string;
@@ -59,8 +57,6 @@ export function createRecruitmentEvent(
       capacity: input.recruitment.capacity,
       participantCount: input.participantCount ?? null,
       status: input.recruitment.status,
-      autoClose: input.recruitment.autoClose,
-      autoClosed: input.recruitment.autoClosed,
       voiceChannelId: input.recruitment.voiceChannelId,
       reason: input.reason ?? null
     }
