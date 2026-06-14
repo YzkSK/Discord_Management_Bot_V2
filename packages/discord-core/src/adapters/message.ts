@@ -28,6 +28,8 @@ export function normalizeMessageUpdate(
 ): NormalizedEvent {
   const eventTimestamp = newMessage.editedAt ?? newMessage.createdAt ?? new Date();
 
+  // newMessage may be a PartialMessage; its attachments collection will be empty
+  // for uncached messages, so no MediaGallery will appear for partial updates.
   return normalizeMessageEvent("message.update", newMessage, eventTimestamp, {
     oldContent: oldMessage.content ?? null,
     newContent: newMessage.content ?? null
