@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
 import { Crown, Mic2, Timer, Users } from "lucide-react";
 import {
@@ -16,6 +16,7 @@ import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import { formatRelativeTime } from "../../lib/event-display";
 import { ErrorAlert } from "../../components/error-alert";
 import { useDashboardData } from "../../hooks/use-dashboard-data";
+import { useVoiceRealtime } from "./hooks/use-voice-realtime";
 
 interface VoiceTempVoice {
   channelId?: string;
@@ -54,11 +55,13 @@ async function fetchVoiceData(guildId: string): Promise<VoiceResponse> {
 export function VoiceDashboard({ guildId }: { guildId: string }) {
   const [uiLang, setUiLang] = useState<GuildLanguage>("en");
   const loc = getDashboardLocale(uiLang);
-  const { data, loading, error } = useDashboardData(
+  const { data, loading, error, reload } = useDashboardData(
     () => fetchVoiceData(guildId),
     [guildId],
     "Voice request failed"
   );
+  const stableReload = useCallback(() => reload(), [reload]);
+  useVoiceRealtime(guildId, stableReload);
 
   useEffect(() => {
     setUiLang(detectBrowserLanguage());
@@ -126,9 +129,15 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
 
       {/* アクティブセッション */}
       <section>
-        <h2 className="mb-3 text-sm font-semibold text-zinc-400">
-          {loc.voiceActiveCalls}
-        </h2>
+        <div className="mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-zinc-400">
+            {loc.voiceActiveCalls}
+          </h2>
+          <span className="relative flex h-2 w-2" title="リアルタイム更新">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-[50%] bg-green-400 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-[50%] bg-green-500" />
+          </span>
+        </div>
         {data.activeSessions.length === 0 ? (
           <div className="rounded-lg border border-zinc-800 bg-zinc-900 py-10 text-center text-sm text-zinc-600">
             {loc.voiceNoActiveCalls}

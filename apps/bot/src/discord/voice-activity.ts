@@ -316,6 +316,16 @@ async function handleVoiceJoin(
     joinedAt: now,
     userId: transition.userId
   });
+
+  if (!shouldPublishStarted) {
+    const allActiveMembers = await context.repository.listActiveMembers(session.id);
+    await context.updateVoiceStatus?.({
+      activeMemberCount: allActiveMembers.length,
+      memberIds: allActiveMembers.map((m) => m.userId),
+      session,
+      state: "active"
+    });
+  }
 }
 
 function shouldPublishStartedForExistingSession(input: {
@@ -373,6 +383,12 @@ async function handleVoiceLeave(
   const activeMembers = await context.repository.listActiveMembers(session.id);
 
   if (activeMembers.length > 0) {
+    await context.updateVoiceStatus?.({
+      activeMemberCount: activeMembers.length,
+      memberIds: activeMembers.map((m) => m.userId),
+      session,
+      state: "active"
+    });
     return;
   }
 
