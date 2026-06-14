@@ -15,7 +15,6 @@ export interface CreateRecruitmentInput {
   capacity: number;
   content: string;
   voiceChannelId?: string | null;
-  autoClose?: boolean;
 }
 
 export async function createRecruitment(
@@ -32,7 +31,6 @@ export async function createRecruitment(
       capacity: input.capacity,
       content: input.content,
       voiceChannelId: input.voiceChannelId ?? null,
-      autoClose: input.autoClose ?? true,
       status: "open"
     })
     .returning();
@@ -102,8 +100,6 @@ export async function listRecruitmentDashboardState(
   return db
     .select({
       activeParticipantCount: sql<number>`coalesce(${activeCounts.activeParticipantCount}, 0)`,
-      autoClose: recruitments.autoClose,
-      autoClosed: recruitments.autoClosed,
       capacity: recruitments.capacity,
       channelId: recruitments.channelId,
       closedAt: recruitments.closedAt,
@@ -134,10 +130,28 @@ export async function listActiveRecruitmentParticipants(
     .where(
       and(
         eq(recruitmentParticipants.recruitmentId, recruitmentId),
-        isNull(recruitmentParticipants.leftAt)
+        isNull(recruitmentParticipants.leftAt),
+        eq(recruitmentParticipants.isQueued, false)
       )
     )
     .orderBy(asc(recruitmentParticipants.joinedAt));
+}
+
+export async function listQueuedParticipants(
+  db: DbClient,
+  recruitmentId: string
+) {
+  return db
+    .select()
+    .from(recruitmentParticipants)
+    .where(
+      and(
+        eq(recruitmentParticipants.recruitmentId, recruitmentId),
+        isNull(recruitmentParticipants.leftAt),
+        eq(recruitmentParticipants.isQueued, true)
+      )
+    )
+    .orderBy(asc(recruitmentParticipants.queuedAt));
 }
 
 export async function countActiveRecruitmentParticipants(
@@ -150,24 +164,49 @@ export async function countActiveRecruitmentParticipants(
     .where(
       and(
         eq(recruitmentParticipants.recruitmentId, recruitmentId),
-        isNull(recruitmentParticipants.leftAt)
+        isNull(recruitmentParticipants.leftAt),
+        eq(recruitmentParticipants.isQueued, false)
       )
     );
 
   return result?.value ?? 0;
 }
 
+export async function getActiveParticipant(
+  db: DbClient,
+  input: { recruitmentId: string; userId: string }
+) {
+  const [participant] = await db
+    .select()
+    .from(recruitmentParticipants)
+    .where(
+      and(
+        eq(recruitmentParticipants.recruitmentId, input.recruitmentId),
+        eq(recruitmentParticipants.userId, input.userId),
+        isNull(recruitmentParticipants.leftAt)
+      )
+    )
+    .limit(1);
+
+  return participant ?? null;
+}
+
 export async function joinRecruitment(
   db: DbClient,
-  input: { recruitmentId: string; userId: string; joinedAt?: Date }
+  input: { recruitmentId: string; userId: string; isQueued?: boolean; joinedAt?: Date; queuedAt?: Date | null }
 ) {
+  const isQueued = input.isQueued ?? false;
+  const queuedAt = isQueued ? (input.queuedAt ?? new Date()) : null;
+
   const [participant] = await db
     .insert(recruitmentParticipants)
     .values({
       recruitmentId: input.recruitmentId,
       userId: input.userId,
       joinedAt: input.joinedAt ?? new Date(),
-      leftAt: null
+      leftAt: null,
+      isQueued,
+      queuedAt
     })
     .onConflictDoUpdate({
       target: [
@@ -176,6 +215,8 @@ export async function joinRecruitment(
       ],
       set: {
         leftAt: null,
+        isQueued,
+        queuedAt,
         updatedAt: sql`now()`
       }
     })
@@ -214,7 +255,6 @@ export async function updateRecruitmentStatus(
   input: {
     recruitmentId: string;
     status: RecruitmentStatus;
-    autoClosed?: boolean;
     closedAt?: Date | null;
   }
 ) {
@@ -222,7 +262,6 @@ export async function updateRecruitmentStatus(
     .update(recruitments)
     .set({
       status: input.status,
-      autoClosed: input.autoClosed ?? false,
       closedAt:
         input.closedAt === undefined
           ? input.status === "closed"
@@ -239,12 +278,11 @@ export async function updateRecruitmentStatus(
 
 export async function closeRecruitment(
   db: DbClient,
-  input: { recruitmentId: string; closedAt?: Date; autoClosed?: boolean }
+  input: { recruitmentId: string; closedAt?: Date }
 ) {
   return updateRecruitmentStatus(db, {
     recruitmentId: input.recruitmentId,
     status: "closed",
-    autoClosed: input.autoClosed ?? false,
     closedAt: input.closedAt ?? new Date()
   });
 }
@@ -252,7 +290,6 @@ export async function closeRecruitment(
 export function resolveRecruitmentStatus(input: {
   capacity: number;
   activeParticipantCount: number;
-  autoClose: boolean;
   currentStatus?: RecruitmentStatus;
 }) {
   if (input.currentStatus === "closed") {
@@ -260,20 +297,35 @@ export function resolveRecruitmentStatus(input: {
   }
 
   if (input.activeParticipantCount >= input.capacity) {
-    return input.autoClose ? "closed" : "full";
+    return "full";
   }
 
   return "open";
 }
 
-export async function updateRecruitmentAutoClose(
+export async function promoteFromQueue(
   db: DbClient,
-  input: { recruitmentId: string; autoClose: boolean }
+  recruitmentId: string
 ) {
-  const [recruitment] = await db
-    .update(recruitments)
-    .set({ autoClose: input.autoClose, updatedAt: sql`now()` })
-    .where(eq(recruitments.id, input.recruitmentId))
-    .returning();
-  return recruitment ?? null;
+  const [first] = await db
+    .select()
+    .from(recruitmentParticipants)
+    .where(
+      and(
+        eq(recruitmentParticipants.recruitmentId, recruitmentId),
+        isNull(recruitmentParticipants.leftAt),
+        eq(recruitmentParticipants.isQueued, true)
+      )
+    )
+    .orderBy(asc(recruitmentParticipants.queuedAt))
+    .limit(1);
+
+  if (!first) return null;
+
+  await db
+    .update(recruitmentParticipants)
+    .set({ isQueued: false, queuedAt: null, updatedAt: sql`now()` })
+    .where(eq(recruitmentParticipants.id, first.id));
+
+  return { userId: first.userId };
 }
