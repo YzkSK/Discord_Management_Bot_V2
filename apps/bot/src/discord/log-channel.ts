@@ -154,6 +154,14 @@ function formatLogPayload(payload: NormalizedEvent["payload"], loc: Locale): str
 
   const lines: string[] = [];
 
+  if (typeof payload.creatorId === "string") {
+    lines.push(loc.logRecruitmentCreator({ id: payload.creatorId }));
+  }
+
+  if (typeof payload.genre === "string") {
+    lines.push(loc.logRecruitmentGenre({ genre: payload.genre }));
+  }
+
   if (typeof payload.reason === "string" && payload.reason.length > 0) {
     lines.push(loc.logReason({ reason: payload.reason }));
   }

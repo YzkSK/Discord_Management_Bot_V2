@@ -117,6 +117,8 @@ type Locale = {
   logEventTitle: (vars: { eventName: string }) => string;
   logEventTimeLabel: string;
   logReason: (vars: { reason: string }) => string;
+  logRecruitmentCreator: (vars: { id: string }) => string;
+  logRecruitmentGenre: (vars: { genre: string }) => string;
   logFieldLabel: (field: string) => string | null;
   logChangeField: (vars: { label: string; before: string; after: string }) => string;
   commandSuccess: (vars: { operation: string }) => string;
@@ -332,6 +334,8 @@ const locales: Record<GuildLanguage, Locale> = {
     },
     logEventTimeLabel: "Event time",
     logReason: ({ reason }) => `Reason: ${reason}`,
+    logRecruitmentCreator: ({ id }) => `Creator: <@${id}>`,
+    logRecruitmentGenre: ({ genre }) => `Genre: ${genre}`,
     logFieldLabel: (field) => ({
       displayName: "Display name",
       nickname: "Nickname",
@@ -553,6 +557,8 @@ const locales: Record<GuildLanguage, Locale> = {
     },
     logEventTimeLabel: "イベント時刻",
     logReason: ({ reason }) => `理由: ${reason}`,
+    logRecruitmentCreator: ({ id }) => `作成者: <@${id}>`,
+    logRecruitmentGenre: ({ genre }) => `ジャンル: ${genre}`,
     logFieldLabel: (field) => ({
       displayName: "表示名",
       nickname: "ニックネーム",
