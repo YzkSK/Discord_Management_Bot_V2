@@ -13,8 +13,6 @@ type RecruitmentStatus = "open" | "full" | "closed";
 
 interface RecruitmentItem {
   activeParticipantCount: number;
-  autoClose: boolean;
-  autoClosed: boolean;
   availableSlots: number;
   capacity: number;
   channelId: string;
