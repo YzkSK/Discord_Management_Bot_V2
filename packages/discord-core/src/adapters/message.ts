@@ -42,6 +42,14 @@ export function normalizeMessageDelete(message: AnyMessage): NormalizedEvent {
   );
 }
 
+function attachmentPayload(
+  message: AnyMessage
+): Array<{ url: string; name: string; contentType: string | null }> {
+  return [...(message.attachments?.values() ?? [])]
+    .filter(a => a.contentType?.startsWith("image/") || a.contentType?.startsWith("video/"))
+    .map(a => ({ url: a.url, name: a.name, contentType: a.contentType ?? null }));
+}
+
 function normalizeMessageEvent(
   eventName: string,
   message: AnyMessage,
@@ -58,6 +66,7 @@ function normalizeMessageEvent(
     messageId: message.id,
     payload: {
       content: message.content ?? null,
+      attachments: attachmentPayload(message),
       createdTimestamp: message.createdTimestamp ?? null,
       partial: message.partial,
       ...extraPayload
