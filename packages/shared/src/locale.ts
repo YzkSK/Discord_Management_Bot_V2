@@ -61,7 +61,6 @@ type Locale = {
   recruitmentPostCreator: (vars: { id: string }) => string;
   recruitmentPostVc: (vars: { id: string }) => string;
   recruitmentPostNoVc: string;
-  recruitmentPostAutoClose: (vars: { enabled: boolean }) => string;
   recruitmentButtonJoin: string;
   recruitmentButtonLeave: string;
   recruitmentButtonClose: string;
@@ -69,6 +68,17 @@ type Locale = {
   recruitmentNotFoundMessage: string;
   recruitmentNotOpen: string;
   recruitmentNotOpenMessage: string;
+  recruitmentAlreadyJoined: string;
+  recruitmentAlreadyQueued: string;
+  recruitmentQueueJoined: (vars: { position: number }) => string;
+  recruitmentQueueLeft: string;
+  recruitmentPromoted: (vars: { userId: string }) => string;
+  recruitmentButtonReopen: string;
+  recruitmentReopenedSuccess: string;
+  recruitmentNotJoined: string;
+  recruitmentParticipantsLabel: string;
+  recruitmentNoParticipants: string;
+  recruitmentQueueLabel: string;
   recruitmentJoined: (vars: { current: number; max: number }) => string;
   recruitmentLeft: (vars: { current: number; max: number }) => string;
   recruitmentClosedSuccess: string;
@@ -122,20 +132,10 @@ type Locale = {
   ttsRateLimited: string;
   ttsRateLimitedHint: string;
   ttsForceJoinCurrentChannel: (vars: { id: string }) => string;
-  recruitmentAutoCloseStatus: (vars: { enabled: boolean }) => string;
-  recruitmentAutoClosedTitle: string;
-  recruitmentAutoClosedHint: string;
-  recruitmentReopenedTitle: string;
   recruitmentModalTitle: string;
   recruitmentModalFieldTitle: string;
   recruitmentModalFieldCapacity: string;
   recruitmentModalFieldContent: string;
-  recruitmentButtonSettings: string;
-  recruitmentSettingsTitle: string;
-  recruitmentAutoCloseToggleOn: string;
-  recruitmentAutoCloseToggleOff: string;
-  recruitmentAutoCloseUpdated: (vars: { enabled: boolean }) => string;
-  recruitmentNotCreator: string;
   recruitmentCapacityInvalid: string;
   setupStatusTitle: string;
   setupStatusTempVc: (vars: { id: string | null }) => string;
@@ -203,7 +203,6 @@ const locales: Record<GuildLanguage, Locale> = {
     recruitmentPostCreator: ({ id }) => `Creator: <@${id}>`,
     recruitmentPostVc: ({ id }) => `VC: <#${id}>`,
     recruitmentPostNoVc: "VC: none",
-    recruitmentPostAutoClose: ({ enabled }) => `Auto close: ${enabled ? "on" : "off"}`,
     recruitmentButtonJoin: "➕ Join",
     recruitmentButtonLeave: "➖ Leave",
     recruitmentButtonClose: "🔒 Close",
@@ -211,6 +210,17 @@ const locales: Record<GuildLanguage, Locale> = {
     recruitmentNotFoundMessage: "This recruitment post no longer exists.",
     recruitmentNotOpen: "❌ Recruitment is not open",
     recruitmentNotOpenMessage: "This recruitment is already full or closed.",
+    recruitmentAlreadyJoined: "You've already joined this recruitment.",
+    recruitmentAlreadyQueued: "You're already in the queue.",
+    recruitmentQueueJoined: ({ position }) => `✅ Added to queue (position ${position})`,
+    recruitmentQueueLeft: "✅ Removed from the queue.",
+    recruitmentPromoted: ({ userId }) => `<@${userId}> A spot opened up!`,
+    recruitmentButtonReopen: "🔓 Reopen",
+    recruitmentReopenedSuccess: "✅ Recruitment reopened",
+    recruitmentNotJoined: "You haven't joined this recruitment.",
+    recruitmentParticipantsLabel: "Participants:",
+    recruitmentNoParticipants: "Participants: none",
+    recruitmentQueueLabel: "Queue:",
     recruitmentJoined: ({ current, max }) => `✅ Joined! (${current}/${max})`,
     recruitmentLeft: ({ current, max }) => `✅ Left. (${current}/${max})`,
     recruitmentClosedSuccess: "✅ Recruitment closed",
@@ -345,20 +355,10 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsRateLimited: "⚡ Slow down",
     ttsRateLimitedHint: "Messages are rate-limited. Wait a moment before sending more.",
     ttsForceJoinCurrentChannel: ({ id }) => `Currently in <#${id}>`,
-    recruitmentAutoCloseStatus: ({ enabled }) => `Auto-close at capacity: ${enabled ? "ON" : "OFF"}`,
-    recruitmentAutoClosedTitle: "🔒 Recruitment closed",
-    recruitmentAutoClosedHint: "Capacity reached — the recruitment has been automatically closed.",
-    recruitmentReopenedTitle: "🟢 Recruitment reopened",
     recruitmentModalTitle: "Create Recruitment",
     recruitmentModalFieldTitle: "Title",
     recruitmentModalFieldCapacity: "Capacity (1–99)",
     recruitmentModalFieldContent: "Details",
-    recruitmentButtonSettings: "⚙️ Settings",
-    recruitmentSettingsTitle: "⚙️ Recruitment Settings",
-    recruitmentAutoCloseToggleOn: "✅ Enable auto-close",
-    recruitmentAutoCloseToggleOff: "🔕 Disable auto-close",
-    recruitmentAutoCloseUpdated: ({ enabled }) => `✅ Auto-close ${enabled ? "enabled" : "disabled"}`,
-    recruitmentNotCreator: "Only the creator can change recruitment settings.",
     recruitmentCapacityInvalid: "Capacity must be an integer between 1 and 99.",
     setupStatusTitle: "📋 Server Configuration",
     setupStatusTempVc: ({ id }) => `Temp VC: ${id ? `<#${id}>` : "Not configured"}`,
@@ -422,7 +422,6 @@ const locales: Record<GuildLanguage, Locale> = {
     recruitmentPostCreator: ({ id }) => `作成者: <@${id}>`,
     recruitmentPostVc: ({ id }) => `VC: <#${id}>`,
     recruitmentPostNoVc: "VC: なし",
-    recruitmentPostAutoClose: ({ enabled }) => `自動締切: ${enabled ? "オン" : "オフ"}`,
     recruitmentButtonJoin: "➕ 参加",
     recruitmentButtonLeave: "➖ 退出",
     recruitmentButtonClose: "🔒 締切",
@@ -430,6 +429,17 @@ const locales: Record<GuildLanguage, Locale> = {
     recruitmentNotFoundMessage: "この募集投稿はすでに存在しません。",
     recruitmentNotOpen: "❌ 募集は受け付けていません",
     recruitmentNotOpenMessage: "この募集は満員または締切済みです。",
+    recruitmentAlreadyJoined: "既に参加済みです。",
+    recruitmentAlreadyQueued: "既に待機リストに入っています。",
+    recruitmentQueueJoined: ({ position }) => `✅ 待機リストに追加されました（${position}番目）`,
+    recruitmentQueueLeft: "✅ 待機リストから外れました。",
+    recruitmentPromoted: ({ userId }) => `<@${userId}> 参加枠が空きました！`,
+    recruitmentButtonReopen: "🔓 再オープン",
+    recruitmentReopenedSuccess: "✅ 募集を再オープンしました",
+    recruitmentNotJoined: "参加していません。",
+    recruitmentParticipantsLabel: "参加者:",
+    recruitmentNoParticipants: "参加者: なし",
+    recruitmentQueueLabel: "待機中:",
     recruitmentJoined: ({ current, max }) => `✅ 参加しました！（${current}/${max}人）`,
     recruitmentLeft: ({ current, max }) => `✅ 退出しました。（${current}/${max}人）`,
     recruitmentClosedSuccess: "✅ 募集を締め切りました",
@@ -571,20 +581,10 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsRateLimited: "⚡ 送信が速すぎます",
     ttsRateLimitedHint: "メッセージの読み上げにはレート制限があります。少し待ってから再送信してください。",
     ttsForceJoinCurrentChannel: ({ id }) => `現在 <#${id}> に接続中`,
-    recruitmentAutoCloseStatus: ({ enabled }) => `定員到達で自動クローズ: ${enabled ? "ON" : "OFF"}`,
-    recruitmentAutoClosedTitle: "🔒 募集がクローズしました",
-    recruitmentAutoClosedHint: "定員に達したため、募集が自動的にクローズされました。",
-    recruitmentReopenedTitle: "🟢 募集が再オープンしました",
     recruitmentModalTitle: "募集を作成",
     recruitmentModalFieldTitle: "タイトル",
     recruitmentModalFieldCapacity: "定員（1〜99）",
     recruitmentModalFieldContent: "内容",
-    recruitmentButtonSettings: "⚙️ 設定",
-    recruitmentSettingsTitle: "⚙️ 募集設定",
-    recruitmentAutoCloseToggleOn: "✅ 自動締め切りをONにする",
-    recruitmentAutoCloseToggleOff: "🔕 自動締め切りをOFFにする",
-    recruitmentAutoCloseUpdated: ({ enabled }) => `✅ 自動締め切りを${enabled ? "ON" : "OFF"}にしました`,
-    recruitmentNotCreator: "この操作は作成者のみが行えます。",
     recruitmentCapacityInvalid: "定員は1〜99の整数を入力してください。",
     setupStatusTitle: "📋 サーバー設定",
     setupStatusTempVc: ({ id }) => `一時VC: ${id ? `<#${id}>` : "未設定"}`,
