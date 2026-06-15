@@ -50,11 +50,9 @@ export async function markVoiceStatusChannel(channel: TextChannel) {
   );
 }
 
-export async function findMarkedVoiceStatusChannel(guild: Guild) {
-  const channels = await guild.channels.fetch();
-
+export function findMarkedVoiceStatusChannel(guild: Guild) {
   return (
-    channels.find(
+    guild.channels.cache.find(
       (channel): channel is TextChannel =>
         channel?.type === ChannelType.GuildText &&
         hasVoiceStatusChannelMarker(channel.topic)
@@ -78,6 +76,7 @@ export function resolveVoiceStatusDisplayState(input: {
 
 export function createVoiceStatusMessage(input: {
   channelId: string;
+  channelName?: string | null;
   endedAt?: Date | null;
   loc: Loc;
   memberIds?: string[];
@@ -100,7 +99,12 @@ export function createVoiceStatusMessage(input: {
 
   const containerComponents: unknown[] = [
     { type: ComponentType.TextDisplay, content: `## ${title}` },
-    { type: ComponentType.TextDisplay, content: `<#${input.channelId}>` }
+    {
+      type: ComponentType.TextDisplay,
+      content: (input.endedAt && input.channelName)
+        ? `#${input.channelName}`
+        : `<#${input.channelId}>`
+    }
   ];
 
   const memberIds = input.memberIds ?? [];
