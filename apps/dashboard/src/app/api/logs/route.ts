@@ -108,6 +108,7 @@ function toLogResponseItem(log: Awaited<ReturnType<typeof listLogEvents>>["items
     guildId: log.guildId,
     actorId: log.actorId,
     channelId: log.channelId,
+    channelName: log.channelName ?? null,
     messageId: log.messageId,
     eventTimestamp: log.eventTimestamp.toISOString(),
     receivedAt: log.receivedAt.toISOString(),

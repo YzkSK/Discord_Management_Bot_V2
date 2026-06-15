@@ -6,6 +6,7 @@ import type { DashboardAccessRole } from "@discord-bot/shared";
 export interface LogItem {
   actorId: string | null;
   channelId: string | null;
+  channelName: string | null;
   eventName: string;
   eventTimestamp: string;
   guildId: string | null;

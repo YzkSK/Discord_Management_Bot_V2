@@ -122,9 +122,10 @@ const eventDescriptions: Record<string, (v: EventVars) => string> = {
   "sticker.delete": (_v) => `🖼️ スタンプを削除`,
   "webhook.update": (_v) => `🔗 Webhookを更新`,
   // 募集
-  "recruitment.created": (v) => `🎮 募集作成${v.genre ? ` (${v.genre})` : ""}`,
-  "recruitment.full": (_v) => `🎮 募集が満員に`,
-  "recruitment.closed": (_v) => `🎮 募集を締切`,
+  "recruitment.created":  (v) => `🎮 ${actor(v)} が募集作成${v.genre ? ` (${v.genre})` : ""}`,
+  "recruitment.full":     (v) => `🎮 募集が満員${v.genre ? ` (${v.genre})` : ""}`,
+  "recruitment.closed":   (v) => `🎮 募集を締切${v.genre ? ` (${v.genre})` : ""}`,
+  "recruitment.reopened": (v) => `🎮 募集を再オープン${v.genre ? ` (${v.genre})` : ""}`,
   // TTS
   "tts.session.started": (v) => `🔊 ${actor(v, "")} TTSセッション開始`.trimStart(),
   "tts.session.stopped": (_v) => `🔊 TTSセッション終了`,
