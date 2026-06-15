@@ -33,6 +33,7 @@ try {
 
   await writeFile(outputPath, gzipSync(JSON.stringify(archivedRows, null, 2)));
 
+  // Deletion runs only after the archive file is confirmed written to disk
   const deletedRows = await sql`
     delete from logs
     where received_at < ${cutoffs.deleteBefore}
@@ -48,6 +49,9 @@ try {
   });
 
   console.log(JSON.stringify(summary, null, 2));
+} catch (err) {
+  console.error("archive-logs: fatal error — deletion skipped to prevent data loss", err);
+  process.exitCode = 1;
 } finally {
   await sql.end({ timeout: 5 });
 }

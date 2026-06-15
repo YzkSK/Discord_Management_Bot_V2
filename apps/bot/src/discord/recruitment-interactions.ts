@@ -7,10 +7,7 @@ import type { DbClient } from "@discord-bot/db";
 import {
   closeRecruitment,
   countActiveRecruitmentParticipants,
-<<<<<<< HEAD
   getActiveParticipant,
-=======
->>>>>>> a8dc0179d3feac4d5b9e187d2883be7c47837ecc
   getRecruitmentById,
   joinRecruitment,
   leaveRecruitment,
@@ -80,6 +77,31 @@ export async function handleRecruitmentButtonInteraction(
   return true;
 }
 
+async function refreshRecruitmentMessage(
+  interaction: ButtonInteraction,
+  context: RecruitmentInteractionContext,
+  updatedRecruitment: NonNullable<Awaited<ReturnType<typeof getRecruitmentById>>>,
+  loc: ReturnType<typeof getLocale>
+) {
+  const [participants, queued] = await Promise.all([
+    listActiveRecruitmentParticipants(context.db, updatedRecruitment.id),
+    listQueuedParticipants(context.db, updatedRecruitment.id)
+  ]);
+
+  await interaction.message.edit({
+    ...createRecruitmentPostMessage(
+      updatedRecruitment,
+      loc,
+      participants.length,
+      participants.map((p) => p.userId),
+      queued.map((p) => p.userId)
+    ),
+    allowedMentions: { parse: [] }
+  });
+
+  return { participants, queued };
+}
+
 async function handleJoin(
   interaction: ButtonInteraction,
   context: RecruitmentInteractionContext,
@@ -140,21 +162,7 @@ async function handleJoin(
     }
   }
 
-  const [participants, queued] = await Promise.all([
-    listActiveRecruitmentParticipants(context.db, recruitment.id),
-    listQueuedParticipants(context.db, recruitment.id)
-  ]);
-
-  await interaction.message.edit({
-    ...createRecruitmentPostMessage(
-      updatedRecruitment,
-      loc,
-      participants.length,
-      participants.map((p) => p.userId),
-      queued.map((p) => p.userId)
-    ),
-    allowedMentions: { parse: [] }
-  });
+  const { participants, queued } = await refreshRecruitmentMessage(interaction, context, updatedRecruitment, loc);
 
   if (context.logWriter && !isQueued && participants.length >= recruitment.capacity) {
     writeRecruitmentLifecycleLog(context.logWriter, "recruitment.full", {
@@ -246,21 +254,7 @@ async function handleLeave(
     }
   }
 
-  const [participants, queued] = await Promise.all([
-    listActiveRecruitmentParticipants(context.db, recruitment.id),
-    listQueuedParticipants(context.db, recruitment.id)
-  ]);
-
-  await interaction.message.edit({
-    ...createRecruitmentPostMessage(
-      updatedRecruitment,
-      loc,
-      participants.length,
-      participants.map((p) => p.userId),
-      queued.map((p) => p.userId)
-    ),
-    allowedMentions: { parse: [] }
-  });
+  const { participants } = await refreshRecruitmentMessage(interaction, context, updatedRecruitment, loc);
 
   await interaction.reply({
     ...createComponentsV2TextMessage({
@@ -310,21 +304,7 @@ async function handleClose(
     (await closeRecruitment(context.db, { recruitmentId: recruitment.id })) ??
     recruitment;
 
-  const [participants, queued] = await Promise.all([
-    listActiveRecruitmentParticipants(context.db, recruitment.id),
-    listQueuedParticipants(context.db, recruitment.id)
-  ]);
-
-  await interaction.message.edit({
-    ...createRecruitmentPostMessage(
-      updatedRecruitment,
-      loc,
-      participants.length,
-      participants.map((p) => p.userId),
-      queued.map((p) => p.userId)
-    ),
-    allowedMentions: { parse: [] }
-  });
+  const { participants } = await refreshRecruitmentMessage(interaction, context, updatedRecruitment, loc);
 
   if (context.logWriter) {
     writeRecruitmentLifecycleLog(context.logWriter, "recruitment.closed", {
@@ -377,13 +357,9 @@ async function handleReopen(
     return;
   }
 
-  const [participants, queued] = await Promise.all([
-    listActiveRecruitmentParticipants(context.db, recruitment.id),
-    listQueuedParticipants(context.db, recruitment.id)
-  ]);
-
+  const activeParticipants = await listActiveRecruitmentParticipants(context.db, recruitment.id);
   const nextStatus: RecruitmentStatus =
-    participants.length >= recruitment.capacity ? "full" : "open";
+    activeParticipants.length >= recruitment.capacity ? "full" : "open";
 
   const updatedRecruitment =
     (await updateRecruitmentStatus(context.db, {
@@ -392,16 +368,7 @@ async function handleReopen(
       closedAt: null
     })) ?? recruitment;
 
-  await interaction.message.edit({
-    ...createRecruitmentPostMessage(
-      updatedRecruitment,
-      loc,
-      participants.length,
-      participants.map((p) => p.userId),
-      queued.map((p) => p.userId)
-    ),
-    allowedMentions: { parse: [] }
-  });
+  const { participants } = await refreshRecruitmentMessage(interaction, context, updatedRecruitment, loc);
 
   if (context.logWriter) {
     writeRecruitmentLifecycleLog(context.logWriter, "recruitment.reopened", {

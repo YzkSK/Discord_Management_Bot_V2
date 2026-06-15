@@ -7,7 +7,9 @@ function enqueueTransition(key: string, op: () => Promise<unknown>): void {
   const prev = pendingTransitions.get(key) ?? Promise.resolve();
   const next = prev
     .then(op)
-    .catch(() => undefined)
+    .catch((err: unknown) => {
+      console.warn("voice-state: transition failed", { key, err });
+    })
     .finally(() => {
       if (pendingTransitions.get(key) === next) {
         pendingTransitions.delete(key);
@@ -24,7 +26,9 @@ function enqueueTransitionOnKeys(key1: string, key2: string, op: () => Promise<u
 
   const next = Promise.all([prev1, prev2])
     .then(op)
-    .catch(() => undefined)
+    .catch((err: unknown) => {
+      console.warn("voice-state: transition failed", { key1, key2, err });
+    })
     .finally(() => {
       if (pendingTransitions.get(key1) === next) pendingTransitions.delete(key1);
       if (pendingTransitions.get(key2) === next) pendingTransitions.delete(key2);

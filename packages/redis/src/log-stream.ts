@@ -137,7 +137,8 @@ function parsePayload(value: string | undefined) {
 
   try {
     return JSON.parse(value) as unknown;
-  } catch {
+  } catch (err) {
+    console.warn("redis log-stream: failed to parse payload JSON", { value, err });
     return {};
   }
 }

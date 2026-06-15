@@ -1,6 +1,7 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 
 import type { DbClient } from "../client.js";
+import { clampLimit } from "./pagination.js";
 import {
   callSessionMembers,
   callSessions,
@@ -49,7 +50,7 @@ export async function listVoiceDashboardState(
       discordChannels.name
     )
     .orderBy(desc(callSessions.startedAt))
-    .limit(clampRecentLimit(input.recentLimit));
+    .limit(clampLimit(input.recentLimit, DEFAULT_RECENT_LIMIT, MAX_RECENT_LIMIT));
 
   const tempVoiceRows = await db
     .select({
@@ -89,11 +90,3 @@ export async function listVoiceDashboardState(
 
 const DEFAULT_RECENT_LIMIT = 20;
 const MAX_RECENT_LIMIT = 50;
-
-function clampRecentLimit(limit = DEFAULT_RECENT_LIMIT) {
-  if (!Number.isFinite(limit)) {
-    return DEFAULT_RECENT_LIMIT;
-  }
-
-  return Math.min(Math.max(Math.trunc(limit), 1), MAX_RECENT_LIMIT);
-}

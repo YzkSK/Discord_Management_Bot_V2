@@ -13,6 +13,9 @@ import {
 } from "recharts";
 
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
+
+const CLOCK_REFRESH_MS = 1_000;
+const DATA_REFRESH_MS = 5 * 60 * 1_000;
 import { ErrorAlert } from "../../components/error-alert";
 import { useDashboardData } from "../../hooks/use-dashboard-data";
 import { useVoiceRealtime } from "./hooks/use-voice-realtime";
@@ -68,18 +71,15 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
     setUiLang(detectBrowserLanguage());
   }, []);
 
-<<<<<<< HEAD
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
+    const id = setInterval(() => setNow(new Date()), CLOCK_REFRESH_MS);
     return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
-    const id = setInterval(() => stableReload(), 5 * 60 * 1000);
+    const id = setInterval(() => stableReload(), DATA_REFRESH_MS);
     return () => clearInterval(id);
   }, [stableReload]);
-=======
->>>>>>> a8dc0179d3feac4d5b9e187d2883be7c47837ecc
 
   const peakData = useMemo(() => {
     const bins = Array.from({ length: 24 }, (_, h) => ({

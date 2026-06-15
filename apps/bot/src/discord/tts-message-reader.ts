@@ -19,6 +19,7 @@ import type { TtsSessionManager } from "./tts-session.js";
 import { normalizeTtsText, type VoicevoxClient } from "./voicevox.js";
 
 const RATE_LIMIT_NOTIFY_COOLDOWN_MS = 5_000;
+const MAX_TTS_TEXT_LENGTH = 120;
 
 export interface InstallTtsMessageReaderOptions {
   db: DbClient;
@@ -172,7 +173,7 @@ export function resolveTtsMessageSkipReason(input: {
     return "command-like";
   }
 
-  if (text.length > 120) {
+  if (text.length > MAX_TTS_TEXT_LENGTH) {
     return "too-long";
   }
 
@@ -239,6 +240,9 @@ export function applyTtsDictionaryEntries(
 }
 
 export function sanitizeTtsText(text: string) {
+  if (text.length > MAX_TTS_TEXT_LENGTH) {
+    return text.slice(0, MAX_TTS_TEXT_LENGTH);
+  }
   return text
     // コードブロック (Markdown 処理より先に除去)
     .replace(/```[\s\S]*?```/g, " ")
@@ -278,19 +282,18 @@ export async function handleTtsMessage(
     return;
   }
 
-  const temporaryChannelIds = options.ttsSessionManager.getReadableChannelIds(
-    message.guildId
-  );
-  const voiceChannelId = options.ttsSessionManager.getVoiceChannelId(
-    message.guildId
-  );
+  let cachedConfigPromise: ReturnType<typeof getGuildConfigByGuildId> | undefined;
+  const fetchGuildConfig = () => {
+    cachedConfigPromise ??= getGuildConfigByGuildId(options.db, message.guildId);
+    return cachedConfigPromise;
+  };
+
+  const temporaryChannelIds = options.ttsSessionManager.getReadableChannelIds(message.guildId);
+  const voiceChannelId = options.ttsSessionManager.getVoiceChannelId(message.guildId);
   const readableChannelIds = await resolveReadableTtsChannelIds({
     channelId: message.channelId,
     guildId: message.guildId,
-    loadPersistentTextChannelId: async (guildId) => {
-      const config = await getGuildConfigByGuildId(options.db, guildId);
-      return config?.ttsTextChannelId ?? null;
-    },
+    loadPersistentTextChannelId: async (_guildId) => (await fetchGuildConfig())?.ttsTextChannelId ?? null,
     temporaryChannelIds
   });
 
@@ -318,94 +321,17 @@ export async function handleTtsMessage(
     return;
   }
 
-  if (
-    options.rateLimiter &&
-    !options.rateLimiter.allow({
-      guildId: message.guildId,
-      userId: message.author.id
-    })
-  ) {
-    await options.logWriter.write(
-      createTtsMessageSkippedEvent({
-        actorId: message.author.id,
-        guildId: message.guildId,
-        reason: "rate-limited",
-        sourceChannelId: message.channelId,
-        sourceMessageId: message.id,
-        textLength: message.content.trim().length,
-        voiceChannelId
-      })
-    );
-    const cooldowns = options.rateLimitNotifyCooldowns;
-    if (cooldowns) {
-      const now = Date.now();
-      const lastNotified = cooldowns.get(message.author.id) ?? 0;
-      if (now - lastNotified >= RATE_LIMIT_NOTIFY_COOLDOWN_MS) {
-        cooldowns.set(message.author.id, now);
-        const config = await getGuildConfigByGuildId(options.db, message.guildId);
-        const lang = config?.language && isGuildLanguage(config.language) ? config.language : "en";
-        const loc = getLocale(lang);
-        await message.reply(
-          createComponentsV2TextMessage({
-            title: loc.ttsRateLimited,
-            lines: [loc.ttsRateLimitedHint],
-            accentColor: EVENT_COLORS.yellow,
-            privateResponse: false
-          })
-        );
-      }
-    }
+  const rateLimited = await handleRateLimitCheck(message, voiceChannelId, options, fetchGuildConfig);
+  if (rateLimited) {
     return;
   }
 
-  const normalizedText = normalizeTtsText({
-    authorIsBot: message.author.bot,
-    content: message.content
-  });
-
-  if (!normalizedText) {
+  const ttsText = await buildTtsText(message, voiceChannelId, options);
+  if (!ttsText) {
     return;
   }
 
-  const sanitizedText = sanitizeTtsText(normalizedText);
-  if (!sanitizedText) {
-    await options.logWriter.write(
-      createTtsMessageSkippedEvent({
-        actorId: message.author.id,
-        guildId: message.guildId,
-        reason: "empty",
-        sourceChannelId: message.channelId,
-        sourceMessageId: message.id,
-        textLength: normalizedText.length,
-        voiceChannelId
-      })
-    );
-    return;
-  }
-
-  const readableText = sanitizedText;
-
-  const loadDictionaryEntries =
-    options.loadDictionaryEntries ??
-    ((input: LoadTtsDictionaryEntriesInput) =>
-      listEffectiveTtsDictionaryEntries(options.db, input));
-  const loadSpeakerId =
-    options.loadSpeakerId ??
-    ((input: LoadTtsSpeakerIdInput) =>
-      getEffectiveTtsSpeakerId(options.db, input));
-  const speakerId = await loadSpeakerId({
-    fallbackSpeakerId: options.speakerId,
-    guildId: message.guildId,
-    userId: message.author.id
-  });
-  const text = applyTtsDictionaryEntries(
-    readableText,
-    await loadDictionaryEntries({
-      guildId: message.guildId,
-      userId: message.author.id
-    })
-  );
-
+  const { text, speakerId } = ttsText;
   const ttsQueue = options.ttsQueue ?? new LocalTtsPlaybackQueue();
 
   await ttsQueue.enqueue({ guildId: message.guildId }, async () => {
@@ -447,4 +373,98 @@ export async function handleTtsMessage(
       });
     }
   });
+}
+
+async function handleRateLimitCheck(
+  message: Message<true>,
+  voiceChannelId: string | null,
+  options: InstallTtsMessageReaderOptions,
+  fetchGuildConfig: () => ReturnType<typeof getGuildConfigByGuildId>
+): Promise<boolean> {
+  if (!options.rateLimiter || options.rateLimiter.allow({ guildId: message.guildId, userId: message.author.id })) {
+    return false;
+  }
+
+  await options.logWriter.write(
+    createTtsMessageSkippedEvent({
+      actorId: message.author.id,
+      guildId: message.guildId,
+      reason: "rate-limited",
+      sourceChannelId: message.channelId,
+      sourceMessageId: message.id,
+      textLength: message.content.trim().length,
+      voiceChannelId
+    })
+  );
+
+  const cooldowns = options.rateLimitNotifyCooldowns;
+  if (cooldowns) {
+    const now = Date.now();
+    const lastNotified = cooldowns.get(message.author.id) ?? 0;
+    if (now - lastNotified >= RATE_LIMIT_NOTIFY_COOLDOWN_MS) {
+      cooldowns.set(message.author.id, now);
+      const guildConfig = await fetchGuildConfig();
+      const lang = guildConfig?.language && isGuildLanguage(guildConfig.language) ? guildConfig.language : "en";
+      const loc = getLocale(lang);
+      await message.reply(
+        createComponentsV2TextMessage({
+          title: loc.ttsRateLimited,
+          lines: [loc.ttsRateLimitedHint],
+          accentColor: EVENT_COLORS.yellow,
+          privateResponse: false
+        })
+      );
+    }
+  }
+
+  return true;
+}
+
+async function buildTtsText(
+  message: Message<true>,
+  voiceChannelId: string | null,
+  options: InstallTtsMessageReaderOptions
+): Promise<{ text: string; speakerId: number } | null> {
+  const normalizedText = normalizeTtsText({
+    authorIsBot: message.author.bot,
+    content: message.content
+  });
+
+  if (!normalizedText) {
+    return null;
+  }
+
+  const sanitizedText = sanitizeTtsText(normalizedText);
+  if (!sanitizedText) {
+    await options.logWriter.write(
+      createTtsMessageSkippedEvent({
+        actorId: message.author.id,
+        guildId: message.guildId,
+        reason: "empty",
+        sourceChannelId: message.channelId,
+        sourceMessageId: message.id,
+        textLength: normalizedText.length,
+        voiceChannelId
+      })
+    );
+    return null;
+  }
+
+  const loadDictionaryEntries =
+    options.loadDictionaryEntries ??
+    ((input: LoadTtsDictionaryEntriesInput) =>
+      listEffectiveTtsDictionaryEntries(options.db, input));
+  const loadSpeakerId =
+    options.loadSpeakerId ??
+    ((input: LoadTtsSpeakerIdInput) =>
+      getEffectiveTtsSpeakerId(options.db, input));
+
+  const [speakerId, entries] = await Promise.all([
+    loadSpeakerId({ fallbackSpeakerId: options.speakerId, guildId: message.guildId, userId: message.author.id }),
+    loadDictionaryEntries({ guildId: message.guildId, userId: message.author.id })
+  ]);
+
+  const text = applyTtsDictionaryEntries(sanitizedText, entries);
+
+  return { text, speakerId };
 }

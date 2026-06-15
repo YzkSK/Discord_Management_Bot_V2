@@ -1,8 +1,5 @@
 import {
-<<<<<<< HEAD
   getUserTtsSpeaker,
-=======
->>>>>>> a8dc0179d3feac4d5b9e187d2883be7c47837ecc
   listDashboardAccessGrants,
   setGuildDefaultTtsSpeaker,
   setUserTtsSpeaker,

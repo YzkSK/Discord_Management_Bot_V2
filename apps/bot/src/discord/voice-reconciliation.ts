@@ -41,40 +41,9 @@ async function reconcileGuildVoiceSessions(guild: Guild, db: DbClient) {
   let cleaned = 0;
 
   for (const session of guildSessions) {
-    const channel = guild.channels.cache.get(session.channelId);
-    const actualHumanIds = new Set(
-      channel?.isVoiceBased()
-        ? [...channel.members.values()]
-            .filter((m) => !m.user.bot)
-            .map((m) => m.id)
-        : []
-    );
-
-    const dbActiveMembers = await listActiveCallSessionMembers(db, session.id);
-    for (const member of dbActiveMembers) {
-      if (!actualHumanIds.has(member.userId)) {
-        await markCallSessionMemberLeft(db, {
-          callSessionId: session.id,
-          leftAt: now,
-          userId: member.userId
-        });
-        cleaned++;
-      }
-    }
-
-    const remaining = dbActiveMembers.filter((m) => actualHumanIds.has(m.userId));
-    if (remaining.length === 0) {
-      await endCallSession(db, { callSessionId: session.id, endedAt: now });
-      await updateDiscordVoiceStatusMessage(guild.client, db, {
-        activeMemberCount: 0,
-        endedAt: now,
-        session,
-        state: "ended"
-      }).catch((err: unknown) => {
-        console.warn("voice reconciliation: failed to update status message", { sessionId: session.id, err });
-      });
-      ended++;
-    }
+    const counts = await reconcileSession(session, guild, guild.client, db, now);
+    ended += counts.ended;
+    cleaned += counts.cleaned;
   }
 
   if (ended > 0 || cleaned > 0) {
@@ -86,51 +55,65 @@ async function reconcileVoiceSessions(client: Client, db: DbClient) {
   const activeSessions = await listAllActiveCallSessions(db);
   if (activeSessions.length === 0) return;
 
+  const now = new Date();
   let ended = 0;
   let cleaned = 0;
-  const now = new Date();
 
   for (const session of activeSessions) {
     const guild = client.guilds.cache.get(session.guildId);
     if (!guild) continue;
 
-    const channel = guild.channels.cache.get(session.channelId);
-    const actualHumanIds = new Set(
-      channel?.isVoiceBased()
-        ? [...channel.members.values()]
-            .filter((m) => !m.user.bot)
-            .map((m) => m.id)
-        : []
-    );
-
-    const dbActiveMembers = await listActiveCallSessionMembers(db, session.id);
-    for (const member of dbActiveMembers) {
-      if (!actualHumanIds.has(member.userId)) {
-        await markCallSessionMemberLeft(db, {
-          callSessionId: session.id,
-          leftAt: now,
-          userId: member.userId
-        });
-        cleaned++;
-      }
-    }
-
-    const remaining = dbActiveMembers.filter((m) =>
-      actualHumanIds.has(m.userId)
-    );
-    if (remaining.length === 0) {
-      await endCallSession(db, { callSessionId: session.id, endedAt: now });
-      await updateDiscordVoiceStatusMessage(client, db, {
-        activeMemberCount: 0,
-        endedAt: now,
-        session,
-        state: "ended"
-      }).catch((err: unknown) => {
-        console.warn("voice reconciliation: failed to update status message", { sessionId: session.id, err });
-      });
-      ended++;
-    }
+    const counts = await reconcileSession(session, guild, client, db, now);
+    ended += counts.ended;
+    cleaned += counts.cleaned;
   }
 
   console.log("voice reconciliation complete", { ended, cleaned });
+}
+
+async function reconcileSession(
+  session: Awaited<ReturnType<typeof listAllActiveCallSessions>>[number],
+  guild: Guild,
+  client: Client,
+  db: DbClient,
+  now: Date
+): Promise<{ ended: number; cleaned: number }> {
+  const channel = guild.channels.cache.get(session.channelId);
+  const actualHumanIds = new Set(
+    channel?.isVoiceBased()
+      ? [...channel.members.values()]
+          .filter((m) => !m.user.bot)
+          .map((m) => m.id)
+      : []
+  );
+
+  const dbActiveMembers = await listActiveCallSessionMembers(db, session.id);
+  let cleaned = 0;
+
+  for (const member of dbActiveMembers) {
+    if (!actualHumanIds.has(member.userId)) {
+      await markCallSessionMemberLeft(db, {
+        callSessionId: session.id,
+        leftAt: now,
+        userId: member.userId
+      });
+      cleaned++;
+    }
+  }
+
+  const remaining = dbActiveMembers.filter((m) => actualHumanIds.has(m.userId));
+  if (remaining.length === 0) {
+    await endCallSession(db, { callSessionId: session.id, endedAt: now });
+    await updateDiscordVoiceStatusMessage(client, db, {
+      activeMemberCount: 0,
+      endedAt: now,
+      session,
+      state: "ended"
+    }).catch((err: unknown) => {
+      console.warn("voice reconciliation: failed to update status message", { sessionId: session.id, err });
+    });
+    return { ended: 1, cleaned };
+  }
+
+  return { ended: 0, cleaned };
 }

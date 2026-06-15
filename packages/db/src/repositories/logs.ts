@@ -1,6 +1,7 @@
 import type { DbClient } from "../client.js";
 import { and, desc, eq, getTableColumns, ilike, like, lte, or, sql, type SQL } from "drizzle-orm";
 import { discordChannels, logs } from "../schema/index.js";
+import { clampLimit } from "./pagination.js";
 
 export interface InsertLogEventInput {
   eventName: string;
@@ -60,7 +61,7 @@ export async function listLogEvents(
   db: DbClient,
   input: ListLogEventsInput = {}
 ): Promise<ListLogEventsResult> {
-  const limit = clampLimit(input.limit);
+  const limit = clampLimit(input.limit, DEFAULT_LOGS_LIMIT, MAX_LOGS_LIMIT);
   const items = await listLogEventsQuery(db, input, limit + 1);
   const hasMore = items.length > limit;
   const visibleItems = hasMore ? items.slice(0, limit) : items;
@@ -147,11 +148,3 @@ function buildLogFilters(input: ListLogEventsInput): SQL[] {
 
 const DEFAULT_LOGS_LIMIT = 50;
 const MAX_LOGS_LIMIT = 100;
-
-function clampLimit(limit = DEFAULT_LOGS_LIMIT) {
-  if (!Number.isFinite(limit)) {
-    return DEFAULT_LOGS_LIMIT;
-  }
-
-  return Math.min(Math.max(Math.trunc(limit), 1), MAX_LOGS_LIMIT);
-}

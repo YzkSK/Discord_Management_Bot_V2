@@ -138,6 +138,10 @@ async function handleRecruitmentCreate(
     return;
   }
 
+  const TITLE_MAX_LENGTH = 80;
+  const CAPACITY_MAX_LENGTH = 2;
+  const CONTENT_MAX_LENGTH = 1000;
+
   const modal = new ModalBuilder()
     .setCustomId("recruitment-create-modal")
     .setTitle(loc.recruitmentModalTitle);
@@ -146,21 +150,21 @@ async function handleRecruitmentCreate(
     .setCustomId("title")
     .setLabel(loc.recruitmentModalFieldTitle)
     .setStyle(TextInputStyle.Short)
-    .setMaxLength(80)
+    .setMaxLength(TITLE_MAX_LENGTH)
     .setRequired(true);
 
   const capacityInput = new TextInputBuilder()
     .setCustomId("capacity")
     .setLabel(loc.recruitmentModalFieldCapacity)
     .setStyle(TextInputStyle.Short)
-    .setMaxLength(2)
+    .setMaxLength(CAPACITY_MAX_LENGTH)
     .setRequired(true);
 
   const contentInput = new TextInputBuilder()
     .setCustomId("content")
     .setLabel(loc.recruitmentModalFieldContent)
     .setStyle(TextInputStyle.Paragraph)
-    .setMaxLength(1000)
+    .setMaxLength(CONTENT_MAX_LENGTH)
     .setRequired(true);
 
   modal.addComponents(
