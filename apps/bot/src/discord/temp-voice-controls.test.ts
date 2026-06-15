@@ -107,9 +107,43 @@ describe("handleTempVoiceControlInteraction", () => {
     );
 
     assert.deepEqual(overwrites, [
+      { id: "bot", permissions: { Connect: true } },
       { id: "everyone", permissions: { Connect: false } },
-      { id: "everyone", permissions: { Connect: null } }
+      { id: "everyone", permissions: { Connect: null } },
+      { id: "bot", permissions: { Connect: null } }
     ]);
+  });
+
+  it("replies with a permission error when unlocking cannot edit channel overwrites", async () => {
+    const replies: unknown[] = [];
+    const channel = fakeVoiceChannel({
+      initialPermissions: {
+        everyone: {
+          Connect: false
+        }
+      },
+      overwriteError: new Error("Missing Access")
+    });
+
+    const handled = await handleTempVoiceControlInteraction(
+      fakeButtonInteraction({
+        action: "unlock",
+        channel,
+        channelId: "voice-1",
+        replies,
+        userId: "owner-1"
+      }),
+      {
+        db: {} as never,
+        getTempVoiceChannel: async () => ({
+          channelId: "voice-1",
+          ownerId: "owner-1"
+        })
+      }
+    );
+
+    assert.equal(handled, true);
+    assert.match(JSON.stringify(replies[0]), /権限エラー/);
   });
 
   it("hides and shows the generated voice channel for everyone", async () => {
@@ -148,8 +182,10 @@ describe("handleTempVoiceControlInteraction", () => {
     );
 
     assert.deepEqual(overwrites, [
+      { id: "bot", permissions: { ViewChannel: true } },
       { id: "everyone", permissions: { ViewChannel: false } },
-      { id: "everyone", permissions: { ViewChannel: null } }
+      { id: "everyone", permissions: { ViewChannel: null } },
+      { id: "bot", permissions: { ViewChannel: null } }
     ]);
   });
 
@@ -300,7 +336,7 @@ describe("createTempVoiceControlMessage — state toggle", () => {
     const s = JSON.stringify(msg);
 
     assert.match(s, /🔒/);
-    assert.match(s, /👁️/);
+    assert.match(s, /🌐/);
   });
 });
 
@@ -357,6 +393,11 @@ function fakeButtonInteraction(input: {
       action: input.action,
       channelId: input.channelId
     }),
+    client: {
+      user: {
+        id: "bot"
+      }
+    },
     guild: {
       channels: {
         fetch: async () => input.channel ?? fakeVoiceChannel()
@@ -452,18 +493,58 @@ function fakeUserSelectInteraction(input: {
 function fakeVoiceChannel(
   input: {
     bitrates?: number[];
+    initialPermissions?: Record<string, Record<string, boolean | null>>;
     names?: string[];
+    overwriteError?: Error;
     overwrites?: unknown[];
     userLimits?: number[];
   } = {}
 ) {
   const overwrites = input.overwrites ?? [];
+  const permState = new Map<string, Map<string, boolean | null>>();
+
+  const permBit = (f: bigint): string | null => {
+    if (f === PermissionFlagsBits.Connect) return "Connect";
+    if (f === PermissionFlagsBits.ViewChannel) return "ViewChannel";
+    return null;
+  };
+
+  const cache = new Map<string, {
+    allow: { has: (f: bigint) => boolean };
+    deny: { has: (f: bigint) => boolean };
+  }>();
+
+  const syncCache = (id: string) => {
+    const state = permState.get(id) ?? new Map<string, boolean | null>();
+    cache.set(id, {
+      allow: { has: (f: bigint) => permBit(f) !== null && state.get(permBit(f)!) === true },
+      deny: { has: (f: bigint) => permBit(f) !== null && state.get(permBit(f)!) === false },
+    });
+  };
+
+  for (const [id, permissions] of Object.entries(input.initialPermissions ?? {})) {
+    const state = new Map<string, boolean | null>();
+    for (const [perm, value] of Object.entries(permissions)) {
+      state.set(perm, value);
+    }
+    permState.set(id, state);
+    syncCache(id);
+  }
 
   return {
     isVoiceBased: () => true,
+    members: new Map<string, { id: string }>(),
     permissionOverwrites: {
-      edit: async (id: string, permissions: unknown) => {
+      cache,
+      edit: async (id: string, permissions: Record<string, boolean | null>) => {
+        if (input.overwriteError) throw input.overwriteError;
         overwrites.push({ id, permissions });
+        const state = permState.get(id) ?? new Map<string, boolean | null>();
+        for (const [perm, value] of Object.entries(permissions)) {
+          state.set(perm, value);
+        }
+        permState.set(id, state);
+        syncCache(id);
       }
     },
     setBitrate: async (bitrate: number) => {

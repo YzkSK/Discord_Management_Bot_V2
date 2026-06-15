@@ -52,7 +52,7 @@ describe("handleSetupCommand — status", () => {
         options: { getSubcommand: () => "status", getChannel: () => null },
         guild: {
           channels: {
-            fetch: async () => {
+            cache: (() => {
               const entries: [string, { id: string; type: number; topic: string }][] = [
                 ["vs-456", { id: "vs-456", type: 0, topic: "[discord-management-bot:voice-status]" }]
               ];
@@ -65,7 +65,7 @@ describe("handleSetupCommand — status", () => {
                   return undefined;
                 }
               });
-            }
+            })()
           }
         },
         reply: async (msg: unknown) => { replyPayload = msg; }
