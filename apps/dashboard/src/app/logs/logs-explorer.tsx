@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
@@ -163,7 +163,7 @@ export function LogsExplorer() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appliedFilters]);
 
-  const filtered = logs.filter((log) => {
+  const filtered = useMemo(() => logs.filter((log) => {
     if (appliedFilters.eventName && !log.eventName.startsWith(appliedFilters.eventName))
       return false;
     if (appliedFilters.search) {
@@ -178,7 +178,7 @@ export function LogsExplorer() {
       if (!desc.includes(q) && !log.eventName.includes(q)) return false;
     }
     return true;
-  });
+  }), [logs, appliedFilters.eventName, appliedFilters.search]);
 
   function applyCategory(eventName: string) {
     const next = {

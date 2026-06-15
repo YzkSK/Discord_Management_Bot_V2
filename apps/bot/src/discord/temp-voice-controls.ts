@@ -275,307 +275,85 @@ async function updateControlPanel(
   });
 }
 
+type TvcInteraction = ButtonInteraction | ModalSubmitInteraction | UserSelectMenuInteraction;
+type TvcRecord = { channelId: string; ownerId: string; controlChannelId?: string | null };
+type VoiceChannel = GuildBasedChannel & {
+  isVoiceBased: () => true;
+  members: Map<string, { id: string }>;
+  permissionOverwrites: {
+    cache: Map<string, { type: number; allow: { has: (f: bigint) => boolean }; deny: { has: (f: bigint) => boolean } }>;
+    edit: (id: string, options: unknown) => Promise<unknown>;
+  };
+  setName: (name: string, reason?: string) => Promise<unknown>;
+  setUserLimit: (limit: number, reason?: string) => Promise<unknown>;
+};
+
 export async function handleTempVoiceControlInteraction(
-  interaction: ButtonInteraction | ModalSubmitInteraction | UserSelectMenuInteraction,
+  interaction: TvcInteraction,
   context: TempVoiceControlContext
 ) {
   const parsed = parseTempVoiceControlCustomId(interaction.customId);
-
-  if (!parsed) {
-    return false;
-  }
+  if (!parsed) return false;
 
   const loc = await resolveGuildLocale(context.db, interaction.guildId);
-
-  const getTempVoiceChannel =
-    context.getTempVoiceChannel ?? getActiveTempVoiceChannelByChannelId;
-  const tempVoiceChannel = await getTempVoiceChannel(context.db, parsed.channelId);
-
-  if (!tempVoiceChannel) {
-    await replyPrivate(interaction, "❌ Temp VC not found", [
-      "This Temp VC no longer exists."
-    ]);
-    return true;
-  }
-
+  const getTvc = context.getTempVoiceChannel ?? getActiveTempVoiceChannelByChannelId;
+  const tempVoiceChannel = await getTvc(context.db, parsed.channelId);
   const guild = interaction.guild;
 
-  if (!guild) {
-    await replyPrivate(interaction, "❌ Temp VC not found", [
-      "Temp VC controls can only be used in a server."
-    ]);
+  if (!tempVoiceChannel) {
+    await replyPrivate(interaction, "❌ Temp VC not found", ["This Temp VC no longer exists."]);
     return true;
   }
 
-  // User management select and target actions have their own auth
-  const isUserManagementFlow =
+  if (!guild) {
+    await replyPrivate(interaction, "❌ Temp VC not found", ["Temp VC controls can only be used in a server."]);
+    return true;
+  }
+
+  const isUserMgmtFlow =
     parsed.action === "user-management-select" ||
     parsed.action === "kick-target" ||
     parsed.action === "allow-target" ||
     parsed.action === "deny-target" ||
     parsed.action === "transfer-target";
 
-  if (!isUserManagementFlow && interaction.user.id !== tempVoiceChannel.ownerId) {
-    await replyPrivate(interaction, "❌ Temp VC control denied", [
-      "Only the Temp VC owner can use these controls."
-    ]);
+  if (!isUserMgmtFlow && interaction.user.id !== tempVoiceChannel.ownerId) {
+    await replyPrivate(interaction, "❌ Temp VC control denied", ["Only the Temp VC owner can use these controls."]);
     return true;
   }
 
-  // User management button: show ephemeral UserSelectMenu
   if (parsed.action === "user-management" && "isButton" in interaction) {
-    const selectMenu = new UserSelectMenuBuilder()
-      .setCustomId(toTempVoiceControlCustomId({ action: "user-management-select", channelId: parsed.channelId }))
-      .setPlaceholder(loc.tempVcUserMgmtPlaceholder)
-      .setMinValues(1)
-      .setMaxValues(1);
-
-    const row = new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(selectMenu);
-
-    await interaction.reply({
-      ...createComponentsV2TextMessage({
-        title: loc.tempVcUserMgmtTitle,
-        lines: [loc.tempVcUserMgmtPrompt],
-        privateResponse: true
-      }),
-      components: [row]
-    });
-    return true;
+    return handleUserManagement(interaction as ButtonInteraction, parsed, loc);
   }
 
-  // User management select: show action buttons
   if (parsed.action === "user-management-select" && "values" in interaction) {
-    if (interaction.user.id !== tempVoiceChannel.ownerId) {
-      await interaction.update(createEphemeralUpdate("❌ Temp VC control denied", ["Only the Temp VC owner can use these controls."]));
-      return true;
-    }
-
-    const targetUserId = interaction.values[0];
-    if (!targetUserId) return true;
-
-    const kickBtn = new ButtonBuilder()
-      .setCustomId(toTempVoiceControlCustomId({ action: "kick-target", channelId: parsed.channelId, targetUserId }))
-      .setLabel(loc.tempVcActionKick)
-      .setStyle(ButtonStyle.Danger);
-
-    const allowBtn = new ButtonBuilder()
-      .setCustomId(toTempVoiceControlCustomId({ action: "allow-target", channelId: parsed.channelId, targetUserId }))
-      .setLabel(loc.tempVcActionAllow)
-      .setStyle(ButtonStyle.Success);
-
-    const denyBtn = new ButtonBuilder()
-      .setCustomId(toTempVoiceControlCustomId({ action: "deny-target", channelId: parsed.channelId, targetUserId }))
-      .setLabel(loc.tempVcActionDeny)
-      .setStyle(ButtonStyle.Secondary);
-
-    const transferBtn = new ButtonBuilder()
-      .setCustomId(toTempVoiceControlCustomId({ action: "transfer-target", channelId: parsed.channelId, targetUserId }))
-      .setLabel(loc.tempVcActionTransfer)
-      .setStyle(ButtonStyle.Secondary);
-
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(kickBtn, allowBtn, denyBtn, transferBtn);
-
-    await interaction.update(
-      createEphemeralUpdate(loc.tempVcUserMgmtTitle, [loc.tempVcUserMgmtActionFor({ userId: targetUserId })], [row])
-    );
-    return true;
+    return handleUserManagementSelect(interaction as UserSelectMenuInteraction, tempVoiceChannel, parsed, loc);
   }
 
-  // User-specific target actions
   if (parsed.targetUserId && "isButton" in interaction) {
     if (interaction.user.id !== tempVoiceChannel.ownerId) {
-      await replyPrivate(interaction, "❌ Temp VC control denied", [
-        "Only the Temp VC owner can use these controls."
-      ]);
+      await replyPrivate(interaction, "❌ Temp VC control denied", ["Only the Temp VC owner can use these controls."]);
       return true;
     }
-
-    const channel = await guild.channels.fetch(parsed.channelId).catch(() => null);
-
-    if (!isVoiceBasedChannel(channel)) {
-      await replyPrivate(interaction, "❌ Temp VC not found", [
-        "The voice channel is no longer available."
-      ]);
+    const targetChannel = await guild.channels.fetch(parsed.channelId).catch(() => null);
+    if (!isVoiceBasedChannel(targetChannel)) {
+      await replyPrivate(interaction, "❌ Temp VC not found", ["The voice channel is no longer available."]);
       return true;
     }
-
-    if (parsed.action === "kick-target") {
-      const member = await guild.members.fetch(parsed.targetUserId).catch(() => null);
-
-      if (!member || member.voice.channelId !== parsed.channelId) {
-        await replyPrivate(interaction, "❌ Kick failed", [
-          "That member is not in this Temp VC."
-        ]);
-        return true;
-      }
-
-      await member.voice.disconnect("Temp VC owner kicked member.");
-      await replyPrivate(interaction, loc.tempVcKickTitle, [loc.tempVcKickMessage({ userId: parsed.targetUserId })]);
-      return true;
-    }
-
-    if (parsed.action === "allow-target") {
-      const targetOw = channel.permissionOverwrites.cache.get(parsed.targetUserId);
-      if (targetOw?.allow.has(PermissionFlagsBits.Connect)) {
-        await replyPrivate(interaction, loc.tempVcAlreadyAllowedTitle, []);
-        return true;
-      }
-      try {
-        await channel.permissionOverwrites.edit(parsed.targetUserId, { Connect: true });
-      } catch {
-        await replyPrivate(interaction, loc.tempVcPermErrorTitle, [
-          loc.tempVcPermErrorManageRolesLine1,
-          loc.tempVcPermErrorManageRolesLine2
-        ]);
-        return true;
-      }
-      await replyPrivate(interaction, loc.tempVcAllowTitle, [
-        loc.tempVcAllowMessage({ userId: parsed.targetUserId })
-      ]);
-      await updateControlPanel(guild, tempVoiceChannel, loc);
-      return true;
-    }
-
-    if (parsed.action === "deny-target") {
-      const targetOw = channel.permissionOverwrites.cache.get(parsed.targetUserId);
-      if (targetOw?.deny.has(PermissionFlagsBits.Connect)) {
-        await replyPrivate(interaction, loc.tempVcAlreadyDeniedTitle, []);
-        return true;
-      }
-      try {
-        await channel.permissionOverwrites.edit(parsed.targetUserId, { Connect: false });
-      } catch {
-        await replyPrivate(interaction, loc.tempVcPermErrorTitle, [
-          loc.tempVcPermErrorManageRolesLine1,
-          loc.tempVcPermErrorManageRolesLine2
-        ]);
-        return true;
-      }
-      await replyPrivate(interaction, loc.tempVcDenyTitle, [
-        loc.tempVcDenyMessage({ userId: parsed.targetUserId })
-      ]);
-      await updateControlPanel(guild, tempVoiceChannel, loc);
-      return true;
-    }
-
-    if (parsed.action === "transfer-target") {
-      const targetMember = await guild.members.fetch(parsed.targetUserId).catch(() => null);
-      if (!targetMember || targetMember.voice.channelId !== parsed.channelId) {
-        await replyPrivate(interaction, loc.tempVcTransferNotInChannelTitle, [
-          loc.tempVcTransferNotInChannelMessage
-        ]);
-        return true;
-      }
-      await transferTempVoiceChannelOwner(context.db, {
-        channelId: parsed.channelId,
-        ownerId: parsed.targetUserId
-      });
-      await updateControlChannelOwnerPermissions(guild, {
-        controlChannelId: tempVoiceChannel.controlChannelId ?? null,
-        nextOwnerId: parsed.targetUserId,
-        previousOwnerId: tempVoiceChannel.ownerId
-      }, loc);
-      await replyPrivate(interaction, loc.tempVcTransferSuccessTitle, [
-        loc.tempVcTransferSuccessMessage({ userId: parsed.targetUserId })
-      ]);
-      await updateControlPanel(guild, { ...tempVoiceChannel, ownerId: parsed.targetUserId }, loc);
-      return true;
-    }
+    return handleTargetAction(
+      interaction as ButtonInteraction,
+      guild,
+      targetChannel,
+      tempVoiceChannel,
+      parsed as TempVoiceControlCustomId & { targetUserId: string },
+      context,
+      loc
+    );
   }
 
-  // Channel-based actions (lock, unlock, hide, show, rename, user-limit)
   const channel = await guild.channels.fetch(parsed.channelId);
-
   if (!isVoiceBasedChannel(channel)) {
-    await replyPrivate(interaction, "❌ Temp VC not found", [
-      "The generated voice channel is no longer available."
-    ]);
-    return true;
-  }
-
-  if (parsed.action === "lock") {
-    const eo = channel.permissionOverwrites.cache.get(guild.roles.everyone.id);
-    if (eo?.deny.has(PermissionFlagsBits.Connect)) {
-      await replyPrivate(interaction, loc.tempVcAlreadyLockedTitle, []);
-      return true;
-    }
-    const botId = interaction.client.user.id;
-    try {
-      const currentMemberIds = [...channel.members.keys()];
-      await Promise.all([
-        channel.permissionOverwrites.edit(botId, { Connect: true }),
-        ...currentMemberIds.map((id) => channel.permissionOverwrites.edit(id, { Connect: true }))
-      ]);
-      await channel.permissionOverwrites.edit(guild.roles.everyone.id, { Connect: false });
-    } catch {
-      await replyPermissionOverwriteError(interaction, loc);
-      return true;
-    }
-    await replyPrivate(interaction, loc.tempVcLockSuccessTitle, [loc.tempVcLockSuccessMessage]);
-    await updateControlPanel(guild, tempVoiceChannel, loc);
-    return true;
-  }
-
-  if (parsed.action === "unlock") {
-    const eo = channel.permissionOverwrites.cache.get(guild.roles.everyone.id);
-    if (!eo?.deny.has(PermissionFlagsBits.Connect)) {
-      await replyPrivate(interaction, loc.tempVcAlreadyUnlockedTitle, []);
-      return true;
-    }
-    const botId = interaction.client.user.id;
-    try {
-      await channel.permissionOverwrites.edit(guild.roles.everyone.id, { Connect: null });
-      await channel.permissionOverwrites.edit(botId, { Connect: null }).catch(() => undefined);
-    } catch {
-      await replyPermissionOverwriteError(interaction, loc);
-      return true;
-    }
-    await replyPrivate(interaction, loc.tempVcUnlockSuccessTitle, [loc.tempVcUnlockSuccessMessage]);
-    await updateControlPanel(guild, tempVoiceChannel, loc);
-    return true;
-  }
-
-  if (parsed.action === "hide") {
-    const eo = channel.permissionOverwrites.cache.get(guild.roles.everyone.id);
-    if (eo?.deny.has(PermissionFlagsBits.ViewChannel)) {
-      await replyPrivate(interaction, loc.tempVcAlreadyHiddenTitle, []);
-      return true;
-    }
-    const botId = interaction.client.user.id;
-    const currentMemberIds = [...channel.members.keys()];
-    try {
-      await Promise.all([
-        channel.permissionOverwrites.edit(botId, { ViewChannel: true }),
-        ...currentMemberIds.map((id) =>
-          channel.permissionOverwrites.edit(id, { ViewChannel: true, Connect: true })
-        ),
-      ]);
-      await channel.permissionOverwrites.edit(guild.roles.everyone.id, { ViewChannel: false });
-    } catch {
-      await replyPermissionOverwriteError(interaction, loc);
-      return true;
-    }
-    await replyPrivate(interaction, loc.tempVcHideSuccessTitle, [loc.tempVcHideSuccessMessage]);
-    await updateControlPanel(guild, tempVoiceChannel, loc);
-    return true;
-  }
-
-  if (parsed.action === "show") {
-    const eo = channel.permissionOverwrites.cache.get(guild.roles.everyone.id);
-    if (!eo?.deny.has(PermissionFlagsBits.ViewChannel)) {
-      await replyPrivate(interaction, loc.tempVcAlreadyVisibleTitle, []);
-      return true;
-    }
-    const botId = interaction.client.user.id;
-    try {
-      await channel.permissionOverwrites.edit(guild.roles.everyone.id, { ViewChannel: null });
-      await channel.permissionOverwrites.edit(botId, { ViewChannel: null }).catch(() => undefined);
-    } catch {
-      await replyPermissionOverwriteError(interaction, loc);
-      return true;
-    }
-    await replyPrivate(interaction, loc.tempVcShowSuccessTitle, [loc.tempVcShowSuccessMessage]);
-    await updateControlPanel(guild, tempVoiceChannel, loc);
+    await replyPrivate(interaction, "❌ Temp VC not found", ["The generated voice channel is no longer available."]);
     return true;
   }
 
@@ -585,31 +363,327 @@ export async function handleTempVoiceControlInteraction(
   }
 
   if ("fields" in interaction) {
-    const value = interaction.fields.getTextInputValue("value").trim();
+    return handleModalSubmit(interaction as ModalSubmitInteraction, channel, parsed, loc);
+  }
 
-    if (parsed.action === "rename") {
-      if (!value) {
-        await replyPrivate(interaction, loc.tempVcRenameEmptyTitle, [loc.tempVcRenameEmptyMessage]);
-        return true;
-      }
+  return handleChannelAction(interaction as ButtonInteraction, guild, channel, tempVoiceChannel, parsed, loc);
+}
 
-      await channel.setName(value.slice(0, DISCORD_CHANNEL_NAME_MAX_LENGTH), "Temp VC owner renamed channel.");
-      await replyPrivate(interaction, loc.tempVcRenameSuccessTitle, [loc.tempVcRenameSuccessMessage({ name: value })]);
+async function handleUserManagement(
+  interaction: ButtonInteraction,
+  parsed: TempVoiceControlCustomId,
+  loc: Loc
+): Promise<true> {
+  const selectMenu = new UserSelectMenuBuilder()
+    .setCustomId(toTempVoiceControlCustomId({ action: "user-management-select", channelId: parsed.channelId }))
+    .setPlaceholder(loc.tempVcUserMgmtPlaceholder)
+    .setMinValues(1)
+    .setMaxValues(1);
+
+  const row = new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(selectMenu);
+
+  await interaction.reply({
+    ...createComponentsV2TextMessage({
+      title: loc.tempVcUserMgmtTitle,
+      lines: [loc.tempVcUserMgmtPrompt],
+      privateResponse: true
+    }),
+    components: [row]
+  });
+  return true;
+}
+
+async function handleUserManagementSelect(
+  interaction: UserSelectMenuInteraction,
+  tempVoiceChannel: TvcRecord,
+  parsed: TempVoiceControlCustomId,
+  loc: Loc
+): Promise<true> {
+  if (interaction.user.id !== tempVoiceChannel.ownerId) {
+    await interaction.update(createEphemeralUpdate("❌ Temp VC control denied", ["Only the Temp VC owner can use these controls."]));
+    return true;
+  }
+
+  const targetUserId = interaction.values[0];
+  if (!targetUserId) return true;
+
+  const kickBtn = new ButtonBuilder()
+    .setCustomId(toTempVoiceControlCustomId({ action: "kick-target", channelId: parsed.channelId, targetUserId }))
+    .setLabel(loc.tempVcActionKick)
+    .setStyle(ButtonStyle.Danger);
+
+  const allowBtn = new ButtonBuilder()
+    .setCustomId(toTempVoiceControlCustomId({ action: "allow-target", channelId: parsed.channelId, targetUserId }))
+    .setLabel(loc.tempVcActionAllow)
+    .setStyle(ButtonStyle.Success);
+
+  const denyBtn = new ButtonBuilder()
+    .setCustomId(toTempVoiceControlCustomId({ action: "deny-target", channelId: parsed.channelId, targetUserId }))
+    .setLabel(loc.tempVcActionDeny)
+    .setStyle(ButtonStyle.Secondary);
+
+  const transferBtn = new ButtonBuilder()
+    .setCustomId(toTempVoiceControlCustomId({ action: "transfer-target", channelId: parsed.channelId, targetUserId }))
+    .setLabel(loc.tempVcActionTransfer)
+    .setStyle(ButtonStyle.Secondary);
+
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(kickBtn, allowBtn, denyBtn, transferBtn);
+
+  await interaction.update(
+    createEphemeralUpdate(loc.tempVcUserMgmtTitle, [loc.tempVcUserMgmtActionFor({ userId: targetUserId })], [row])
+  );
+  return true;
+}
+
+async function handleTargetAction(
+  interaction: ButtonInteraction,
+  guild: Guild,
+  channel: VoiceChannel,
+  tempVoiceChannel: TvcRecord,
+  parsed: TempVoiceControlCustomId & { targetUserId: string },
+  context: TempVoiceControlContext,
+  loc: Loc
+): Promise<true> {
+  if (parsed.action === "kick-target") {
+    const member = await guild.members.fetch(parsed.targetUserId).catch(() => null);
+    if (!member || member.voice.channelId !== parsed.channelId) {
+      await replyPrivate(interaction, "❌ Kick failed", ["That member is not in this Temp VC."]);
       return true;
     }
+    await member.voice.disconnect("Temp VC owner kicked member.");
+    await replyPrivate(interaction, loc.tempVcKickTitle, [loc.tempVcKickMessage({ userId: parsed.targetUserId })]);
+    return true;
+  }
 
-    if (parsed.action === "user-limit") {
-      const limit = parseBoundedInteger(value, 0, 99);
-
-      if (limit === null) {
-        await replyPrivate(interaction, loc.tempVcUserLimitInvalidTitle, [loc.tempVcUserLimitInvalidMessage]);
-        return true;
-      }
-
-      await channel.setUserLimit(limit, "Temp VC owner changed user limit.");
-      await replyPrivate(interaction, loc.tempVcUserLimitSuccessTitle, [loc.tempVcUserLimitSuccessMessage({ limit })]);
+  if (parsed.action === "allow-target") {
+    const targetOw = channel.permissionOverwrites.cache.get(parsed.targetUserId);
+    if (targetOw?.allow.has(PermissionFlagsBits.Connect)) {
+      await replyPrivate(interaction, loc.tempVcAlreadyAllowedTitle, []);
       return true;
     }
+    try {
+      await channel.permissionOverwrites.edit(parsed.targetUserId, { Connect: true });
+    } catch {
+      await replyPrivate(interaction, loc.tempVcPermErrorTitle, [
+        loc.tempVcPermErrorManageRolesLine1,
+        loc.tempVcPermErrorManageRolesLine2
+      ]);
+      return true;
+    }
+    await replyPrivate(interaction, loc.tempVcAllowTitle, [loc.tempVcAllowMessage({ userId: parsed.targetUserId })]);
+    await updateControlPanel(guild, tempVoiceChannel, loc);
+    return true;
+  }
+
+  if (parsed.action === "deny-target") {
+    const targetOw = channel.permissionOverwrites.cache.get(parsed.targetUserId);
+    if (targetOw?.deny.has(PermissionFlagsBits.Connect)) {
+      await replyPrivate(interaction, loc.tempVcAlreadyDeniedTitle, []);
+      return true;
+    }
+    try {
+      await channel.permissionOverwrites.edit(parsed.targetUserId, { Connect: false });
+    } catch {
+      await replyPrivate(interaction, loc.tempVcPermErrorTitle, [
+        loc.tempVcPermErrorManageRolesLine1,
+        loc.tempVcPermErrorManageRolesLine2
+      ]);
+      return true;
+    }
+    await replyPrivate(interaction, loc.tempVcDenyTitle, [loc.tempVcDenyMessage({ userId: parsed.targetUserId })]);
+    await updateControlPanel(guild, tempVoiceChannel, loc);
+    return true;
+  }
+
+  if (parsed.action === "transfer-target") {
+    const targetMember = await guild.members.fetch(parsed.targetUserId).catch(() => null);
+    if (!targetMember || targetMember.voice.channelId !== parsed.channelId) {
+      await replyPrivate(interaction, loc.tempVcTransferNotInChannelTitle, [loc.tempVcTransferNotInChannelMessage]);
+      return true;
+    }
+    await transferTempVoiceChannelOwner(context.db, {
+      channelId: parsed.channelId,
+      ownerId: parsed.targetUserId
+    });
+    await updateControlChannelOwnerPermissions(guild, {
+      controlChannelId: tempVoiceChannel.controlChannelId ?? null,
+      nextOwnerId: parsed.targetUserId,
+      previousOwnerId: tempVoiceChannel.ownerId
+    }, loc);
+    await replyPrivate(interaction, loc.tempVcTransferSuccessTitle, [
+      loc.tempVcTransferSuccessMessage({ userId: parsed.targetUserId })
+    ]);
+    await updateControlPanel(guild, { ...tempVoiceChannel, ownerId: parsed.targetUserId }, loc);
+    return true;
+  }
+
+  return true;
+}
+
+async function handleChannelAction(
+  interaction: ButtonInteraction,
+  guild: Guild,
+  channel: VoiceChannel,
+  tempVoiceChannel: TvcRecord,
+  parsed: TempVoiceControlCustomId,
+  loc: Loc
+): Promise<true> {
+  if (parsed.action === "lock") {
+    return handleLock(interaction, guild, channel, tempVoiceChannel, loc);
+  }
+  if (parsed.action === "unlock") {
+    return handleUnlock(interaction, guild, channel, tempVoiceChannel, loc);
+  }
+  if (parsed.action === "hide") {
+    return handleHide(interaction, guild, channel, tempVoiceChannel, loc);
+  }
+  if (parsed.action === "show") {
+    return handleShow(interaction, guild, channel, tempVoiceChannel, loc);
+  }
+  return true;
+}
+
+async function handleLock(
+  interaction: ButtonInteraction,
+  guild: Guild,
+  channel: VoiceChannel,
+  tempVoiceChannel: TvcRecord,
+  loc: Loc
+): Promise<true> {
+  const eo = channel.permissionOverwrites.cache.get(guild.roles.everyone.id);
+  if (eo?.deny.has(PermissionFlagsBits.Connect)) {
+    await replyPrivate(interaction, loc.tempVcAlreadyLockedTitle, []);
+    return true;
+  }
+  const botId = interaction.client.user.id;
+  try {
+    const currentMemberIds = [...channel.members.keys()];
+    await Promise.all([
+      channel.permissionOverwrites.edit(botId, { Connect: true }),
+      ...currentMemberIds.map((id) => channel.permissionOverwrites.edit(id, { Connect: true }))
+    ]);
+    await channel.permissionOverwrites.edit(guild.roles.everyone.id, { Connect: false });
+  } catch {
+    await replyPermissionOverwriteError(interaction, loc);
+    return true;
+  }
+  await replyPrivate(interaction, loc.tempVcLockSuccessTitle, [loc.tempVcLockSuccessMessage]);
+  await updateControlPanel(guild, tempVoiceChannel, loc);
+  return true;
+}
+
+async function handleUnlock(
+  interaction: ButtonInteraction,
+  guild: Guild,
+  channel: VoiceChannel,
+  tempVoiceChannel: TvcRecord,
+  loc: Loc
+): Promise<true> {
+  const eo = channel.permissionOverwrites.cache.get(guild.roles.everyone.id);
+  if (!eo?.deny.has(PermissionFlagsBits.Connect)) {
+    await replyPrivate(interaction, loc.tempVcAlreadyUnlockedTitle, []);
+    return true;
+  }
+  const botId = interaction.client.user.id;
+  try {
+    await channel.permissionOverwrites.edit(guild.roles.everyone.id, { Connect: null });
+    await channel.permissionOverwrites.edit(botId, { Connect: null }).catch((err: unknown) =>
+      console.warn("temp-vc-controls: bot Connect permission cleanup failed on unlock", { channelId: channel.id, err })
+    );
+  } catch {
+    await replyPermissionOverwriteError(interaction, loc);
+    return true;
+  }
+  await replyPrivate(interaction, loc.tempVcUnlockSuccessTitle, [loc.tempVcUnlockSuccessMessage]);
+  await updateControlPanel(guild, tempVoiceChannel, loc);
+  return true;
+}
+
+async function handleHide(
+  interaction: ButtonInteraction,
+  guild: Guild,
+  channel: VoiceChannel,
+  tempVoiceChannel: TvcRecord,
+  loc: Loc
+): Promise<true> {
+  const eo = channel.permissionOverwrites.cache.get(guild.roles.everyone.id);
+  if (eo?.deny.has(PermissionFlagsBits.ViewChannel)) {
+    await replyPrivate(interaction, loc.tempVcAlreadyHiddenTitle, []);
+    return true;
+  }
+  const botId = interaction.client.user.id;
+  const currentMemberIds = [...channel.members.keys()];
+  try {
+    await Promise.all([
+      channel.permissionOverwrites.edit(botId, { ViewChannel: true }),
+      ...currentMemberIds.map((id) =>
+        channel.permissionOverwrites.edit(id, { ViewChannel: true, Connect: true })
+      ),
+    ]);
+    await channel.permissionOverwrites.edit(guild.roles.everyone.id, { ViewChannel: false });
+  } catch {
+    await replyPermissionOverwriteError(interaction, loc);
+    return true;
+  }
+  await replyPrivate(interaction, loc.tempVcHideSuccessTitle, [loc.tempVcHideSuccessMessage]);
+  await updateControlPanel(guild, tempVoiceChannel, loc);
+  return true;
+}
+
+async function handleShow(
+  interaction: ButtonInteraction,
+  guild: Guild,
+  channel: VoiceChannel,
+  tempVoiceChannel: TvcRecord,
+  loc: Loc
+): Promise<true> {
+  const eo = channel.permissionOverwrites.cache.get(guild.roles.everyone.id);
+  if (!eo?.deny.has(PermissionFlagsBits.ViewChannel)) {
+    await replyPrivate(interaction, loc.tempVcAlreadyVisibleTitle, []);
+    return true;
+  }
+  const botId = interaction.client.user.id;
+  try {
+    await channel.permissionOverwrites.edit(guild.roles.everyone.id, { ViewChannel: null });
+    await channel.permissionOverwrites.edit(botId, { ViewChannel: null }).catch((err: unknown) =>
+      console.warn("temp-vc-controls: bot ViewChannel permission cleanup failed on show", { channelId: channel.id, err })
+    );
+  } catch {
+    await replyPermissionOverwriteError(interaction, loc);
+    return true;
+  }
+  await replyPrivate(interaction, loc.tempVcShowSuccessTitle, [loc.tempVcShowSuccessMessage]);
+  await updateControlPanel(guild, tempVoiceChannel, loc);
+  return true;
+}
+
+async function handleModalSubmit(
+  interaction: ModalSubmitInteraction,
+  channel: VoiceChannel,
+  parsed: TempVoiceControlCustomId,
+  loc: Loc
+): Promise<true> {
+  const value = interaction.fields.getTextInputValue("value").trim();
+
+  if (parsed.action === "rename") {
+    if (!value) {
+      await replyPrivate(interaction, loc.tempVcRenameEmptyTitle, [loc.tempVcRenameEmptyMessage]);
+      return true;
+    }
+    await channel.setName(value.slice(0, DISCORD_CHANNEL_NAME_MAX_LENGTH), "Temp VC owner renamed channel.");
+    await replyPrivate(interaction, loc.tempVcRenameSuccessTitle, [loc.tempVcRenameSuccessMessage({ name: value })]);
+    return true;
+  }
+
+  if (parsed.action === "user-limit") {
+    const limit = parseBoundedInteger(value, 0, 99);
+    if (limit === null) {
+      await replyPrivate(interaction, loc.tempVcUserLimitInvalidTitle, [loc.tempVcUserLimitInvalidMessage]);
+      return true;
+    }
+    await channel.setUserLimit(limit, "Temp VC owner changed user limit.");
+    await replyPrivate(interaction, loc.tempVcUserLimitSuccessTitle, [loc.tempVcUserLimitSuccessMessage({ limit })]);
+    return true;
   }
 
   return true;
@@ -617,16 +691,7 @@ export async function handleTempVoiceControlInteraction(
 
 function isVoiceBasedChannel(
   channel: GuildBasedChannel | null | undefined
-): channel is GuildBasedChannel & {
-  isVoiceBased: () => true;
-  members: Map<string, { id: string }>;
-  permissionOverwrites: {
-    cache: Map<string, { type: number; allow: { has: (f: bigint) => boolean }; deny: { has: (f: bigint) => boolean } }>;
-    edit: (id: string, options: unknown) => Promise<unknown>;
-  };
-  setName: (name: string, reason?: string) => Promise<unknown>;
-  setUserLimit: (limit: number, reason?: string) => Promise<unknown>;
-} {
+): channel is VoiceChannel {
   return channel?.isVoiceBased() === true;
 }
 
@@ -643,7 +708,7 @@ function createEphemeralUpdate(
 }
 
 async function replyPrivate(
-  interaction: ButtonInteraction | ModalSubmitInteraction | UserSelectMenuInteraction,
+  interaction: TvcInteraction,
   title: string,
   lines: string[]
 ) {
@@ -657,7 +722,7 @@ async function replyPrivate(
 }
 
 async function replyPermissionOverwriteError(
-  interaction: ButtonInteraction | ModalSubmitInteraction | UserSelectMenuInteraction,
+  interaction: TvcInteraction,
   loc: Loc
 ) {
   await replyPrivate(interaction, loc.tempVcChannelPermErrorTitle, [

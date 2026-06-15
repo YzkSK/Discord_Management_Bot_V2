@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Plus, Save, Trash2 } from "lucide-react";
-import type { DashboardSettingsFeatures, GuildLanguage } from "@discord-bot/shared";
+import { AlertTriangle, Save } from "lucide-react";
+import type { GuildLanguage } from "@discord-bot/shared";
 import { isGuildLanguage } from "@discord-bot/shared";
 import { getDashboardLocale, detectBrowserLanguage } from "../../lib/locale";
 import {
@@ -13,106 +13,22 @@ import {
   type GrantableAccessRole
 } from "./access-grants";
 import { buildSettingsSectionSummaries, type SettingsSectionKey } from "./settings-sections";
+import { AccessGrantsTab } from "./components/AccessGrantsTab";
+import { LogsSettingsTab } from "./components/LogsSettingsTab";
+import { RecruitmentSettingsTab } from "./components/RecruitmentSettingsTab";
+import { TtsSettingsTab } from "./components/TtsSettingsTab";
+import { VoiceSettingsTab } from "./components/VoiceSettingsTab";
+import {
+  FeatureStatus,
+  type SettingsResponse,
+  type TtsDictionaryEntry,
+  type TtsSettingsResponse
+} from "./components/shared";
 
 import { Button } from "../../components/ui/button";
-import { Badge } from "../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { Select } from "../../components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "../../components/ui/table";
 
-interface DiscordRole {
-  id: string;
-  name: string;
-}
-
-interface DiscordChannel {
-  id: string;
-  name: string;
-}
-
-interface SettingsResponse {
-  guildId: string;
-  guildName: string | null;
-  isActive?: boolean;
-  logMode: string;
-  language: string;
-  updatedAt: string;
-  accessRole: string;
-  dashboardManagementRoleIds: string[];
-  features: DashboardSettingsFeatures;
-  availableRoles?: DiscordRole[];
-  availableTextChannels: DiscordChannel[];
-  availableVoiceChannels: DiscordChannel[];
-  availableCategories: DiscordChannel[];
-}
-
-interface TtsDictionaryEntry {
-  fromText: string;
-  guildId: string;
-  isEnabled: boolean;
-  priority: number;
-  scope: "guild" | "user";
-  toText: string;
-  userId: string | null;
-}
-
-interface TtsSpeakerSetting {
-  guildId: string;
-  speakerId: number;
-  userId: string | null;
-}
-
-interface TtsSettingsResponse {
-  accessRole: string;
-  dictionaryEntries: TtsDictionaryEntry[];
-  guildDefaultSpeaker: TtsSpeakerSetting | null;
-  guildId: string;
-  userSpeakers: TtsSpeakerSetting[];
-}
-
-function ChannelSelect({
-  value,
-  onChange,
-  channels,
-  placeholder
-}: {
-  value: string;
-  onChange: (val: string) => void;
-  channels: DiscordChannel[];
-  placeholder?: string;
-}) {
-  if (channels.length === 0) {
-    return (
-      <Input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder ?? "Channel ID"}
-      />
-    );
-  }
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-    >
-      <option value="">-- {placeholder ?? "チャンネルを選択"} --</option>
-      {channels.map((ch) => (
-        <option key={ch.id} value={ch.id}>
-          #{ch.name}
-        </option>
-      ))}
-    </select>
-  );
-}
+export type { SettingsResponse, TtsSettingsResponse };
 
 export function SettingsPanel({ guildId }: { guildId: string }) {
   const [settings, setSettings] = useState<SettingsResponse | null>(null);
@@ -509,483 +425,100 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
           </div>
         )}
 
-        {/* ログ設定タブ */}
         {activeTab === "logs" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>{loc.logsSettings}</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3">
-              <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                {loc.logMode}
-                <Select onChange={(e) => setLogMode(e.target.value)} value={logMode}>
-                  {logModeOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </Select>
-              </label>
-
-              <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                {loc.language}
-                <Select
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setLanguage(val);
-                    if (isGuildLanguage(val)) setUiLang(val);
-                  }}
-                  value={language}
-                >
-                  {languageOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </Select>
-              </label>
-
-            </CardContent>
-          </Card>
+          <LogsSettingsTab
+            logMode={logMode}
+            language={language}
+            logModeOptions={logModeOptions}
+            languageOptions={languageOptions}
+            loc={loc}
+            onLogModeChange={setLogMode}
+            onLanguageChange={setLanguage}
+            onUiLangChange={(val) => { if (isGuildLanguage(val)) setUiLang(val); }}
+          />
         )}
 
-        {/* 音声タブ */}
         {activeTab === "voice" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>{loc.tempVcSettings}</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3">
-              <FeatureStatus
-                configured={settings.features.tempVc.configured}
-                label={loc.tempVcSettings}
-                loc={loc}
-              />
-              <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                {loc.tempVcCreateChannelId}
-                <Input
-                  onChange={(e) => setTempVcCreateChannelId(e.target.value)}
-                  value={tempVcCreateChannelId}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                {loc.tempVcCategoryId}
-                <ChannelSelect
-                  value={tempVcCategoryId}
-                  onChange={setTempVcCategoryId}
-                  channels={settings.availableCategories ?? []}
-                  placeholder="カテゴリを選択"
-                />
-              </label>
-            </CardContent>
-          </Card>
+          <VoiceSettingsTab
+            tempVcCreateChannelId={tempVcCreateChannelId}
+            tempVcCategoryId={tempVcCategoryId}
+            settings={settings}
+            loc={loc}
+            onTempVcCreateChannelIdChange={setTempVcCreateChannelId}
+            onTempVcCategoryIdChange={setTempVcCategoryId}
+          />
         )}
 
-        {/* TTS タブ */}
         {activeTab === "tts" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{loc.ttsSettings}</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3">
-            <FeatureStatus
-              configured={settings.features.tts.configured}
-              label={loc.ttsSettings}
-              loc={loc}
-            />
-            <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-              {loc.ttsTextChannelId}
-              <ChannelSelect
-                value={ttsTextChannelId}
-                onChange={setTtsTextChannelId}
-                channels={settings.availableTextChannels ?? []}
-                placeholder="TTSチャンネルを選択"
-              />
-            </label>
-            <div className="grid gap-3 border-t border-zinc-800 pt-3">
-              <p className="text-xs font-semibold text-zinc-300">{loc.ttsSpeakerDefault}</p>
-              <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
-                <Input
-                  disabled={!canEditTts}
-                  onChange={(e) => setTtsDefaultSpeakerId(e.target.value)}
-                  value={ttsDefaultSpeakerId}
-                />
-                <Button
-                  disabled={!canEditTts || savingTtsSpeaker}
-                  onClick={saveTtsDefaultSpeaker}
-                  size="sm"
-                  type="button"
-                >
-                  <Save className="h-3.5 w-3.5" />
-                  {loc.saveChanges}
-                </Button>
-                <Button
-                  disabled={!canEditTts || savingTtsSpeaker || !ttsSettings?.guildDefaultSpeaker}
-                  onClick={() => void deleteTtsSpeaker({ target: "guild-default" })}
-                  size="icon"
-                  type="button"
-                  variant="ghost"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid gap-3 border-t border-zinc-800 pt-3">
-              <p className="text-xs font-semibold text-zinc-300">{loc.ttsUserSpeakers}</p>
-              <div className="grid gap-2 sm:grid-cols-[1fr_120px_auto]">
-                <Input
-                  disabled={!canEditTts}
-                  onChange={(e) => setTtsUserSpeakerUserId(e.target.value)}
-                  placeholder={loc.accessGrantUserId}
-                  value={ttsUserSpeakerUserId}
-                />
-                <Input
-                  disabled={!canEditTts}
-                  onChange={(e) => setTtsUserSpeakerId(e.target.value)}
-                  placeholder={loc.ttsSpeakerId}
-                  value={ttsUserSpeakerId}
-                />
-                <Button
-                  disabled={!canEditTts || savingTtsSpeaker}
-                  onClick={saveTtsUserSpeaker}
-                  size="sm"
-                  type="button"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  {loc.saveChanges}
-                </Button>
-              </div>
-              <div className="overflow-hidden rounded-md border border-zinc-800">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{loc.accessGrantUserId}</TableHead>
-                      <TableHead className="w-28">{loc.ttsSpeakerId}</TableHead>
-                      <TableHead className="w-16">{loc.accessGrantAction}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {!ttsSettings?.userSpeakers.length ? (
-                      <TableRow>
-                        <TableCell className="py-5 text-center text-zinc-600" colSpan={3}>
-                          {loc.notConfigured}
-                        </TableCell>
-                      </TableRow>
-                    ) : ttsSettings.userSpeakers.map((speaker) => (
-                      <TableRow key={speaker.userId}>
-                        <TableCell className="break-all font-mono text-xs">{speaker.userId}</TableCell>
-                        <TableCell>{speaker.speakerId}</TableCell>
-                        <TableCell>
-                          <Button
-                            disabled={!canEditTts || savingTtsSpeaker}
-                            onClick={() => {
-                              if (speaker.userId) {
-                                void deleteTtsSpeaker({
-                                  target: "user",
-                                  userId: speaker.userId
-                                });
-                              }
-                            }}
-                            size="icon"
-                            type="button"
-                            variant="ghost"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-
-            <div className="grid gap-3 border-t border-zinc-800 pt-3">
-              <p className="text-xs font-semibold text-zinc-300">{loc.ttsDictionary}</p>
-              <div className="grid gap-2 sm:grid-cols-[110px_1fr_1fr]">
-                <Select
-                  disabled={!canEditTts}
-                  onChange={(e) => setTtsDictionaryScope(e.target.value === "user" ? "user" : "guild")}
-                  value={ttsDictionaryScope}
-                >
-                  <option value="guild">guild</option>
-                  <option value="user">user</option>
-                </Select>
-                <Input
-                  disabled={!canEditTts || ttsDictionaryScope === "guild"}
-                  onChange={(e) => setTtsDictionaryUserId(e.target.value)}
-                  placeholder={loc.accessGrantUserId}
-                  value={ttsDictionaryUserId}
-                />
-                <Input
-                  disabled={!canEditTts}
-                  onChange={(e) => setTtsDictionaryPriority(e.target.value)}
-                  placeholder={loc.ttsPriority}
-                  value={ttsDictionaryPriority}
-                />
-              </div>
-              <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                <Input
-                  disabled={!canEditTts}
-                  onChange={(e) => setTtsDictionaryFromText(e.target.value)}
-                  placeholder={loc.ttsFromText}
-                  value={ttsDictionaryFromText}
-                />
-                <Input
-                  disabled={!canEditTts}
-                  onChange={(e) => setTtsDictionaryToText(e.target.value)}
-                  placeholder={loc.ttsToText}
-                  value={ttsDictionaryToText}
-                />
-                <label className="flex items-center gap-2 text-xs text-zinc-400">
-                  <input
-                    checked={ttsDictionaryEnabled}
-                    disabled={!canEditTts}
-                    onChange={(e) => setTtsDictionaryEnabled(e.target.checked)}
-                    type="checkbox"
-                  />
-                  {loc.ttsEnabled}
-                </label>
-              </div>
-              <div className="flex justify-end">
-                <Button
-                  disabled={!canEditTts || savingTtsDictionary}
-                  onClick={saveTtsDictionaryEntry}
-                  size="sm"
-                  type="button"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  {loc.saveChanges}
-                </Button>
-              </div>
-              <div className="overflow-hidden rounded-md border border-zinc-800">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-20">{loc.ttsScope}</TableHead>
-                      <TableHead>{loc.ttsFromText}</TableHead>
-                      <TableHead>{loc.ttsToText}</TableHead>
-                      <TableHead className="w-20">{loc.ttsPriority}</TableHead>
-                      <TableHead className="w-16">{loc.accessGrantAction}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {!ttsSettings?.dictionaryEntries.length ? (
-                      <TableRow>
-                        <TableCell className="py-5 text-center text-zinc-600" colSpan={5}>
-                          {loc.notConfigured}
-                        </TableCell>
-                      </TableRow>
-                    ) : ttsSettings.dictionaryEntries.map((entry) => (
-                      <TableRow key={ttsDictionaryKey(entry)}>
-                        <TableCell>{entry.scope}</TableCell>
-                        <TableCell className="break-all">{entry.fromText}</TableCell>
-                        <TableCell className="break-all">{entry.toText}</TableCell>
-                        <TableCell>{entry.priority}</TableCell>
-                        <TableCell>
-                          <Button
-                            disabled={!canEditTts || savingTtsDictionary}
-                            onClick={() => void deleteTtsDictionary(entry)}
-                            size="icon"
-                            type="button"
-                            variant="ghost"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
+          <TtsSettingsTab
+            settings={settings}
+            ttsSettings={ttsSettings}
+            ttsTextChannelId={ttsTextChannelId}
+            ttsDefaultSpeakerId={ttsDefaultSpeakerId}
+            ttsUserSpeakerUserId={ttsUserSpeakerUserId}
+            ttsUserSpeakerId={ttsUserSpeakerId}
+            ttsDictionaryScope={ttsDictionaryScope}
+            ttsDictionaryUserId={ttsDictionaryUserId}
+            ttsDictionaryFromText={ttsDictionaryFromText}
+            ttsDictionaryToText={ttsDictionaryToText}
+            ttsDictionaryPriority={ttsDictionaryPriority}
+            ttsDictionaryEnabled={ttsDictionaryEnabled}
+            canEditTts={canEditTts}
+            savingTtsDictionary={savingTtsDictionary}
+            savingTtsSpeaker={savingTtsSpeaker}
+            loc={loc}
+            onTtsTextChannelIdChange={setTtsTextChannelId}
+            onTtsDefaultSpeakerIdChange={setTtsDefaultSpeakerId}
+            onTtsUserSpeakerUserIdChange={setTtsUserSpeakerUserId}
+            onTtsUserSpeakerIdChange={setTtsUserSpeakerId}
+            onTtsDictionaryScopeChange={setTtsDictionaryScope}
+            onTtsDictionaryUserIdChange={setTtsDictionaryUserId}
+            onTtsDictionaryFromTextChange={setTtsDictionaryFromText}
+            onTtsDictionaryToTextChange={setTtsDictionaryToText}
+            onTtsDictionaryPriorityChange={setTtsDictionaryPriority}
+            onTtsDictionaryEnabledChange={setTtsDictionaryEnabled}
+            onSaveTtsDefaultSpeaker={() => void saveTtsDefaultSpeaker()}
+            onSaveTtsUserSpeaker={() => void saveTtsUserSpeaker()}
+            onDeleteTtsSpeaker={(input) => void deleteTtsSpeaker(input)}
+            onSaveTtsDictionaryEntry={() => void saveTtsDictionaryEntry()}
+            onDeleteTtsDictionary={(entry) => void deleteTtsDictionary(entry)}
+          />
         )}
 
-        {/* 募集タブ */}
         {activeTab === "recruitment" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>{loc.recruitmentSettings}</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3">
-              <FeatureStatus
-                configured={settings.features.recruitment.configured}
-                label={loc.recruitmentSettings}
-                loc={loc}
-              />
-              <div>
-                <label className="block text-sm font-medium mb-1">{loc.recruitmentChannelLabel}</label>
-                <ChannelSelect
-                  value={recruitmentChannelId}
-                  onChange={setRecruitmentChannelId}
-                  channels={settings.availableTextChannels ?? []}
-                  placeholder={loc.recruitmentChannelPlaceholder}
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <RecruitmentSettingsTab
+            recruitmentChannelId={recruitmentChannelId}
+            settings={settings}
+            loc={loc}
+            onRecruitmentChannelIdChange={setRecruitmentChannelId}
+          />
         )}
 
-        {/* アクセス管理タブ */}
         {activeTab === "access" && isOwner && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{loc.dashboardAccess}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-5">
-            <p className="text-xs text-zinc-500">
-              {loc.dashboardAccessNote}
-            </p>
-
-            <div className="grid gap-3 rounded-md border border-zinc-800 bg-zinc-950 p-3">
-              <div className="grid gap-2 sm:grid-cols-[110px_1fr_120px]">
-                <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                  {loc.accessGrantTarget}
-                  <Select
-                    onChange={(e) => {
-                      const targetType = e.target.value === "role" ? "role" : "user";
-                      setGrantTargetType(targetType);
-                      setGrantTargetId("");
-                    }}
-                    value={grantTargetType}
-                  >
-                    <option value="user">{loc.accessGrantUser}</option>
-                    <option value="role">{loc.accessGrantRole}</option>
-                  </Select>
-                </label>
-
-                <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                  {grantTargetType === "role" ? loc.accessGrantRole : loc.accessGrantUserId}
-                  {grantTargetType === "role" && settings.availableRoles?.length ? (
-                    <Select
-                      onChange={(e) => setGrantTargetId(e.target.value)}
-                      value={grantTargetId}
-                    >
-                      <option value="">{loc.accessGrantSelectRole}</option>
-                      {settings.availableRoles.map((role) => (
-                        <option key={role.id} value={role.id}>{role.name}</option>
-                      ))}
-                    </Select>
-                  ) : (
-                    <Input
-                      onChange={(e) => setGrantTargetId(e.target.value)}
-                      placeholder={grantTargetType === "role" ? loc.accessGrantRoleId : loc.accessGrantUserId}
-                      value={grantTargetId}
-                    />
-                  )}
-                </label>
-
-                <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                  {loc.accessGrantRole}
-                  <Select
-                    onChange={(e) => setGrantRole(e.target.value === "admin" ? "admin" : "viewer")}
-                    value={grantRole}
-                  >
-                    <option value="viewer">{loc.accessGrantViewer}</option>
-                    <option value="admin">{loc.accessGrantAdmin}</option>
-                  </Select>
-                </label>
-              </div>
-
-              <div className="flex justify-end">
-                <Button disabled={savingGrant} onClick={saveAccessGrant} size="sm" type="button">
-                  <Plus className="h-3.5 w-3.5" />
-                  {savingGrant ? loc.saving : loc.accessGrantSave}
-                </Button>
-              </div>
-            </div>
-
-            <div className="overflow-hidden rounded-md border border-zinc-800">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-24">{loc.accessGrantTarget}</TableHead>
-                    <TableHead>{loc.accessGrantId}</TableHead>
-                    <TableHead className="w-28">{loc.accessGrantAccess}</TableHead>
-                    <TableHead className="w-20">{loc.accessGrantAction}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {accessGrants.length === 0 ? (
-                    <TableRow>
-                      <TableCell className="py-8 text-center text-zinc-600" colSpan={4}>
-                        {loc.noAccessGrants}
-                      </TableCell>
-                    </TableRow>
-                  ) : accessGrants.map((grant) => (
-                    <TableRow key={accessGrantKey(grant)}>
-                      <TableCell className="capitalize text-zinc-400">{grant.targetType}</TableCell>
-                      <TableCell>
-                        <span className="break-all font-mono text-xs text-zinc-300">
-                          {formatGrantTarget(grant, settings.availableRoles)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          onChange={(e) => {
-                            const role = e.target.value === "admin" ? "admin" : "viewer";
-                            void updateAccessGrantRole(grant, role);
-                          }}
-                          value={grant.role}
-                        >
-                          <option value="viewer">{loc.accessGrantViewer}</option>
-                          <option value="admin">{loc.accessGrantAdmin}</option>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          disabled={deletingGrantKey === accessGrantKey(grant)}
-                          onClick={() => void deleteAccessGrant(grant)}
-                          size="icon"
-                          type="button"
-                          variant="ghost"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            {settings.availableRoles !== undefined && (
-              <div className="grid gap-3 border-t border-zinc-800 pt-4">
-                <p className="text-xs text-zinc-500">
-                  {loc.managementRoleShortcutNote}
-                </p>
-                <div className="flex flex-col gap-1.5">
-                  {settings.availableRoles.map((role) => (
-                    <label
-                      className="flex cursor-pointer items-center gap-3 rounded-md border border-zinc-800 px-3 py-2 hover:border-zinc-700"
-                      key={role.id}
-                    >
-                      <input
-                        checked={managementRoleIds.includes(role.id)}
-                        className="h-4 w-4 accent-green-500"
-                        onChange={(e) => {
-                          setManagementRoleIds(
-                            e.target.checked
-                              ? [...managementRoleIds, role.id]
-                              : managementRoleIds.filter((id) => id !== role.id)
-                          );
-                        }}
-                        type="checkbox"
-                      />
-                      <span className="text-sm text-zinc-300">{role.name}</span>
-                    </label>
-                  ))}
-                </div>
-                <div className="flex justify-end">
-                  <Button disabled={savingRoles} onClick={requestSaveManagementRoles} size="sm" type="button">
-                    <Save className="h-3.5 w-3.5" />
-                    {savingRoles ? loc.savingRoles : loc.saveRoles}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          <AccessGrantsTab
+            settings={settings}
+            accessGrants={accessGrants}
+            grantTargetType={grantTargetType}
+            grantTargetId={grantTargetId}
+            grantRole={grantRole}
+            managementRoleIds={managementRoleIds}
+            savingGrant={savingGrant}
+            savingRoles={savingRoles}
+            deletingGrantKey={deletingGrantKey}
+            loc={loc}
+            onGrantTargetTypeChange={setGrantTargetType}
+            onGrantTargetIdChange={setGrantTargetId}
+            onGrantRoleChange={setGrantRole}
+            onManagementRoleChange={(id, checked) => {
+              setManagementRoleIds((prev) =>
+                checked ? [...prev, id] : prev.filter((x) => x !== id)
+              );
+            }}
+            onSaveAccessGrant={() => void saveAccessGrant()}
+            onDeleteAccessGrant={(grant) => void deleteAccessGrant(grant)}
+            onUpdateAccessGrantRole={(grant, role) => void updateAccessGrantRole(grant, role)}
+            onRequestSaveManagementRoles={requestSaveManagementRoles}
+          />
         )}
       </div>
 
@@ -1159,7 +692,7 @@ async function patchTtsSpeaker(input:
     method: "PATCH"
   });
   if (!r.ok) throw new Error(`Failed to save TTS speaker (${r.status})`);
-  return (await r.json()) as { setting: TtsSpeakerSetting };
+  return (await r.json()) as { setting: { speakerId: number } };
 }
 
 async function deleteTtsSpeakerSetting(input:
@@ -1270,29 +803,6 @@ function accessGrantKey(grant: {
   return `${grant.guildId}:${grant.targetType}:${grant.targetId}`;
 }
 
-function ttsDictionaryKey(entry: TtsDictionaryEntry) {
-  return `${entry.guildId}:${entry.scope}:${entry.userId ?? ""}:${entry.fromText}`;
-}
-
-function FeatureStatus({
-  configured,
-  label,
-  loc
-}: {
-  configured: boolean;
-  label: string;
-  loc: ReturnType<typeof getDashboardLocale>;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
-      <span className="text-xs font-medium text-zinc-300">{label}</span>
-      <Badge variant={configured ? "success" : "outline"}>
-        {configured ? loc.configured : loc.notConfigured}
-      </Badge>
-    </div>
-  );
-}
-
 function sectionLabel(
   key: SettingsSectionKey,
   loc: ReturnType<typeof getDashboardLocale>
@@ -1301,15 +811,6 @@ function sectionLabel(
   if (key === "tempVc") return loc.tempVcSettings;
   if (key === "tts") return loc.ttsSettings;
   return loc.recruitmentSettings;
-}
-
-function formatGrantTarget(grant: DashboardAccessGrant, roles: DiscordRole[] | undefined) {
-  if (grant.targetType === "role") {
-    const role = roles?.find((item) => item.id === grant.targetId);
-    return role ? `${role.name} (${grant.targetId})` : grant.targetId;
-  }
-
-  return grant.targetId;
 }
 
 function formatDate(value: string) {

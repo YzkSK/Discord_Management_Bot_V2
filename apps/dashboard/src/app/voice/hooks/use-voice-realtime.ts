@@ -31,7 +31,9 @@ export function useVoiceRealtime(guildId: string, onUpdate: () => void) {
       }
     });
 
-    socket.on(realtimeErrorEventName, () => {});
+    socket.on(realtimeErrorEventName, (err: unknown) => {
+      console.warn("voice-realtime: realtime error received", err);
+    });
 
     return () => {
       socket.disconnect();

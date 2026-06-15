@@ -20,10 +20,7 @@ import {
   endTempVoiceChannel,
   getActiveTempVoiceChannelByChannelId,
   getCallSessionById,
-<<<<<<< HEAD
   getGuildConfigByGuildId,
-=======
->>>>>>> a8dc0179d3feac4d5b9e187d2883be7c47837ecc
   listActiveCallSessionMembers,
   listAllActiveTempVoiceChannels,
   listDiscordChannelNamesByIds,
@@ -99,7 +96,9 @@ export function installTempVoiceHandlers(
             .catch(() => null);
           if (controlChannel) {
             suppressTempVoiceChannelLog(controlChannel.id);
-            await controlChannel.delete(tempVoiceDeleteReason).catch(() => undefined);
+            await controlChannel.delete(tempVoiceDeleteReason).catch((err: unknown) =>
+              console.warn("temp-vc: control channel delete failed on VC delete", { controlChannelId: deleted.controlChannelId, err })
+            );
           }
         }
 
@@ -112,7 +111,9 @@ export function installTempVoiceHandlers(
               endedAt: session.endedAt ?? new Date(),
               session,
               state: "ended"
-            }).catch(() => undefined);
+            }).catch((err: unknown) =>
+              console.warn("temp-vc: voice status message update failed on VC delete", { channelId: channel.id, err })
+            );
           }
         }
 
@@ -135,7 +136,6 @@ export function installTempVoiceHandlers(
         console.error("temp-vc: channelDelete cleanup failed", { channelId: channel.id, err });
       });
   });
-<<<<<<< HEAD
 
   client.once(Events.ClientReady, (readyClient) => {
     void reconcileTempVoiceChannels(readyClient, options.db, logWriter).catch(
@@ -144,8 +144,6 @@ export function installTempVoiceHandlers(
       }
     );
   });
-=======
->>>>>>> a8dc0179d3feac4d5b9e187d2883be7c47837ecc
 }
 
 export function formatTempVoiceChannelName(username: string) {
@@ -411,8 +409,10 @@ async function createGeneratedChannel(
   } catch (error) {
     await controlChannel
       .delete("Temp VC creation failed.")
-      .catch(() => undefined);
-    await channel.delete("Temp VC creation failed.").catch(() => undefined);
+      .catch((err: unknown) => console.warn("temp-vc: cleanup control channel delete failed", { channelId: controlChannel.id, err }));
+    await channel.delete("Temp VC creation failed.").catch((err: unknown) =>
+      console.warn("temp-vc: cleanup voice channel delete failed", { channelId: channel.id, err })
+    );
     throw error;
   }
 }
@@ -605,7 +605,9 @@ export async function updateControlChannelOwnerPermissions(
       SendMessages: null,
       ViewChannel: null
     })
-    .catch(() => undefined);
+    .catch((err: unknown) =>
+      console.warn("temp-vc: failed to remove previous owner permissions", { previousOwnerId: input.previousOwnerId, err })
+    );
   await controlChannel.permissionOverwrites.edit(input.nextOwnerId, {
     ReadMessageHistory: true,
     SendMessages: true,
@@ -619,7 +621,9 @@ export async function updateControlChannelOwnerPermissions(
         lines: [loc.tempVcOwnerChangedMessage({ userId: input.nextOwnerId })],
         accentColor: 0xFFD700
       })
-    }).catch(() => undefined);
+    }).catch((err: unknown) =>
+      console.warn("temp-vc: owner transfer notification failed", { controlChannelId: input.controlChannelId, err })
+    );
   }
 }
 
@@ -673,7 +677,9 @@ async function deleteIfStillEmpty(
 
   if (controlChannel) {
     suppressTempVoiceChannelLog(controlChannel.id);
-    await controlChannel.delete(tempVoiceDeleteReason).catch(() => undefined);
+    await controlChannel.delete(tempVoiceDeleteReason).catch((err: unknown) =>
+      console.warn("temp-vc: control channel delete failed on empty VC cleanup", { channelId: controlChannel.id, err })
+    );
   }
 
   if (deletedTempVoiceChannel) {
@@ -727,7 +733,9 @@ async function reconcileTempVoiceChannels(
           .catch(() => null);
         if (controlChannel) {
           suppressTempVoiceChannelLog(controlChannel.id);
-          await controlChannel.delete(tempVoiceDeleteReason).catch(() => undefined);
+          await controlChannel.delete(tempVoiceDeleteReason).catch((err: unknown) =>
+            console.warn("temp-vc: reconcile control channel delete failed", { channelId: controlChannel.id, err })
+          );
         }
       }
 
@@ -741,7 +749,9 @@ async function reconcileTempVoiceChannels(
             endedAt: session.endedAt ?? new Date(),
             session,
             state: "ended"
-          }).catch(() => undefined);
+          }).catch((err: unknown) =>
+            console.warn("temp-vc: reconcile voice status update failed", { channelId: tempVC.channelId, err })
+          );
         }
       }
 
@@ -759,7 +769,9 @@ async function reconcileTempVoiceChannels(
             controlChannelId: deleted.controlChannelId,
             creationChannelId: deleted.creationChannelId
           }
-        }).catch(() => undefined);
+        }).catch((err: unknown) =>
+          console.warn("temp-vc: reconcile log write failed", { channelId: deleted.channelId, err })
+        );
       }
 
       ended++;

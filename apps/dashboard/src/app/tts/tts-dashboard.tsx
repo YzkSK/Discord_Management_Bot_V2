@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
 import {
   BookOpen,
-  ExternalLink,
   Mic2,
   Radio,
   Settings,
@@ -14,38 +13,12 @@ import {
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "../../components/ui/table";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import { ErrorAlert } from "../../components/error-alert";
 import { useDashboardData } from "../../hooks/use-dashboard-data";
-
-const DICTIONARY_DISPLAY_LIMIT = 8;
-const USER_SPEAKER_DISPLAY_LIMIT = 8;
-
-type TtsDictionaryScope = "guild" | "user";
-
-interface TtsDictionaryEntry {
-  fromText: string;
-  isEnabled: boolean;
-  priority: number;
-  scope: TtsDictionaryScope;
-  toText: string;
-  updatedAt: string;
-  userId: string | null;
-}
-
-interface TtsUserSpeaker {
-  speakerId: number;
-  updatedAt: string;
-  userId: string;
-}
+import { DictionaryTable, type TtsDictionaryEntry } from "./components/DictionaryTable";
+import { UserSpeakerTable, type TtsUserSpeaker } from "./components/UserSpeakerTable";
+import { usePreviewAudio } from "./components/usePreviewAudio";
 
 interface TtsResponse {
   accessRole: string;
@@ -238,45 +211,14 @@ function KeyValue({ label, value }: { label: string; value: string }) {
 }
 
 function GuildDefaultSpeakerPreview({ speakerId }: { speakerId: number }) {
-  const [playing, setPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, []);
-
-  async function handlePreview() {
-    if (playing) return;
-    setPlaying(true);
-    try {
-      const res = await fetch(`/api/tts/preview?speakerId=${speakerId}`);
-      if (!res.ok) {
-        setPlaying(false);
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.onended = () => { URL.revokeObjectURL(url); setPlaying(false); audioRef.current = null; };
-      audio.onerror = () => { URL.revokeObjectURL(url); setPlaying(false); audioRef.current = null; };
-      void audio.play();
-    } catch (e: unknown) {
-      console.error("TTS preview failed", e);
-      setPlaying(false);
-    }
-  }
+  const { playingId, playPreview } = usePreviewAudio();
+  const playing = playingId === speakerId;
 
   return (
     <Button
       className="w-full"
-      disabled={playing}
-      onClick={() => void handlePreview()}
+      disabled={playingId !== null}
+      onClick={() => void playPreview(speakerId)}
       size="sm"
       type="button"
       variant="outline"
@@ -286,58 +228,6 @@ function GuildDefaultSpeakerPreview({ speakerId }: { speakerId: number }) {
   );
 }
 
-function DictionaryTable({
-  entries,
-  loc
-}: {
-  entries: TtsDictionaryEntry[];
-  loc: ReturnType<typeof getDashboardLocale>;
-}) {
-  const visibleEntries = entries.slice(0, DICTIONARY_DISPLAY_LIMIT);
-
-  return (
-    <div className="overflow-hidden rounded-md border border-zinc-800">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{loc.ttsScope}</TableHead>
-            <TableHead>{loc.ttsFromText}</TableHead>
-            <TableHead>{loc.ttsToText}</TableHead>
-            <TableHead>{loc.ttsPriority}</TableHead>
-            <TableHead>{loc.ttsEnabled}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {visibleEntries.length === 0 ? (
-            <TableRow>
-              <TableCell className="py-8 text-center text-zinc-600" colSpan={5}>
-                {loc.ttsDictionaryEntries}: 0
-              </TableCell>
-            </TableRow>
-          ) : visibleEntries.map((entry) => (
-            <TableRow key={`${entry.scope}:${entry.userId ?? ""}:${entry.fromText}`}>
-              <TableCell>
-                <Badge variant="outline">{entry.scope}</Badge>
-              </TableCell>
-              <TableCell className="break-all font-mono text-xs">
-                {entry.fromText}
-              </TableCell>
-              <TableCell className="break-all font-mono text-xs">
-                {entry.toText}
-              </TableCell>
-              <TableCell>{entry.priority}</TableCell>
-              <TableCell>
-                <Badge variant={entry.isEnabled ? "success" : "outline"}>
-                  {entry.isEnabled ? loc.ttsEnabled : loc.logModeDisabled}
-                </Badge>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
 
 function DictionaryAddForm({
   guildId,
@@ -457,100 +347,6 @@ function DictionaryAddForm({
   );
 }
 
-function UserSpeakerTable({
-  loc,
-  userSpeakers
-}: {
-  loc: ReturnType<typeof getDashboardLocale>;
-  userSpeakers: TtsUserSpeaker[];
-}) {
-  const visibleSpeakers = userSpeakers.slice(0, USER_SPEAKER_DISPLAY_LIMIT);
-  const [playingId, setPlayingId] = useState<number | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, []);
-
-  async function handlePreview(speakerId: number) {
-    if (playingId !== null) return;
-    setPlayingId(speakerId);
-    try {
-      const res = await fetch(`/api/tts/preview?speakerId=${speakerId}`);
-      if (!res.ok) {
-        setPlayingId(null);
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.onended = () => {
-        URL.revokeObjectURL(url);
-        setPlayingId(null);
-        audioRef.current = null;
-      };
-      audio.onerror = () => {
-        URL.revokeObjectURL(url);
-        setPlayingId(null);
-        audioRef.current = null;
-      };
-      void audio.play();
-    } catch {
-      setPlayingId(null);
-    }
-  }
-
-  return (
-    <div className="overflow-hidden rounded-md border border-zinc-800">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{loc.accessGrantUserId}</TableHead>
-            <TableHead>{loc.ttsSpeakerId}</TableHead>
-            <TableHead>{loc.updated}</TableHead>
-            <TableHead></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {visibleSpeakers.length === 0 ? (
-            <TableRow>
-              <TableCell className="py-8 text-center text-zinc-600" colSpan={4}>
-                {loc.ttsUserSpeakers}: 0
-              </TableCell>
-            </TableRow>
-          ) : visibleSpeakers.map((speaker) => (
-            <TableRow key={speaker.userId}>
-              <TableCell className="break-all font-mono text-xs">
-                {speaker.userId}
-              </TableCell>
-              <TableCell>{speaker.speakerId}</TableCell>
-              <TableCell className="text-xs text-zinc-500">
-                {formatDate(speaker.updatedAt)}
-              </TableCell>
-              <TableCell>
-                <Button
-                  disabled={playingId !== null}
-                  onClick={() => void handlePreview(speaker.speakerId)}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  {playingId === speaker.speakerId ? "..." : "試聴"}
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
 
 function TtsShortcut({
   body,
@@ -588,12 +384,4 @@ async function fetchTtsSummary(guildId: string): Promise<TtsResponse> {
   return (await response.json()) as TtsResponse;
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "short"
-  }).format(new Date(value));
-}
 
