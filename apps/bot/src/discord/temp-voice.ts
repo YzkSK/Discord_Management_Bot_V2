@@ -1,12 +1,10 @@
 import {
   ChannelType,
   type Client,
-  ComponentType,
   DiscordAPIError,
   Events,
   type Guild,
   type GuildBasedChannel,
-  MessageFlags,
   PermissionFlagsBits,
   RESTJSONErrorCodes,
   type TextChannel,
@@ -22,7 +20,10 @@ import {
   endTempVoiceChannel,
   getActiveTempVoiceChannelByChannelId,
   getCallSessionById,
+<<<<<<< HEAD
   getGuildConfigByGuildId,
+=======
+>>>>>>> a8dc0179d3feac4d5b9e187d2883be7c47837ecc
   listActiveCallSessionMembers,
   listAllActiveTempVoiceChannels,
   listDiscordChannelNamesByIds,
@@ -33,7 +34,8 @@ import {
 } from "@discord-bot/db";
 
 import { updateDiscordVoiceStatusMessage } from "./voice-activity.js";
-
+import { resolveGuildLocale } from "./resolve-locale.js";
+import { createComponentsV2TextMessage } from "./components-v2.js";
 import {
   installVoiceStateHandlers,
   type VoiceStateTransition,
@@ -79,6 +81,11 @@ export function installTempVoiceHandlers(
   });
 
   client.on(Events.ChannelDelete, (channel) => {
+    const pendingTimer = pendingOwnerTransferTimers.get(channel.id);
+    if (pendingTimer) {
+      clearTimeout(pendingTimer);
+      pendingOwnerTransferTimers.delete(channel.id);
+    }
     void getActiveTempVoiceChannelByChannelId(options.db, channel.id)
       .then(async (tempVC) => {
         if (!tempVC) return;
@@ -128,6 +135,7 @@ export function installTempVoiceHandlers(
         console.error("temp-vc: channelDelete cleanup failed", { channelId: channel.id, err });
       });
   });
+<<<<<<< HEAD
 
   client.once(Events.ClientReady, (readyClient) => {
     void reconcileTempVoiceChannels(readyClient, options.db, logWriter).catch(
@@ -136,6 +144,8 @@ export function installTempVoiceHandlers(
       }
     );
   });
+=======
+>>>>>>> a8dc0179d3feac4d5b9e187d2883be7c47837ecc
 }
 
 export function formatTempVoiceChannelName(username: string) {
@@ -346,6 +356,8 @@ async function createGeneratedChannel(
     return;
   }
 
+  const loc = await resolveGuildLocale(db, transition.guildId);
+
   let channel;
   try {
     channel = await createTempVoiceDiscordChannel(context.newState.guild, {
@@ -369,7 +381,7 @@ async function createGeneratedChannel(
     categoryId: input.categoryId,
     ownerId: transition.userId,
     tempVoiceChannelId: channel.id
-  });
+  }, loc);
 
   try {
     const createdTempVoice = await createTempVoiceChannel(db, {
@@ -411,7 +423,8 @@ async function createControlChannel(
     categoryId: string | null;
     ownerId: string;
     tempVoiceChannelId: string;
-  }
+  },
+  loc: Awaited<ReturnType<typeof resolveGuildLocale>>
 ) {
   const member = context.newState.member;
   const botMember = context.newState.guild.members.me;
@@ -455,16 +468,17 @@ async function createControlChannel(
   await sendControlChannelMessage(channel, {
     ownerId: input.ownerId,
     tempVoiceChannelId: input.tempVoiceChannelId
-  });
+  }, loc);
 
   return channel;
 }
 
 async function sendControlChannelMessage(
   channel: TextChannel,
-  input: { ownerId: string; tempVoiceChannelId: string }
+  input: { ownerId: string; tempVoiceChannelId: string },
+  loc: Awaited<ReturnType<typeof resolveGuildLocale>>
 ) {
-  await channel.send({ ...createTempVoiceControlMessage(input), allowedMentions: { parse: [] } });
+  await channel.send({ ...createTempVoiceControlMessage(input, loc), allowedMentions: { parse: [] } });
 }
 
 export interface TempVoiceOwnerCandidate {
@@ -539,6 +553,8 @@ async function transferOwnerIfNeeded(
     return;
   }
 
+  const loc = await resolveGuildLocale(db, tempVoiceChannel.guildId);
+
   await transferTempVoiceChannelOwner(db, {
     channelId: input.channelId,
     ownerId: nextOwner.userId
@@ -547,7 +563,7 @@ async function transferOwnerIfNeeded(
     controlChannelId: tempVoiceChannel.controlChannelId,
     nextOwnerId: nextOwner.userId,
     previousOwnerId: tempVoiceChannel.ownerId
-  });
+  }, loc);
   await writeTempVoiceLog(
     logWriter,
     createTempVoiceOwnerTransferredEvent({
@@ -568,7 +584,8 @@ export async function updateControlChannelOwnerPermissions(
     controlChannelId: string | null;
     nextOwnerId: string;
     previousOwnerId: string;
-  }
+  },
+  loc: Awaited<ReturnType<typeof resolveGuildLocale>>
 ) {
   if (!input.controlChannelId) {
     return;
@@ -597,24 +614,12 @@ export async function updateControlChannelOwnerPermissions(
 
   if ("send" in controlChannel) {
     await (controlChannel as TextChannel).send({
-      flags: MessageFlags.IsComponentsV2,
-      components: [
-        {
-          type: ComponentType.Container,
-          accent_color: 0xFFD700,
-          components: [
-            {
-              type: ComponentType.TextDisplay,
-              content: `## 👑 オーナーが変更されました`
-            },
-            {
-              type: ComponentType.TextDisplay,
-              content: `<@${input.nextOwnerId}> さんがこの Temp VC のオーナーになりました。\nコントロールパネルからチャンネルを管理できます。`
-            }
-          ]
-        }
-      ]
-    } as never).catch(() => undefined);
+      ...createComponentsV2TextMessage({
+        title: loc.tempVcOwnerChangedTitle,
+        lines: [loc.tempVcOwnerChangedMessage({ userId: input.nextOwnerId })],
+        accentColor: 0xFFD700
+      })
+    }).catch(() => undefined);
   }
 }
 
@@ -668,7 +673,7 @@ async function deleteIfStillEmpty(
 
   if (controlChannel) {
     suppressTempVoiceChannelLog(controlChannel.id);
-    await controlChannel?.delete(tempVoiceDeleteReason).catch(() => undefined);
+    await controlChannel.delete(tempVoiceDeleteReason).catch(() => undefined);
   }
 
   if (deletedTempVoiceChannel) {

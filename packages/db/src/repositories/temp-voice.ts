@@ -19,45 +19,51 @@ export async function createTempVoiceChannel(
   db: DbClient,
   input: CreateTempVoiceChannelInput
 ) {
-  const [callSession] = await db
-    .insert(callSessions)
-    .values({
-      guildId: input.guildId,
-      channelId: input.channelId,
-      status: "active"
-    })
-    .returning();
+  return db.transaction(async (tx) => {
+    const [callSession] = await tx
+      .insert(callSessions)
+      .values({
+        guildId: input.guildId,
+        channelId: input.channelId,
+        status: "active"
+      })
+      .returning();
 
-  if (!callSession) {
-    throw new Error("Failed to create call session.");
-  }
+    if (!callSession) {
+      throw new Error("Failed to create call session.");
+    }
 
-  const [tempVoiceChannel] = await db
-    .insert(tempVoiceChannels)
-    .values({
-      guildId: input.guildId,
-      channelId: input.channelId,
-      ownerId: input.ownerId,
-      creationChannelId: input.creationChannelId,
-      controlChannelId: input.controlChannelId ?? null,
-      callSessionId: callSession.id
-    })
-    .returning();
+    const [tempVoiceChannel] = await tx
+      .insert(tempVoiceChannels)
+      .values({
+        guildId: input.guildId,
+        channelId: input.channelId,
+        ownerId: input.ownerId,
+        creationChannelId: input.creationChannelId,
+        controlChannelId: input.controlChannelId ?? null,
+        callSessionId: callSession.id
+      })
+      .returning();
 
-  if (!tempVoiceChannel) {
-    throw new Error("Failed to create temp voice channel.");
-  }
+    if (!tempVoiceChannel) {
+      throw new Error("Failed to create temp voice channel.");
+    }
 
-  await upsertCallSessionMember(db, {
-    callSessionId: callSession.id,
-    userId: input.ownerId
+    // tx has the same query API as DbClient at runtime; cast required for Drizzle's transaction type
+    await upsertCallSessionMember(tx as unknown as DbClient, {
+      callSessionId: callSession.id,
+      userId: input.ownerId
+    });
+
+    return { callSession, tempVoiceChannel };
   });
-
-  return { callSession, tempVoiceChannel };
+<<<<<<< HEAD
 }
 
 export async function listAllActiveTempVoiceChannels(db: DbClient) {
   return db.select().from(tempVoiceChannels);
+=======
+>>>>>>> a8dc0179d3feac4d5b9e187d2883be7c47837ecc
 }
 
 export async function getActiveTempVoiceChannelByChannelId(
@@ -125,29 +131,32 @@ export async function endTempVoiceChannel(
   db: DbClient,
   input: { channelId: string; endedAt?: Date }
 ) {
-  const tempVoiceChannel = await getActiveTempVoiceChannelByChannelId(
-    db,
-    input.channelId
-  );
+  return db.transaction(async (tx) => {
+    const [tempVoiceChannel] = await tx
+      .select()
+      .from(tempVoiceChannels)
+      .where(eq(tempVoiceChannels.channelId, input.channelId))
+      .limit(1);
 
-  if (!tempVoiceChannel?.callSessionId) {
-    return null;
-  }
+    if (!tempVoiceChannel?.callSessionId) {
+      return null;
+    }
 
-  await db
-    .update(callSessions)
-    .set({
-      status: "ended",
-      endedAt: input.endedAt ?? new Date(),
-      updatedAt: sql`now()`
-    })
-    .where(eq(callSessions.id, tempVoiceChannel.callSessionId));
+    await tx
+      .update(callSessions)
+      .set({
+        status: "ended",
+        endedAt: input.endedAt ?? new Date(),
+        updatedAt: sql`now()`
+      })
+      .where(eq(callSessions.id, tempVoiceChannel.callSessionId));
 
-  const [deletedTempVoiceChannel] = await db
-    .delete(tempVoiceChannels)
-    .where(eq(tempVoiceChannels.channelId, input.channelId))
-    .returning();
+    const [deletedTempVoiceChannel] = await tx
+      .delete(tempVoiceChannels)
+      .where(eq(tempVoiceChannels.channelId, input.channelId))
+      .returning();
 
-  return deletedTempVoiceChannel ?? null;
+    return deletedTempVoiceChannel ?? null;
+  });
 }
 

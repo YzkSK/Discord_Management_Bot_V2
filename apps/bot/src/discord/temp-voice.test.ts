@@ -77,6 +77,19 @@ describe("formatTempVoiceChannelName", () => {
     assert.equal(nextOwner?.userId, "user-2");
   });
 
+  it("returns null when there are no active members", () => {
+    const nextOwner = selectNextTempVoiceOwner([], "owner-1");
+    assert.equal(nextOwner, null);
+  });
+
+  it("returns null when the only active member is the current owner", () => {
+    const nextOwner = selectNextTempVoiceOwner(
+      [{ joinOrder: 0, joinedAt: new Date(), userId: "owner-1" }],
+      "owner-1"
+    );
+    assert.equal(nextOwner, null);
+  });
+
   it("creates a Temp VC owner transferred log event", () => {
     const event = createTempVoiceOwnerTransferredEvent({
       callSessionId: "call-1",

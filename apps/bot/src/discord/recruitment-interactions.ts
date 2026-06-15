@@ -7,8 +7,10 @@ import type { DbClient } from "@discord-bot/db";
 import {
   closeRecruitment,
   countActiveRecruitmentParticipants,
+<<<<<<< HEAD
   getActiveParticipant,
-  getGuildConfigByGuildId,
+=======
+>>>>>>> a8dc0179d3feac4d5b9e187d2883be7c47837ecc
   getRecruitmentById,
   joinRecruitment,
   leaveRecruitment,
@@ -18,7 +20,7 @@ import {
   updateRecruitmentStatus,
   type RecruitmentStatus
 } from "@discord-bot/db";
-import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/shared";
+import { getLocale } from "@discord-bot/shared";
 
 import { createComponentsV2TextMessage, EVENT_COLORS } from "./components-v2.js";
 import {
@@ -27,14 +29,7 @@ import {
 } from "./recruitment-channel.js";
 import type { DiscordLogWriter } from "./log-writer.js";
 import { writeRecruitmentLifecycleLog } from "./recruitment-logs.js";
-
-async function resolveLocale(db: DbClient, guildId: string | null) {
-  if (!guildId) return getLocale("ja");
-  const config = await getGuildConfigByGuildId(db, guildId).catch(() => null);
-  const lang: GuildLanguage =
-    config?.language && isGuildLanguage(config.language) ? config.language : "ja";
-  return getLocale(lang);
-}
+import { resolveGuildLocale } from "./resolve-locale.js";
 
 export interface RecruitmentInteractionContext {
   db: DbClient;
@@ -51,7 +46,7 @@ export async function handleRecruitmentButtonInteraction(
     return false;
   }
 
-  const loc = await resolveLocale(context.db, interaction.guildId);
+  const loc = await resolveGuildLocale(context.db, interaction.guildId);
   const recruitment = await getRecruitmentById(context.db, parsed.recruitmentId);
 
   if (!recruitment) {

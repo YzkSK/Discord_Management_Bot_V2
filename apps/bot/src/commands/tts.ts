@@ -1,12 +1,14 @@
 import {
-  getGuildConfigByGuildId,
+<<<<<<< HEAD
   getUserTtsSpeaker,
+=======
+>>>>>>> a8dc0179d3feac4d5b9e187d2883be7c47837ecc
   listDashboardAccessGrants,
   setGuildDefaultTtsSpeaker,
   setUserTtsSpeaker,
   type DbClient
 } from "@discord-bot/db";
-import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/shared";
+import { getLocale } from "@discord-bot/shared";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -34,6 +36,7 @@ import {
 } from "../discord/tts-logs.js";
 import type { TtsSessionManager } from "../discord/tts-session.js";
 import type { VoicevoxSpeaker } from "../discord/voicevox.js";
+import { resolveGuildLocale } from "../discord/resolve-locale.js";
 
 type Loc = ReturnType<typeof getLocale>;
 
@@ -262,7 +265,7 @@ export async function handleForceJoinCommand(
     return;
   }
 
-  if (!(await canUseForceJoin(interaction, context))) {
+  if (!(await canUseDashboardAdminCommand(interaction, context))) {
     await replyPrivate(interaction, loc.ttsForceJoinFailed, [loc.ttsForceJoinAdminRequired], EVENT_COLORS.red);
     return;
   }
@@ -496,13 +499,6 @@ async function getTtsJoinTarget(interaction: ChatInputCommandInteraction) {
   };
 }
 
-async function canUseForceJoin(
-  interaction: ChatInputCommandInteraction,
-  context: TtsCommandContext
-) {
-  return canUseDashboardAdminCommand(interaction, context);
-}
-
 async function canUseDashboardAdminCommand(
   interaction: ChatInputCommandInteraction,
   context: TtsCommandContext
@@ -511,7 +507,11 @@ async function canUseDashboardAdminCommand(
     return false;
   }
 
-  const member = await interaction.guild.members.fetch(interaction.user.id);
+  const member = await interaction.guild.members.fetch(interaction.user.id).catch((err: unknown) => {
+    console.warn("failed to fetch guild member for permission check", err);
+    return null;
+  });
+  if (!member) return false;
   const roleIds = getMemberRoleIds(member);
   const grants = await listDashboardAccessGrants(context.db, {
     guildId: interaction.guildId,
@@ -609,17 +609,6 @@ async function replyPrivate(
   });
 }
 
-async function resolveGuildLocale(db: DbClient, guildId: string) {
-  const config = await getGuildConfigByGuildId(db, guildId).catch((error: unknown) => {
-    console.warn("failed to fetch guild config for tts locale", error);
-    return null;
-  });
-  const lang: GuildLanguage =
-    config?.language && isGuildLanguage(config.language)
-      ? config.language
-      : "en";
-  return getLocale(lang);
-}
 
 async function writeTtsLog(
   context: TtsCommandContext,

@@ -68,6 +68,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
     setUiLang(detectBrowserLanguage());
   }, []);
 
+<<<<<<< HEAD
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
@@ -77,6 +78,8 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
     const id = setInterval(() => stableReload(), 5 * 60 * 1000);
     return () => clearInterval(id);
   }, [stableReload]);
+=======
+>>>>>>> a8dc0179d3feac4d5b9e187d2883be7c47837ecc
 
   const peakData = useMemo(() => {
     const bins = Array.from({ length: 24 }, (_, h) => ({

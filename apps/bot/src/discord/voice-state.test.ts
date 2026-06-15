@@ -79,6 +79,30 @@ describe("toVoiceStateTransition", () => {
   });
 });
 
+describe("installVoiceStateHandlers multi-guild", () => {
+  it("tracks the same user joining different guilds as independent events", async () => {
+    const transitions: { type: string; guildId: string }[] = [];
+    const mockClient = new EventEmitter();
+    installVoiceStateHandlers(mockClient as unknown as Client, {
+      onTransition: async (transition) => {
+        transitions.push({ type: transition.type, guildId: transition.guildId });
+      }
+    });
+
+    mockClient.emit("voiceStateUpdate", makeVoiceState("guild-1", "user-1", null), makeVoiceState("guild-1", "user-1", "voice-1"));
+    mockClient.emit("voiceStateUpdate", makeVoiceState("guild-2", "user-1", null), makeVoiceState("guild-2", "user-1", "voice-2"));
+
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
+
+    assert.equal(transitions.length, 2);
+    const g1 = transitions.find((t) => t.guildId === "guild-1");
+    const g2 = transitions.find((t) => t.guildId === "guild-2");
+    assert.equal(g1?.type, "join");
+    assert.equal(g2?.type, "join");
+  });
+});
+
 describe("installVoiceStateHandlers move serialization", () => {
   it("serializes leave-from-destination after move (zombie session prevention)", async () => {
     const callOrder: string[] = [];

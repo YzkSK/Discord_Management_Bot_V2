@@ -5,6 +5,8 @@ import type { GuildLanguage } from "@discord-bot/shared";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
+
+const MAX_PAYLOAD_FIELDS_DISPLAYED = 6;
 import {
   dashboardGuildStorageKey,
   normalizeGuildId,
@@ -381,7 +383,7 @@ function LogEntry({
             })()}
             {Object.entries(payload)
               .filter(([, v]) => v !== null && v !== undefined && v !== "" && typeof v !== "object")
-              .slice(0, 6)
+              .slice(0, MAX_PAYLOAD_FIELDS_DISPLAYED)
               .map(([k, v]) => (
                 <div key={k}>
                   <dt className="text-zinc-600">{payloadFieldLabel(k)}</dt>

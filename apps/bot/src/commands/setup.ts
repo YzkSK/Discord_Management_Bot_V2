@@ -11,7 +11,7 @@ import {
   getGuildConfigByGuildId,
   updateGuildTempVoiceConfigByGuildId
 } from "@discord-bot/db";
-import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/shared";
+import { getLocale } from "@discord-bot/shared";
 
 import { createComponentsV2TextMessage, EVENT_COLORS } from "../discord/components-v2.js";
 import { findMarkedLogChannel, markLogChannel } from "../discord/log-channel.js";
@@ -19,6 +19,7 @@ import {
   findMarkedVoiceStatusChannel,
   markVoiceStatusChannel
 } from "../discord/voice-status-channel.js";
+import { resolveGuildLocale } from "../discord/resolve-locale.js";
 
 type Loc = ReturnType<typeof getLocale>;
 
@@ -93,17 +94,6 @@ export interface SetupCommandContext {
   db: DbClient;
 }
 
-async function resolveGuildLocale(db: DbClient, guildId: string) {
-  const config = await getGuildConfigByGuildId(db, guildId).catch((error: unknown) => {
-    console.warn("failed to fetch guild config for setup locale", error);
-    return null;
-  });
-  const lang: GuildLanguage =
-    config?.language && isGuildLanguage(config.language)
-      ? config.language
-      : "en";
-  return getLocale(lang);
-}
 
 export async function handleSetupCommand(
   interaction: ChatInputCommandInteraction,

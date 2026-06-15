@@ -20,7 +20,11 @@ export async function GET(
     return NextResponse.json({ error: "Invalid channel id." }, { status: 400 });
   }
 
-  const guildId = request.nextUrl.searchParams.get("guildId") ?? undefined;
+  const rawGuildId = request.nextUrl.searchParams.get("guildId");
+  if (rawGuildId !== null && !SNOWFLAKE_RE.test(rawGuildId)) {
+    return NextResponse.json({ error: "Invalid guild id." }, { status: 400 });
+  }
+  const guildId = rawGuildId ?? undefined;
   const auth = await authorizeDashboardApi({ request, guildId });
   if (!auth.allowed) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
