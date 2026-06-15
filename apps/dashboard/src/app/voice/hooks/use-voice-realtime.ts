@@ -13,7 +13,8 @@ const VOICE_EVENTS = new Set([
   "call.started",
   "call.ended",
   "voice.session.join",
-  "voice.session.leave"
+  "voice.session.leave",
+  "voice.temp.deleted"
 ]);
 
 export function useVoiceRealtime(guildId: string, onUpdate: () => void) {

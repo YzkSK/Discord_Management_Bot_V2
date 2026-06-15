@@ -13,7 +13,6 @@ import {
 } from "recharts";
 
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
-import { formatRelativeTime } from "../../lib/event-display";
 import { ErrorAlert } from "../../components/error-alert";
 import { useDashboardData } from "../../hooks/use-dashboard-data";
 import { useVoiceRealtime } from "./hooks/use-voice-realtime";
@@ -28,6 +27,7 @@ interface VoiceTempVoice {
 
 interface VoiceSession {
   channelId: string;
+  channelName?: string;
   durationSeconds: number;
   endedAt?: string;
   id: string;
@@ -42,7 +42,7 @@ interface VoiceResponse {
   activeSessions: VoiceSession[];
   guildId: string;
   recentSessions: VoiceSession[];
-  tempVoiceChannels: Array<VoiceTempVoice & { channelId: string }>;
+  tempVoiceChannels: Array<VoiceTempVoice & { channelId: string; channelName?: string }>;
 }
 
 async function fetchVoiceData(guildId: string): Promise<VoiceResponse> {
@@ -54,6 +54,7 @@ async function fetchVoiceData(guildId: string): Promise<VoiceResponse> {
 
 export function VoiceDashboard({ guildId }: { guildId: string }) {
   const [uiLang, setUiLang] = useState<GuildLanguage>("en");
+  const [now, setNow] = useState(() => new Date());
   const loc = getDashboardLocale(uiLang);
   const { data, loading, error, reload } = useDashboardData(
     () => fetchVoiceData(guildId),
@@ -66,6 +67,16 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
   useEffect(() => {
     setUiLang(detectBrowserLanguage());
   }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => stableReload(), 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [stableReload]);
 
   const peakData = useMemo(() => {
     const bins = Array.from({ length: 24 }, (_, h) => ({
@@ -144,35 +155,41 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {data.activeSessions.map((s) => (
-              <div
-                key={s.id}
-                className="rounded-lg border border-zinc-800 bg-zinc-900 p-4"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-[50%] bg-purple-400 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-[50%] bg-purple-500" />
-                  </span>
-                  <span className="truncate text-sm font-medium text-zinc-200">
-                    #{s.channelId}
-                  </span>
+            {data.activeSessions.map((s) => {
+              const elapsedSeconds = Math.max(
+                0,
+                Math.floor((now.getTime() - new Date(s.startedAt).getTime()) / 1000)
+              );
+              return (
+                <div
+                  key={s.id}
+                  className="rounded-lg border border-zinc-800 bg-zinc-900 p-4"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-[50%] bg-purple-400 opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-[50%] bg-purple-500" />
+                    </span>
+                    <span className="truncate text-sm font-medium text-zinc-200">
+                      {s.channelName ?? `#${s.channelId}`}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-4 text-xs text-zinc-500">
+                    <span className="flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      {s.memberCount}人
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Timer className="h-3 w-3" />
+                      {formatDuration(elapsedSeconds)}
+                    </span>
+                  </div>
+                  {s.tempVoice && (
+                    <p className="mt-1.5 text-xs text-purple-400">Temp VC</p>
+                  )}
                 </div>
-                <div className="mt-2 flex items-center gap-4 text-xs text-zinc-500">
-                  <span className="flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    {s.memberCount}人
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Timer className="h-3 w-3" />
-                    {formatDuration(s.durationSeconds)}
-                  </span>
-                </div>
-                {s.tempVoice && (
-                  <p className="mt-1.5 text-xs text-purple-400">Temp VC</p>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
@@ -190,16 +207,15 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
                 className="rounded-lg border border-zinc-800 bg-zinc-900 p-4"
               >
                 <p className="truncate text-sm font-medium text-zinc-200">
-                  #{vc.channelId}
+                  {vc.channelName ?? `#${vc.channelId}`}
                 </p>
                 <div className="mt-2 flex items-center gap-1.5 text-xs text-zinc-500">
                   <Crown className="h-3 w-3 text-yellow-500" />
                   <span className="font-mono">{vc.ownerId}</span>
                 </div>
                 {vc.deleteScheduledAt && (
-                  <p className="mt-1 text-xs text-zinc-600">
-                    削除予定:{" "}
-                    {formatRelativeTime(new Date(vc.deleteScheduledAt))}
+                  <p className="mt-1 text-xs text-amber-500/70">
+                    {renderDeleteScheduled(new Date(vc.deleteScheduledAt), now)}
                   </p>
                 )}
               </div>
@@ -245,8 +261,21 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
   );
 }
 
+function renderDeleteScheduled(deleteAt: Date, now: Date): string {
+  const diffSeconds = Math.floor((deleteAt.getTime() - now.getTime()) / 1000);
+  if (diffSeconds > 0) {
+    return `あと${diffSeconds}秒で削除`;
+  }
+  return "削除保留中";
+}
+
 function formatDuration(totalSeconds: number) {
-  const minutes = Math.floor(totalSeconds / 60);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
+  const mm = minutes.toString().padStart(2, "0");
+  const ss = seconds.toString().padStart(2, "0");
+  return hours > 0
+    ? `${hours}:${mm}:${ss}`
+    : `${mm}:${ss}`;
 }
