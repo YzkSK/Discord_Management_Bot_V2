@@ -805,21 +805,21 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
         {activeTab === "recruitment" && (
           <Card>
             <CardHeader>
-              <CardTitle>募集設定</CardTitle>
+              <CardTitle>{loc.recruitmentSettings}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3">
               <FeatureStatus
                 configured={settings.features.recruitment.configured}
-                label="募集"
+                label={loc.recruitmentSettings}
                 loc={loc}
               />
               <div>
-                <label className="block text-sm font-medium mb-1">募集チャンネル</label>
+                <label className="block text-sm font-medium mb-1">{loc.recruitmentChannelLabel}</label>
                 <ChannelSelect
                   value={recruitmentChannelId}
                   onChange={setRecruitmentChannelId}
                   channels={settings.availableTextChannels ?? []}
-                  placeholder="募集チャンネルを選択（未設定時はコマンドチャンネルを使用）"
+                  placeholder={loc.recruitmentChannelPlaceholder}
                 />
               </div>
             </CardContent>

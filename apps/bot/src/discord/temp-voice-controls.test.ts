@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { PermissionFlagsBits, type GuildBasedChannel } from "discord.js";
+import { getLocale } from "@discord-bot/shared";
 
 import {
   createTempVoiceControlMessage,
@@ -10,6 +11,8 @@ import {
   parseTempVoiceControlCustomId,
   toTempVoiceControlCustomId
 } from "./temp-voice-controls.js";
+
+const loc = getLocale("en");
 
 describe("Temp VC control custom ids", () => {
   it("round-trips a Temp VC control action", () => {
@@ -35,7 +38,7 @@ describe("createTempVoiceControlMessage", () => {
     const message = createTempVoiceControlMessage({
       ownerId: "owner-1",
       tempVoiceChannelId: "voice-1"
-    });
+    }, loc);
     const serialized = JSON.stringify(message);
 
     assert.equal(Number(message.flags), 32768);
@@ -143,8 +146,9 @@ describe("handleTempVoiceControlInteraction", () => {
     );
 
     assert.equal(handled, true);
-    assert.match(JSON.stringify(replies[0]), /権限エラー/);
+    assert.match(JSON.stringify(replies[0]), /Permission error/);
   });
+
 
   it("hides and shows the generated voice channel for everyone", async () => {
     const overwrites: unknown[] = [];
@@ -293,7 +297,7 @@ describe("createTempVoiceControlMessage — state toggle", () => {
       tempVoiceChannelId: "v1",
       isLocked: true,
       isHidden: false
-    });
+    }, loc);
     const s = JSON.stringify(msg);
 
     assert.doesNotMatch(s, /temp-vc:lock:v1/);
@@ -306,7 +310,7 @@ describe("createTempVoiceControlMessage — state toggle", () => {
       tempVoiceChannelId: "v1",
       isLocked: false,
       isHidden: false
-    });
+    }, loc);
     const s = JSON.stringify(msg);
 
     assert.match(s, /temp-vc:lock:v1/);
@@ -319,7 +323,7 @@ describe("createTempVoiceControlMessage — state toggle", () => {
       tempVoiceChannelId: "v1",
       isLocked: false,
       isHidden: true
-    });
+    }, loc);
     const s = JSON.stringify(msg);
 
     assert.doesNotMatch(s, /temp-vc:hide:v1/);
@@ -332,7 +336,7 @@ describe("createTempVoiceControlMessage — state toggle", () => {
       tempVoiceChannelId: "v1",
       isLocked: true,
       isHidden: false
-    });
+    }, loc);
     const s = JSON.stringify(msg);
 
     assert.match(s, /🔒/);

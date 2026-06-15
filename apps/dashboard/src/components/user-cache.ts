@@ -24,13 +24,19 @@ export async function fetchCachedDiscordUser(
       globalName: null,
       avatarUrl: buildAvatarUrl(userId, null),
     };
-    if (cache.size >= MAX_CACHE_SIZE) cache.clear();
+    if (cache.size >= MAX_CACHE_SIZE) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) cache.delete(oldest);
+  }
     cache.set(userId, fallback);
     return fallback;
   }
 
   const data = (await response.json()) as CachedDiscordUser;
-  if (cache.size >= MAX_CACHE_SIZE) cache.clear();
+  if (cache.size >= MAX_CACHE_SIZE) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) cache.delete(oldest);
+  }
   cache.set(userId, data);
   return data;
 }
