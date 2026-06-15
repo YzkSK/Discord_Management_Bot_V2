@@ -173,6 +173,38 @@ describe("handleSpeakerCommand", () => {
 
     assert.equal(stored, false);
   });
+
+  it("rejects server default speaker updates when member fetch fails", async () => {
+    let stored = false;
+
+    await handleSpeakerCommand(
+      {
+        guild: {
+          members: {
+            fetch: async () => { throw new Error("Cannot fetch member"); }
+          },
+          ownerId: "owner-1"
+        },
+        guildId: "guild-1",
+        options: {
+          getInteger: () => 4,
+          getSubcommand: () => "server-default"
+        },
+        reply: async () => {},
+        user: { id: "user-1" }
+      } as never,
+      {
+        db: createSpeakerCommandDb() as never,
+        setGuildDefaultSpeaker: async () => {
+          stored = true;
+          return undefined as never;
+        },
+        ttsSessionManager: {} as never
+      }
+    );
+
+    assert.equal(stored, false);
+  });
 });
 
 describe("buildSpeakerAutocompleteChoices", () => {

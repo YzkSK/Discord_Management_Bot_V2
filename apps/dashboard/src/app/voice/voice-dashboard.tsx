@@ -64,6 +64,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
     setUiLang(detectBrowserLanguage());
   }, []);
 
+
   const peakData = useMemo(() => {
     const bins = Array.from({ length: 24 }, (_, h) => ({
       hour: `${h}時`,

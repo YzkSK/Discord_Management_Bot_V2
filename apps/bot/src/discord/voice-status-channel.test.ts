@@ -97,3 +97,47 @@ describe("voice status display", () => {
     assert.match(serialized, /<@user-2>/);
   });
 });
+
+describe("voice status display — Japanese locale", () => {
+  const locJa = getLocale("ja");
+
+  it("renders ended state title in Japanese", () => {
+    const message = createVoiceStatusMessage({
+      channelId: "voice-1",
+      endedAt: new Date("2026-06-03T00:02:30.000Z"),
+      loc: locJa,
+      memberCount: 0,
+      now: new Date("2026-06-03T00:02:30.000Z"),
+      sessionId: "session-1",
+      startedAt: new Date("2026-06-03T00:00:00.000Z")
+    });
+
+    assert.match(JSON.stringify(message), /通話セッション終了/);
+  });
+
+  it("renders active state title in Japanese", () => {
+    const message = createVoiceStatusMessage({
+      channelId: "voice-1",
+      loc: locJa,
+      memberCount: 1,
+      now: new Date("2026-06-03T00:01:00.000Z"),
+      sessionId: "session-1",
+      startedAt: new Date("2026-06-03T00:00:00.000Z")
+    });
+
+    assert.match(JSON.stringify(message), /通話セッション中/);
+  });
+
+  it("renders started state title in Japanese", () => {
+    const message = createVoiceStatusMessage({
+      channelId: "voice-1",
+      loc: locJa,
+      memberCount: 1,
+      now: new Date("2026-06-03T00:00:30.000Z"),
+      sessionId: "session-1",
+      startedAt: new Date("2026-06-03T00:00:00.000Z")
+    });
+
+    assert.match(JSON.stringify(message), /通話セッション開始/);
+  });
+});

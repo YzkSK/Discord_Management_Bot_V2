@@ -159,6 +159,17 @@ export async function listActiveCallSessionMembers(
     .orderBy(asc(callSessionMembers.joinedAt), asc(callSessionMembers.joinOrder));
 }
 
+export async function listAllActiveCallSessions(db: DbClient) {
+  return db.select().from(callSessions).where(eq(callSessions.status, "active"));
+}
+
+export async function listActiveCallSessionsByGuildId(db: DbClient, guildId: string) {
+  return db
+    .select()
+    .from(callSessions)
+    .where(and(eq(callSessions.status, "active"), eq(callSessions.guildId, guildId)));
+}
+
 async function nextJoinOrder(db: DbClient, callSessionId: string) {
   const [result] = await db
     .select({

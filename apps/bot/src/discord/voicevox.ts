@@ -169,7 +169,8 @@ export async function getVoicevoxSpeakers(
     const response = await fetchImpl(url);
     if (!response.ok) return [];
     return (await response.json()) as VoicevoxSpeaker[];
-  } catch {
+  } catch (err) {
+    console.warn("[voicevox] failed to fetch speakers:", err);
     return [];
   }
 }

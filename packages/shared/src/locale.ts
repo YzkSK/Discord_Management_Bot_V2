@@ -74,6 +74,8 @@ type Locale = {
   recruitmentClosedSuccess: string;
   recruitmentCannotClose: string;
   recruitmentCannotCloseMessage: string;
+  recruitmentCannotReopen: string;
+  recruitmentCannotReopenMessage: string;
   ttsJoinFailed: string;
   ttsJoinVoiceFirst: string;
   ttsAlreadyConnected: string;
@@ -142,6 +144,73 @@ type Locale = {
   setupStatusLogs: (vars: { id: string | null }) => string;
   setupStatusVoiceStatus: (vars: { id: string | null }) => string;
   setupStatusNotConfigured: string;
+  tempVcControlTitle: string;
+  tempVcControlStatusLocked: string;
+  tempVcControlStatusOpen: string;
+  tempVcControlStatusHidden: string;
+  tempVcControlStatusVisible: string;
+  tempVcControlOwner: (vars: { ownerId: string }) => string;
+  tempVcControlAllowList: (vars: { users: string }) => string;
+  tempVcControlDenyList: (vars: { users: string }) => string;
+  tempVcControlButtonRename: string;
+  tempVcControlButtonLock: string;
+  tempVcControlButtonUnlock: string;
+  tempVcControlButtonHide: string;
+  tempVcControlButtonShow: string;
+  tempVcControlButtonUserLimit: string;
+  tempVcControlButtonUserManagement: string;
+  tempVcUserMgmtPlaceholder: string;
+  tempVcUserMgmtTitle: string;
+  tempVcUserMgmtPrompt: string;
+  tempVcUserMgmtActionFor: (vars: { userId: string }) => string;
+  tempVcActionKick: string;
+  tempVcActionAllow: string;
+  tempVcActionDeny: string;
+  tempVcActionTransfer: string;
+  tempVcKickTitle: string;
+  tempVcKickMessage: (vars: { userId: string }) => string;
+  tempVcAlreadyAllowedTitle: string;
+  tempVcPermErrorTitle: string;
+  tempVcPermErrorManageRolesLine1: string;
+  tempVcPermErrorManageRolesLine2: string;
+  tempVcAllowTitle: string;
+  tempVcAllowMessage: (vars: { userId: string }) => string;
+  tempVcAlreadyDeniedTitle: string;
+  tempVcDenyTitle: string;
+  tempVcDenyMessage: (vars: { userId: string }) => string;
+  tempVcTransferNotInChannelTitle: string;
+  tempVcTransferNotInChannelMessage: string;
+  tempVcTransferSuccessTitle: string;
+  tempVcTransferSuccessMessage: (vars: { userId: string }) => string;
+  tempVcAlreadyLockedTitle: string;
+  tempVcLockSuccessTitle: string;
+  tempVcLockSuccessMessage: string;
+  tempVcAlreadyUnlockedTitle: string;
+  tempVcUnlockSuccessTitle: string;
+  tempVcUnlockSuccessMessage: string;
+  tempVcAlreadyHiddenTitle: string;
+  tempVcHideSuccessTitle: string;
+  tempVcHideSuccessMessage: string;
+  tempVcAlreadyVisibleTitle: string;
+  tempVcShowSuccessTitle: string;
+  tempVcShowSuccessMessage: string;
+  tempVcRenameEmptyTitle: string;
+  tempVcRenameEmptyMessage: string;
+  tempVcRenameSuccessTitle: string;
+  tempVcRenameSuccessMessage: (vars: { name: string }) => string;
+  tempVcUserLimitInvalidTitle: string;
+  tempVcUserLimitInvalidMessage: string;
+  tempVcUserLimitSuccessTitle: string;
+  tempVcUserLimitSuccessMessage: (vars: { limit: number }) => string;
+  tempVcChannelPermErrorTitle: string;
+  tempVcChannelPermErrorMessage: string;
+  tempVcChannelPermErrorHint: string;
+  tempVcModalRenameTitle: string;
+  tempVcModalUserLimitTitle: string;
+  tempVcModalRenameLabel: string;
+  tempVcModalUserLimitLabel: string;
+  tempVcOwnerChangedTitle: string;
+  tempVcOwnerChangedMessage: (vars: { userId: string }) => string;
 };
 
 const locales: Record<GuildLanguage, Locale> = {
@@ -216,6 +285,8 @@ const locales: Record<GuildLanguage, Locale> = {
     recruitmentClosedSuccess: "✅ Recruitment closed",
     recruitmentCannotClose: "❌ Cannot close recruitment",
     recruitmentCannotCloseMessage: "Only the creator or a server manager can close this.",
+    recruitmentCannotReopen: "❌ Cannot reopen recruitment",
+    recruitmentCannotReopenMessage: "Only the creator or a server manager can reopen this.",
     ttsJoinFailed: "❌ TTS join failed",
     ttsJoinVoiceFirst: "Join a voice channel first.",
     ttsAlreadyConnected: "⚠️ TTS already connected",
@@ -365,6 +436,73 @@ const locales: Record<GuildLanguage, Locale> = {
     setupStatusLogs: ({ id }) => `Logs: ${id ? `<#${id}>` : "Not configured"}`,
     setupStatusVoiceStatus: ({ id }) => `Voice Status: ${id ? `<#${id}>` : "Not configured"}`,
     setupStatusNotConfigured: "Not configured",
+    tempVcControlTitle: "## 🎙️ Temp VC Control",
+    tempVcControlStatusLocked: "🔒 Locked",
+    tempVcControlStatusOpen: "🔓 Open",
+    tempVcControlStatusHidden: "🚫 Hidden",
+    tempVcControlStatusVisible: "🌐 Visible",
+    tempVcControlOwner: ({ ownerId }) => `Owner: <@${ownerId}>`,
+    tempVcControlAllowList: ({ users }) => `✅ Allowed: ${users}`,
+    tempVcControlDenyList: ({ users }) => `🚫 Denied: ${users}`,
+    tempVcControlButtonRename: "✏️ Rename",
+    tempVcControlButtonLock: "🔒 Lock",
+    tempVcControlButtonUnlock: "🔓 Unlock",
+    tempVcControlButtonHide: "🚫 Hide",
+    tempVcControlButtonShow: "🌐 Show",
+    tempVcControlButtonUserLimit: "👥 User Limit",
+    tempVcControlButtonUserManagement: "👤 User Management",
+    tempVcUserMgmtPlaceholder: "Select a user...",
+    tempVcUserMgmtTitle: "👤 User Management",
+    tempVcUserMgmtPrompt: "Select a user to manage.",
+    tempVcUserMgmtActionFor: ({ userId }) => `Action for <@${userId}>:`,
+    tempVcActionKick: "🚪 Kick",
+    tempVcActionAllow: "✅ Allow",
+    tempVcActionDeny: "🚫 Deny",
+    tempVcActionTransfer: "👑 Transfer Owner",
+    tempVcKickTitle: "✅ Kicked",
+    tempVcKickMessage: ({ userId }) => `<@${userId}> was kicked.`,
+    tempVcAlreadyAllowedTitle: "Already allowed",
+    tempVcPermErrorTitle: "❌ Permission error",
+    tempVcPermErrorManageRolesLine1: "The bot lacks `MANAGE_ROLES` permission to set per-user overrides.",
+    tempVcPermErrorManageRolesLine2: "Grant the bot role `Manage Roles` in server settings.",
+    tempVcAllowTitle: "✅ Allowed",
+    tempVcAllowMessage: ({ userId }) => `<@${userId}> is now allowed to join.`,
+    tempVcAlreadyDeniedTitle: "Already denied",
+    tempVcDenyTitle: "🚫 Denied",
+    tempVcDenyMessage: ({ userId }) => `<@${userId}> is now denied from joining.`,
+    tempVcTransferNotInChannelTitle: "❌ Cannot transfer",
+    tempVcTransferNotInChannelMessage: "Owner transfer is only available to members currently in the channel.",
+    tempVcTransferSuccessTitle: "👑 Transfer complete",
+    tempVcTransferSuccessMessage: ({ userId }) => `<@${userId}> is now the owner.`,
+    tempVcAlreadyLockedTitle: "Already locked",
+    tempVcLockSuccessTitle: "✅ 🔒 Locked",
+    tempVcLockSuccessMessage: "New members can no longer connect.",
+    tempVcAlreadyUnlockedTitle: "Already unlocked",
+    tempVcUnlockSuccessTitle: "✅ 🔓 Unlocked",
+    tempVcUnlockSuccessMessage: "New members can now connect.",
+    tempVcAlreadyHiddenTitle: "Already hidden",
+    tempVcHideSuccessTitle: "✅ 🚫 Hidden",
+    tempVcHideSuccessMessage: "Channel is now hidden.",
+    tempVcAlreadyVisibleTitle: "Already visible",
+    tempVcShowSuccessTitle: "✅ 🌐 Visible",
+    tempVcShowSuccessMessage: "Channel is now visible.",
+    tempVcRenameEmptyTitle: "❌ Rename failed",
+    tempVcRenameEmptyMessage: "Please enter a channel name.",
+    tempVcRenameSuccessTitle: "✅ ✏️ Renamed",
+    tempVcRenameSuccessMessage: ({ name }) => `New name: ${name}`,
+    tempVcUserLimitInvalidTitle: "❌ User limit failed",
+    tempVcUserLimitInvalidMessage: "Please enter a number between 0 and 99.",
+    tempVcUserLimitSuccessTitle: "✅ 👥 User limit updated",
+    tempVcUserLimitSuccessMessage: ({ limit }) => `User limit: ${limit}`,
+    tempVcChannelPermErrorTitle: "❌ Permission error",
+    tempVcChannelPermErrorMessage: "The bot could not update this VC's permission overwrites.",
+    tempVcChannelPermErrorHint: "Make sure the bot role has `Manage Channels` and can view the target VC.",
+    tempVcModalRenameTitle: "✏️ Rename Temp VC",
+    tempVcModalUserLimitTitle: "👥 Temp VC User Limit",
+    tempVcModalRenameLabel: "New channel name",
+    tempVcModalUserLimitLabel: "User limit (0–99)",
+    tempVcOwnerChangedTitle: "👑 Owner changed",
+    tempVcOwnerChangedMessage: ({ userId }) => `<@${userId}> is now the Temp VC owner.\nYou can manage the channel from the control panel.`,
   },
   ja: {
     logTitle: ({ eventName }) => `ログ: ${eventName}`,
@@ -435,6 +573,8 @@ const locales: Record<GuildLanguage, Locale> = {
     recruitmentClosedSuccess: "✅ 募集を締め切りました",
     recruitmentCannotClose: "❌ 締め切れません",
     recruitmentCannotCloseMessage: "作成者またはサーバー管理者のみが締め切れます。",
+    recruitmentCannotReopen: "❌ 再オープンできません",
+    recruitmentCannotReopenMessage: "作成者またはサーバー管理者のみが再オープンできます。",
     ttsJoinFailed: "❌ TTS参加失敗",
     ttsJoinVoiceFirst: "先にボイスチャンネルに参加してください。",
     ttsAlreadyConnected: "⚠️ TTS接続中",
@@ -591,6 +731,73 @@ const locales: Record<GuildLanguage, Locale> = {
     setupStatusLogs: ({ id }) => `ログ: ${id ? `<#${id}>` : "未設定"}`,
     setupStatusVoiceStatus: ({ id }) => `通話状態: ${id ? `<#${id}>` : "未設定"}`,
     setupStatusNotConfigured: "未設定",
+    tempVcControlTitle: "## 🎙️ Temp VC コントロール",
+    tempVcControlStatusLocked: "🔒 ロック中",
+    tempVcControlStatusOpen: "🔓 オープン",
+    tempVcControlStatusHidden: "🚫 非表示",
+    tempVcControlStatusVisible: "🌐 表示中",
+    tempVcControlOwner: ({ ownerId }) => `オーナー: <@${ownerId}>`,
+    tempVcControlAllowList: ({ users }) => `✅ 入室許可: ${users}`,
+    tempVcControlDenyList: ({ users }) => `🚫 入室禁止: ${users}`,
+    tempVcControlButtonRename: "✏️ 名前変更",
+    tempVcControlButtonLock: "🔒 ロック",
+    tempVcControlButtonUnlock: "🔓 解除",
+    tempVcControlButtonHide: "🚫 非表示",
+    tempVcControlButtonShow: "🌐 表示",
+    tempVcControlButtonUserLimit: "👥 人数制限",
+    tempVcControlButtonUserManagement: "👤 ユーザー管理",
+    tempVcUserMgmtPlaceholder: "ユーザーを選択してください...",
+    tempVcUserMgmtTitle: "👤 ユーザー管理",
+    tempVcUserMgmtPrompt: "操作するユーザーを選択してください。",
+    tempVcUserMgmtActionFor: ({ userId }) => `<@${userId}> に対するアクション:`,
+    tempVcActionKick: "🚪 キック",
+    tempVcActionAllow: "✅ 入室許可",
+    tempVcActionDeny: "🚫 入室禁止",
+    tempVcActionTransfer: "👑 オーナー譲渡",
+    tempVcKickTitle: "✅ キック完了",
+    tempVcKickMessage: ({ userId }) => `<@${userId}> をキックしました。`,
+    tempVcAlreadyAllowedTitle: "既に入室を許可しています",
+    tempVcPermErrorTitle: "❌ 権限エラー",
+    tempVcPermErrorManageRolesLine1: "ボットに `MANAGE_ROLES` 権限がないため、ユーザーへの個別権限設定ができません。",
+    tempVcPermErrorManageRolesLine2: "サーバー設定でボットロールに `ロールの管理` 権限を付与してください。",
+    tempVcAllowTitle: "✅ 入室許可",
+    tempVcAllowMessage: ({ userId }) => `<@${userId}> の入室を許可しました。`,
+    tempVcAlreadyDeniedTitle: "既に入室を禁止しています",
+    tempVcDenyTitle: "🚫 入室禁止",
+    tempVcDenyMessage: ({ userId }) => `<@${userId}> の入室を禁止しました。`,
+    tempVcTransferNotInChannelTitle: "❌ 譲渡できません",
+    tempVcTransferNotInChannelMessage: "オーナー譲渡は現在通話に参加しているメンバーにのみ行えます。",
+    tempVcTransferSuccessTitle: "👑 オーナー譲渡完了",
+    tempVcTransferSuccessMessage: ({ userId }) => `<@${userId}> にオーナーを譲渡しました。`,
+    tempVcAlreadyLockedTitle: "既にロックされています",
+    tempVcLockSuccessTitle: "✅ 🔒 ロック完了",
+    tempVcLockSuccessMessage: "新しいメンバーは接続できなくなりました。",
+    tempVcAlreadyUnlockedTitle: "既にロック解除されています",
+    tempVcUnlockSuccessTitle: "✅ 🔓 ロック解除",
+    tempVcUnlockSuccessMessage: "新しいメンバーが接続できるようになりました。",
+    tempVcAlreadyHiddenTitle: "既に非表示になっています",
+    tempVcHideSuccessTitle: "✅ 🚫 非表示",
+    tempVcHideSuccessMessage: "チャンネルを非表示にしました。",
+    tempVcAlreadyVisibleTitle: "既に表示されています",
+    tempVcShowSuccessTitle: "✅ 🌐 表示",
+    tempVcShowSuccessMessage: "チャンネルを表示しました。",
+    tempVcRenameEmptyTitle: "❌ 名前変更失敗",
+    tempVcRenameEmptyMessage: "チャンネル名を入力してください。",
+    tempVcRenameSuccessTitle: "✅ ✏️ 名前変更完了",
+    tempVcRenameSuccessMessage: ({ name }) => `新しい名前: ${name}`,
+    tempVcUserLimitInvalidTitle: "❌ 人数制限失敗",
+    tempVcUserLimitInvalidMessage: "0〜99の数字を入力してください。",
+    tempVcUserLimitSuccessTitle: "✅ 👥 人数制限更新",
+    tempVcUserLimitSuccessMessage: ({ limit }) => `人数制限: ${limit}人`,
+    tempVcChannelPermErrorTitle: "❌ 権限エラー",
+    tempVcChannelPermErrorMessage: "Bot がこの VC の権限設定を変更できませんでした。",
+    tempVcChannelPermErrorHint: "Bot ロールに `チャンネルの管理` があり、対象 VC を表示できるか確認してください。",
+    tempVcModalRenameTitle: "✏️ Temp VC 名前変更",
+    tempVcModalUserLimitTitle: "👥 Temp VC 人数制限",
+    tempVcModalRenameLabel: "新しいチャンネル名",
+    tempVcModalUserLimitLabel: "人数制限（0〜99）",
+    tempVcOwnerChangedTitle: "👑 オーナーが変更されました",
+    tempVcOwnerChangedMessage: ({ userId }) => `<@${userId}> さんがこの Temp VC のオーナーになりました。\nコントロールパネルからチャンネルを管理できます。`,
   }
 };
 

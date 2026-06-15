@@ -24,9 +24,13 @@ import {
   transferTempVoiceChannelOwner,
   type DbClient
 } from "@discord-bot/db";
+import { getLocale } from "@discord-bot/shared";
 
 import { createComponentsV2TextMessage, EVENT_COLORS } from "./components-v2.js";
 import { updateControlChannelOwnerPermissions } from "./temp-voice.js";
+import { resolveGuildLocale } from "./resolve-locale.js";
+
+type Loc = ReturnType<typeof getLocale>;
 
 export type TempVoiceControlAction =
   | "rename"
@@ -57,6 +61,7 @@ export interface TempVoiceControlContext {
 }
 
 const customIdPrefix = "temp-vc";
+const DISCORD_CHANNEL_NAME_MAX_LENGTH = 100;
 const tempVoiceControlActions = new Set<TempVoiceControlAction>([
   "rename",
   "lock",
@@ -96,27 +101,30 @@ export function parseTempVoiceControlCustomId(customId: string) {
   };
 }
 
-export function createTempVoiceControlMessage(input: {
-  ownerId: string;
-  tempVoiceChannelId: string;
-  allowedUserIds?: string[];
-  deniedUserIds?: string[];
-  isLocked?: boolean;
-  isHidden?: boolean;
-}): MessageCreateOptions & MessageEditOptions {
+export function createTempVoiceControlMessage(
+  input: {
+    ownerId: string;
+    tempVoiceChannelId: string;
+    allowedUserIds?: string[];
+    deniedUserIds?: string[];
+    isLocked?: boolean;
+    isHidden?: boolean;
+  },
+  loc: Loc
+): MessageCreateOptions & MessageEditOptions {
   const { allowedUserIds = [], deniedUserIds = [] } = input;
   const isLocked = input.isLocked ?? false;
   const isHidden = input.isHidden ?? false;
 
   const statusLine = [
-    isLocked ? "🔒 ロック中" : "🔓 オープン",
-    isHidden ? "🙈 非表示" : "👁️ 表示中"
+    isLocked ? loc.tempVcControlStatusLocked : loc.tempVcControlStatusOpen,
+    isHidden ? loc.tempVcControlStatusHidden : loc.tempVcControlStatusVisible
   ].join("  ·  ");
 
   const hasPermissionInfo = allowedUserIds.length > 0 || deniedUserIds.length > 0;
 
   const infoLines = [
-    `オーナー: <@${input.ownerId}>`,
+    loc.tempVcControlOwner({ ownerId: input.ownerId }),
     `VC: <#${input.tempVoiceChannelId}>`,
     statusLine
   ];
@@ -126,7 +134,7 @@ export function createTempVoiceControlMessage(input: {
   }
 
   const containerComponents: object[] = [
-    { type: ComponentType.TextDisplay, content: "## 🎙️ Temp VC コントロール" },
+    { type: ComponentType.TextDisplay, content: loc.tempVcControlTitle },
     { type: ComponentType.TextDisplay, content: infoLines.join("\n") },
     { type: ComponentType.Separator }
   ];
@@ -134,14 +142,14 @@ export function createTempVoiceControlMessage(input: {
   if (allowedUserIds.length > 0) {
     containerComponents.push({
       type: ComponentType.TextDisplay,
-      content: `✅ 入室許可: ${allowedUserIds.map(id => `<@${id}>`).join("  ")}`
+      content: loc.tempVcControlAllowList({ users: allowedUserIds.map(id => `<@${id}>`).join("  ") })
     });
   }
 
   if (deniedUserIds.length > 0) {
     containerComponents.push({
       type: ComponentType.TextDisplay,
-      content: `🚫 入室禁止: ${deniedUserIds.map(id => `<@${id}>`).join("  ")}`
+      content: loc.tempVcControlDenyList({ users: deniedUserIds.map(id => `<@${id}>`).join("  ") })
     });
   }
 
@@ -158,18 +166,18 @@ export function createTempVoiceControlMessage(input: {
   const channelId = input.tempVoiceChannelId;
 
   const firstRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    createButton(channelId, "rename", "✏️ 名前変更", ButtonStyle.Primary),
+    createButton(channelId, "rename", loc.tempVcControlButtonRename, ButtonStyle.Primary),
     ...(isLocked
-      ? [createButton(channelId, "unlock", "🔓 解除", ButtonStyle.Secondary)]
-      : [createButton(channelId, "lock", "🔒 ロック", ButtonStyle.Secondary)]),
+      ? [createButton(channelId, "unlock", loc.tempVcControlButtonUnlock, ButtonStyle.Secondary)]
+      : [createButton(channelId, "lock", loc.tempVcControlButtonLock, ButtonStyle.Secondary)]),
     ...(isHidden
-      ? [createButton(channelId, "show", "👁️ 表示", ButtonStyle.Secondary)]
-      : [createButton(channelId, "hide", "🙈 非表示", ButtonStyle.Secondary)])
+      ? [createButton(channelId, "show", loc.tempVcControlButtonShow, ButtonStyle.Secondary)]
+      : [createButton(channelId, "hide", loc.tempVcControlButtonHide, ButtonStyle.Secondary)])
   );
 
   const secondRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    createButton(channelId, "user-limit", "👥 人数制限", ButtonStyle.Secondary),
-    createButton(channelId, "user-management", "👤 ユーザー管理", ButtonStyle.Secondary)
+    createButton(channelId, "user-limit", loc.tempVcControlButtonUserLimit, ButtonStyle.Secondary),
+    createButton(channelId, "user-management", loc.tempVcControlButtonUserManagement, ButtonStyle.Secondary)
   );
 
   return {
@@ -223,7 +231,8 @@ function getChannelUserPermissions(channel: GuildBasedChannel & { isVoiceBased: 
 
 async function updateControlPanel(
   guild: Guild,
-  tempVoice: { channelId: string; controlChannelId?: string | null; ownerId: string }
+  tempVoice: { channelId: string; controlChannelId?: string | null; ownerId: string },
+  loc: Loc
 ) {
   if (!tempVoice.controlChannelId) return;
 
@@ -253,16 +262,17 @@ async function updateControlPanel(
 
   if (!panelMessage) return;
 
-  await panelMessage.edit(
-    createTempVoiceControlMessage({
+  await panelMessage.edit({
+    ...createTempVoiceControlMessage({
       ownerId: tempVoice.ownerId,
       tempVoiceChannelId: tempVoice.channelId,
       allowedUserIds,
       deniedUserIds,
       isLocked,
       isHidden
-    })
-  );
+    }, loc),
+    allowedMentions: { parse: [] }
+  });
 }
 
 export async function handleTempVoiceControlInteraction(
@@ -274,6 +284,8 @@ export async function handleTempVoiceControlInteraction(
   if (!parsed) {
     return false;
   }
+
+  const loc = await resolveGuildLocale(context.db, interaction.guildId);
 
   const getTempVoiceChannel =
     context.getTempVoiceChannel ?? getActiveTempVoiceChannelByChannelId;
@@ -314,7 +326,7 @@ export async function handleTempVoiceControlInteraction(
   if (parsed.action === "user-management" && "isButton" in interaction) {
     const selectMenu = new UserSelectMenuBuilder()
       .setCustomId(toTempVoiceControlCustomId({ action: "user-management-select", channelId: parsed.channelId }))
-      .setPlaceholder("ユーザーを選択してください...")
+      .setPlaceholder(loc.tempVcUserMgmtPlaceholder)
       .setMinValues(1)
       .setMaxValues(1);
 
@@ -322,8 +334,8 @@ export async function handleTempVoiceControlInteraction(
 
     await interaction.reply({
       ...createComponentsV2TextMessage({
-        title: "👤 ユーザー管理",
-        lines: ["操作するユーザーを選択してください。"],
+        title: loc.tempVcUserMgmtTitle,
+        lines: [loc.tempVcUserMgmtPrompt],
         privateResponse: true
       }),
       components: [row]
@@ -343,28 +355,28 @@ export async function handleTempVoiceControlInteraction(
 
     const kickBtn = new ButtonBuilder()
       .setCustomId(toTempVoiceControlCustomId({ action: "kick-target", channelId: parsed.channelId, targetUserId }))
-      .setLabel("🚪 キック")
+      .setLabel(loc.tempVcActionKick)
       .setStyle(ButtonStyle.Danger);
 
     const allowBtn = new ButtonBuilder()
       .setCustomId(toTempVoiceControlCustomId({ action: "allow-target", channelId: parsed.channelId, targetUserId }))
-      .setLabel("✅ 入室許可")
+      .setLabel(loc.tempVcActionAllow)
       .setStyle(ButtonStyle.Success);
 
     const denyBtn = new ButtonBuilder()
       .setCustomId(toTempVoiceControlCustomId({ action: "deny-target", channelId: parsed.channelId, targetUserId }))
-      .setLabel("🚫 入室禁止")
+      .setLabel(loc.tempVcActionDeny)
       .setStyle(ButtonStyle.Secondary);
 
     const transferBtn = new ButtonBuilder()
       .setCustomId(toTempVoiceControlCustomId({ action: "transfer-target", channelId: parsed.channelId, targetUserId }))
-      .setLabel("👑 オーナー譲渡")
+      .setLabel(loc.tempVcActionTransfer)
       .setStyle(ButtonStyle.Secondary);
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(kickBtn, allowBtn, denyBtn, transferBtn);
 
     await interaction.update(
-      createEphemeralUpdate("👤 ユーザー管理", [`<@${targetUserId}> に対するアクション:`], [row])
+      createEphemeralUpdate(loc.tempVcUserMgmtTitle, [loc.tempVcUserMgmtActionFor({ userId: targetUserId })], [row])
     );
     return true;
   }
@@ -398,49 +410,59 @@ export async function handleTempVoiceControlInteraction(
       }
 
       await member.voice.disconnect("Temp VC owner kicked member.");
-      await replyPrivate(interaction, "✅ Kicked", [`<@${parsed.targetUserId}> をキックしました。`]);
+      await replyPrivate(interaction, loc.tempVcKickTitle, [loc.tempVcKickMessage({ userId: parsed.targetUserId })]);
       return true;
     }
 
     if (parsed.action === "allow-target") {
+      const targetOw = channel.permissionOverwrites.cache.get(parsed.targetUserId);
+      if (targetOw?.allow.has(PermissionFlagsBits.Connect)) {
+        await replyPrivate(interaction, loc.tempVcAlreadyAllowedTitle, []);
+        return true;
+      }
       try {
         await channel.permissionOverwrites.edit(parsed.targetUserId, { Connect: true });
       } catch {
-        await replyPrivate(interaction, "❌ 権限エラー", [
-          "ボットに `MANAGE_ROLES` 権限がないため、ユーザーへの個別権限設定ができません。",
-          "サーバー設定でボットロールに `ロールの管理` 権限を付与してください。"
+        await replyPrivate(interaction, loc.tempVcPermErrorTitle, [
+          loc.tempVcPermErrorManageRolesLine1,
+          loc.tempVcPermErrorManageRolesLine2
         ]);
         return true;
       }
-      await replyPrivate(interaction, "✅ 入室許可", [
-        `<@${parsed.targetUserId}> の入室を許可しました。`
+      await replyPrivate(interaction, loc.tempVcAllowTitle, [
+        loc.tempVcAllowMessage({ userId: parsed.targetUserId })
       ]);
-      await updateControlPanel(guild, tempVoiceChannel);
+      await updateControlPanel(guild, tempVoiceChannel, loc);
       return true;
     }
 
     if (parsed.action === "deny-target") {
+      const targetOw = channel.permissionOverwrites.cache.get(parsed.targetUserId);
+      if (targetOw?.deny.has(PermissionFlagsBits.Connect)) {
+        await replyPrivate(interaction, loc.tempVcAlreadyDeniedTitle, []);
+        return true;
+      }
       try {
         await channel.permissionOverwrites.edit(parsed.targetUserId, { Connect: false });
       } catch {
-        await replyPrivate(interaction, "❌ 権限エラー", [
-          "ボットに `MANAGE_ROLES` 権限がないため、ユーザーへの個別権限設定ができません。",
-          "サーバー設定でボットロールに `ロールの管理` 権限を付与してください。"
+        await replyPrivate(interaction, loc.tempVcPermErrorTitle, [
+          loc.tempVcPermErrorManageRolesLine1,
+          loc.tempVcPermErrorManageRolesLine2
         ]);
         return true;
       }
-      await replyPrivate(interaction, "🚫 入室禁止", [
-        `<@${parsed.targetUserId}> の入室を禁止しました。`
+      await replyPrivate(interaction, loc.tempVcDenyTitle, [
+        loc.tempVcDenyMessage({ userId: parsed.targetUserId })
       ]);
-      await updateControlPanel(guild, tempVoiceChannel);
+      await updateControlPanel(guild, tempVoiceChannel, loc);
       return true;
     }
 
     if (parsed.action === "transfer-target") {
       const targetMember = await guild.members.fetch(parsed.targetUserId).catch(() => null);
       if (!targetMember || targetMember.voice.channelId !== parsed.channelId) {
-        await replyPrivate(interaction, "❌ 譲渡できません", [
-          "オーナー譲渡は現在通話に参加しているメンバーにのみ行えます。"
+        await replyPrivate(interaction, loc.tempVcTransferNotInChannelTitle, [
+          loc.tempVcTransferNotInChannelMessage
         ]);
         return true;
       }
@@ -452,11 +474,11 @@ export async function handleTempVoiceControlInteraction(
         controlChannelId: tempVoiceChannel.controlChannelId ?? null,
         nextOwnerId: parsed.targetUserId,
         previousOwnerId: tempVoiceChannel.ownerId
-      });
-      await replyPrivate(interaction, "👑 オーナー譲渡完了", [
-        `<@${parsed.targetUserId}> にオーナーを譲渡しました。`
+      }, loc);
+      await replyPrivate(interaction, loc.tempVcTransferSuccessTitle, [
+        loc.tempVcTransferSuccessMessage({ userId: parsed.targetUserId })
       ]);
-      await updateControlPanel(guild, { ...tempVoiceChannel, ownerId: parsed.targetUserId });
+      await updateControlPanel(guild, { ...tempVoiceChannel, ownerId: parsed.targetUserId }, loc);
       return true;
     }
   }
@@ -472,35 +494,93 @@ export async function handleTempVoiceControlInteraction(
   }
 
   if (parsed.action === "lock") {
-    await channel.permissionOverwrites.edit(guild.roles.everyone.id, { Connect: false });
-    await replyPrivate(interaction, "✅ 🔒 ロック完了", ["新しいメンバーは接続できなくなりました。"]);
-    await updateControlPanel(guild, tempVoiceChannel);
+    const eo = channel.permissionOverwrites.cache.get(guild.roles.everyone.id);
+    if (eo?.deny.has(PermissionFlagsBits.Connect)) {
+      await replyPrivate(interaction, loc.tempVcAlreadyLockedTitle, []);
+      return true;
+    }
+    const botId = interaction.client.user.id;
+    try {
+      const currentMemberIds = [...channel.members.keys()];
+      await Promise.all([
+        channel.permissionOverwrites.edit(botId, { Connect: true }),
+        ...currentMemberIds.map((id) => channel.permissionOverwrites.edit(id, { Connect: true }))
+      ]);
+      await channel.permissionOverwrites.edit(guild.roles.everyone.id, { Connect: false });
+    } catch {
+      await replyPermissionOverwriteError(interaction, loc);
+      return true;
+    }
+    await replyPrivate(interaction, loc.tempVcLockSuccessTitle, [loc.tempVcLockSuccessMessage]);
+    await updateControlPanel(guild, tempVoiceChannel, loc);
     return true;
   }
 
   if (parsed.action === "unlock") {
-    await channel.permissionOverwrites.edit(guild.roles.everyone.id, { Connect: null });
-    await replyPrivate(interaction, "✅ 🔓 ロック解除", ["新しいメンバーが接続できるようになりました。"]);
-    await updateControlPanel(guild, tempVoiceChannel);
+    const eo = channel.permissionOverwrites.cache.get(guild.roles.everyone.id);
+    if (!eo?.deny.has(PermissionFlagsBits.Connect)) {
+      await replyPrivate(interaction, loc.tempVcAlreadyUnlockedTitle, []);
+      return true;
+    }
+    const botId = interaction.client.user.id;
+    try {
+      await channel.permissionOverwrites.edit(guild.roles.everyone.id, { Connect: null });
+      await channel.permissionOverwrites.edit(botId, { Connect: null }).catch(() => undefined);
+    } catch {
+      await replyPermissionOverwriteError(interaction, loc);
+      return true;
+    }
+    await replyPrivate(interaction, loc.tempVcUnlockSuccessTitle, [loc.tempVcUnlockSuccessMessage]);
+    await updateControlPanel(guild, tempVoiceChannel, loc);
     return true;
   }
 
   if (parsed.action === "hide") {
-    await channel.permissionOverwrites.edit(guild.roles.everyone.id, { ViewChannel: false });
-    await replyPrivate(interaction, "✅ 🙈 非表示", ["チャンネルを非表示にしました。"]);
-    await updateControlPanel(guild, tempVoiceChannel);
+    const eo = channel.permissionOverwrites.cache.get(guild.roles.everyone.id);
+    if (eo?.deny.has(PermissionFlagsBits.ViewChannel)) {
+      await replyPrivate(interaction, loc.tempVcAlreadyHiddenTitle, []);
+      return true;
+    }
+    const botId = interaction.client.user.id;
+    const currentMemberIds = [...channel.members.keys()];
+    try {
+      await Promise.all([
+        channel.permissionOverwrites.edit(botId, { ViewChannel: true }),
+        ...currentMemberIds.map((id) =>
+          channel.permissionOverwrites.edit(id, { ViewChannel: true, Connect: true })
+        ),
+      ]);
+      await channel.permissionOverwrites.edit(guild.roles.everyone.id, { ViewChannel: false });
+    } catch {
+      await replyPermissionOverwriteError(interaction, loc);
+      return true;
+    }
+    await replyPrivate(interaction, loc.tempVcHideSuccessTitle, [loc.tempVcHideSuccessMessage]);
+    await updateControlPanel(guild, tempVoiceChannel, loc);
     return true;
   }
 
   if (parsed.action === "show") {
-    await channel.permissionOverwrites.edit(guild.roles.everyone.id, { ViewChannel: null });
-    await replyPrivate(interaction, "✅ 👁️ 表示", ["チャンネルを表示しました。"]);
-    await updateControlPanel(guild, tempVoiceChannel);
+    const eo = channel.permissionOverwrites.cache.get(guild.roles.everyone.id);
+    if (!eo?.deny.has(PermissionFlagsBits.ViewChannel)) {
+      await replyPrivate(interaction, loc.tempVcAlreadyVisibleTitle, []);
+      return true;
+    }
+    const botId = interaction.client.user.id;
+    try {
+      await channel.permissionOverwrites.edit(guild.roles.everyone.id, { ViewChannel: null });
+      await channel.permissionOverwrites.edit(botId, { ViewChannel: null }).catch(() => undefined);
+    } catch {
+      await replyPermissionOverwriteError(interaction, loc);
+      return true;
+    }
+    await replyPrivate(interaction, loc.tempVcShowSuccessTitle, [loc.tempVcShowSuccessMessage]);
+    await updateControlPanel(guild, tempVoiceChannel, loc);
     return true;
   }
 
   if (isFormAction(parsed.action) && "showModal" in interaction) {
-    await interaction.showModal(createControlModal(parsed));
+    await interaction.showModal(createControlModal(parsed, loc));
     return true;
   }
 
@@ -509,12 +589,12 @@ export async function handleTempVoiceControlInteraction(
 
     if (parsed.action === "rename") {
       if (!value) {
-        await replyPrivate(interaction, "❌ 名前変更失敗", ["チャンネル名を入力してください。"]);
+        await replyPrivate(interaction, loc.tempVcRenameEmptyTitle, [loc.tempVcRenameEmptyMessage]);
         return true;
       }
 
-      await channel.setName(value.slice(0, 100), "Temp VC owner renamed channel.");
-      await replyPrivate(interaction, "✅ ✏️ 名前変更完了", [`新しい名前: ${value}`]);
+      await channel.setName(value.slice(0, DISCORD_CHANNEL_NAME_MAX_LENGTH), "Temp VC owner renamed channel.");
+      await replyPrivate(interaction, loc.tempVcRenameSuccessTitle, [loc.tempVcRenameSuccessMessage({ name: value })]);
       return true;
     }
 
@@ -522,12 +602,12 @@ export async function handleTempVoiceControlInteraction(
       const limit = parseBoundedInteger(value, 0, 99);
 
       if (limit === null) {
-        await replyPrivate(interaction, "❌ 人数制限失敗", ["0〜99の数字を入力してください。"]);
+        await replyPrivate(interaction, loc.tempVcUserLimitInvalidTitle, [loc.tempVcUserLimitInvalidMessage]);
         return true;
       }
 
       await channel.setUserLimit(limit, "Temp VC owner changed user limit.");
-      await replyPrivate(interaction, "✅ 👥 人数制限更新", [`人数制限: ${limit}人`]);
+      await replyPrivate(interaction, loc.tempVcUserLimitSuccessTitle, [loc.tempVcUserLimitSuccessMessage({ limit })]);
       return true;
     }
   }
@@ -575,32 +655,32 @@ async function replyPrivate(
   });
 }
 
+async function replyPermissionOverwriteError(
+  interaction: ButtonInteraction | ModalSubmitInteraction | UserSelectMenuInteraction,
+  loc: Loc
+) {
+  await replyPrivate(interaction, loc.tempVcChannelPermErrorTitle, [
+    loc.tempVcChannelPermErrorMessage,
+    loc.tempVcChannelPermErrorHint
+  ]);
+}
+
 function isFormAction(action: TempVoiceControlAction) {
   return action === "rename" || action === "user-limit";
 }
 
-function createControlModal(input: TempVoiceControlCustomId) {
+function createControlModal(input: TempVoiceControlCustomId, loc: Loc) {
   const modal = new ModalBuilder()
     .setCustomId(toTempVoiceControlCustomId(input))
-    .setTitle(controlModalTitle(input.action));
+    .setTitle(input.action === "rename" ? loc.tempVcModalRenameTitle : loc.tempVcModalUserLimitTitle);
   const textInput = new TextInputBuilder()
     .setCustomId("value")
-    .setLabel(controlModalLabel(input.action))
+    .setLabel(input.action === "rename" ? loc.tempVcModalRenameLabel : loc.tempVcModalUserLimitLabel)
     .setRequired(true)
     .setStyle(TextInputStyle.Short);
   const row = new ActionRowBuilder<TextInputBuilder>().addComponents(textInput);
 
   return modal.addComponents(row);
-}
-
-function controlModalTitle(action: TempVoiceControlAction) {
-  if (action === "rename") return "✏️ Temp VC 名前変更";
-  return "👥 Temp VC 人数制限";
-}
-
-function controlModalLabel(action: TempVoiceControlAction) {
-  if (action === "rename") return "新しいチャンネル名";
-  return "人数制限（0〜99）";
 }
 
 function parseBoundedInteger(value: string, min: number, max: number) {

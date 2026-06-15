@@ -39,6 +39,8 @@ type DashboardLocale = {
   tempVcSettings: string;
   ttsSettings: string;
   recruitmentSettings: string;
+  recruitmentChannelLabel: string;
+  recruitmentChannelPlaceholder: string;
   configured: string;
   notConfigured: string;
   readOnly: string;
@@ -198,6 +200,8 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     tempVcSettings: "Temp VC",
     ttsSettings: "TTS",
     recruitmentSettings: "Recruitment",
+    recruitmentChannelLabel: "Recruitment Channel",
+    recruitmentChannelPlaceholder: "Select recruitment channel (defaults to command channel if not set)",
     configured: "Configured",
     notConfigured: "Not configured",
     readOnly: "Read-only",
@@ -354,6 +358,8 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     tempVcSettings: "一時VC",
     ttsSettings: "TTS",
     recruitmentSettings: "募集",
+    recruitmentChannelLabel: "募集チャンネル",
+    recruitmentChannelPlaceholder: "募集チャンネルを選択（未設定時はコマンドチャンネルを使用）",
     configured: "設定済み",
     notConfigured: "未設定",
     readOnly: "閲覧のみ",

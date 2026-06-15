@@ -129,7 +129,7 @@ function buildLogFilters(input: ListLogEventsInput): SQL[] {
     filters.push(
       or(
         ilike(logs.eventName, `%${input.search}%`),
-        sql`${logs.payload}::text ilike ${`%${input.search}%`}`
+        ilike(sql`${logs.payload}::text`, `%${input.search}%`)
       )!
     );
   }
@@ -141,10 +141,13 @@ function buildLogFilters(input: ListLogEventsInput): SQL[] {
   return filters;
 }
 
-function clampLimit(limit = 50) {
+const DEFAULT_LOGS_LIMIT = 50;
+const MAX_LOGS_LIMIT = 100;
+
+function clampLimit(limit = DEFAULT_LOGS_LIMIT) {
   if (!Number.isFinite(limit)) {
-    return 50;
+    return DEFAULT_LOGS_LIMIT;
   }
 
-  return Math.min(Math.max(Math.trunc(limit), 1), 100);
+  return Math.min(Math.max(Math.trunc(limit), 1), MAX_LOGS_LIMIT);
 }

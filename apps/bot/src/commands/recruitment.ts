@@ -18,7 +18,7 @@ import {
   getGuildConfigByGuildId,
   setRecruitmentMessageId
 } from "@discord-bot/db";
-import { getLocale, isGuildLanguage, type GuildLanguage } from "@discord-bot/shared";
+import { getLocale } from "@discord-bot/shared";
 
 import { createComponentsV2TextMessage, EVENT_COLORS } from "../discord/components-v2.js";
 import {
@@ -26,6 +26,7 @@ import {
 } from "../discord/recruitment-channel.js";
 import type { DiscordLogWriter } from "../discord/log-writer.js";
 import { writeRecruitmentLifecycleLog } from "../discord/recruitment-logs.js";
+import { resolveGuildLocale } from "../discord/resolve-locale.js";
 
 type Loc = ReturnType<typeof getLocale>;
 
@@ -47,17 +48,6 @@ export interface RecruitmentCommandContext {
   loadRecruitmentChannelId?: (guildId: string) => Promise<string | null>;
 }
 
-async function resolveGuildLocale(db: DbClient, guildId: string) {
-  const config = await getGuildConfigByGuildId(db, guildId).catch((error: unknown) => {
-    console.warn("failed to fetch guild config for recruitment locale", error);
-    return null;
-  });
-  const lang: GuildLanguage =
-    config?.language && isGuildLanguage(config.language)
-      ? config.language
-      : "en";
-  return getLocale(lang);
-}
 
 export async function resolveRecruitmentChannel(input: {
   guildId: string;

@@ -13,6 +13,8 @@ export interface ComponentsV2TextMessageInput {
   privateResponse?: boolean;
 }
 
+const DISCORD_MEDIA_GALLERY_MAX_ITEMS = 10;
+
 export const EVENT_COLORS = {
   purple: 0x9B59B6,
   blue:   0x5865F2,

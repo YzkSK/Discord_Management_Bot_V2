@@ -65,10 +65,13 @@ export async function listVoiceDashboardState(
   };
 }
 
-function clampRecentLimit(limit = 20) {
+const DEFAULT_RECENT_LIMIT = 20;
+const MAX_RECENT_LIMIT = 50;
+
+function clampRecentLimit(limit = DEFAULT_RECENT_LIMIT) {
   if (!Number.isFinite(limit)) {
-    return 20;
+    return DEFAULT_RECENT_LIMIT;
   }
 
-  return Math.min(Math.max(Math.trunc(limit), 1), 50);
+  return Math.min(Math.max(Math.trunc(limit), 1), MAX_RECENT_LIMIT);
 }

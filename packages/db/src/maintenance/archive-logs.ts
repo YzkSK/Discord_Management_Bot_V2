@@ -21,10 +21,13 @@ export interface ArchiveSummary {
   outputPath: string;
 }
 
+const ARCHIVE_CUTOFF_DAYS = 180;
+const DELETE_CUTOFF_DAYS = 365;
+
 export function calculateArchiveCutoffs(now = new Date()): ArchiveCutoffs {
   return {
-    archiveBefore: subtractUtcDays(now, 180),
-    deleteBefore: subtractUtcDays(now, 365)
+    archiveBefore: subtractUtcDays(now, ARCHIVE_CUTOFF_DAYS),
+    deleteBefore: subtractUtcDays(now, DELETE_CUTOFF_DAYS)
   };
 }
 
