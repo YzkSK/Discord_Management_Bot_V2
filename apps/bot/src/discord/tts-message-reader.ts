@@ -282,13 +282,18 @@ export async function handleTtsMessage(
     return;
   }
 
-  const guildConfig = await getGuildConfigByGuildId(options.db, message.guildId);
+  let cachedConfigPromise: ReturnType<typeof getGuildConfigByGuildId> | undefined;
+  const fetchGuildConfig = () => {
+    cachedConfigPromise ??= getGuildConfigByGuildId(options.db, message.guildId);
+    return cachedConfigPromise;
+  };
+
   const temporaryChannelIds = options.ttsSessionManager.getReadableChannelIds(message.guildId);
   const voiceChannelId = options.ttsSessionManager.getVoiceChannelId(message.guildId);
   const readableChannelIds = await resolveReadableTtsChannelIds({
     channelId: message.channelId,
     guildId: message.guildId,
-    loadPersistentTextChannelId: async (_guildId) => guildConfig?.ttsTextChannelId ?? null,
+    loadPersistentTextChannelId: async (_guildId) => (await fetchGuildConfig())?.ttsTextChannelId ?? null,
     temporaryChannelIds
   });
 
@@ -316,7 +321,7 @@ export async function handleTtsMessage(
     return;
   }
 
-  const rateLimited = await handleRateLimitCheck(message, voiceChannelId, options, guildConfig);
+  const rateLimited = await handleRateLimitCheck(message, voiceChannelId, options, fetchGuildConfig);
   if (rateLimited) {
     return;
   }
@@ -374,7 +379,7 @@ async function handleRateLimitCheck(
   message: Message<true>,
   voiceChannelId: string | null,
   options: InstallTtsMessageReaderOptions,
-  guildConfig: Awaited<ReturnType<typeof getGuildConfigByGuildId>>
+  fetchGuildConfig: () => ReturnType<typeof getGuildConfigByGuildId>
 ): Promise<boolean> {
   if (!options.rateLimiter || options.rateLimiter.allow({ guildId: message.guildId, userId: message.author.id })) {
     return false;
@@ -398,6 +403,7 @@ async function handleRateLimitCheck(
     const lastNotified = cooldowns.get(message.author.id) ?? 0;
     if (now - lastNotified >= RATE_LIMIT_NOTIFY_COOLDOWN_MS) {
       cooldowns.set(message.author.id, now);
+      const guildConfig = await fetchGuildConfig();
       const lang = guildConfig?.language && isGuildLanguage(guildConfig.language) ? guildConfig.language : "en";
       const loc = getLocale(lang);
       await message.reply(
