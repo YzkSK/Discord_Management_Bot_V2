@@ -7,7 +7,10 @@ import type { DbClient } from "@discord-bot/db";
 import {
   closeRecruitment,
   countActiveRecruitmentParticipants,
+<<<<<<< HEAD
   getActiveParticipant,
+=======
+>>>>>>> a8dc0179d3feac4d5b9e187d2883be7c47837ecc
   getRecruitmentById,
   joinRecruitment,
   leaveRecruitment,

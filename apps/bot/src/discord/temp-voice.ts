@@ -20,7 +20,10 @@ import {
   endTempVoiceChannel,
   getActiveTempVoiceChannelByChannelId,
   getCallSessionById,
+<<<<<<< HEAD
   getGuildConfigByGuildId,
+=======
+>>>>>>> a8dc0179d3feac4d5b9e187d2883be7c47837ecc
   listActiveCallSessionMembers,
   listAllActiveTempVoiceChannels,
   listDiscordChannelNamesByIds,
@@ -132,6 +135,7 @@ export function installTempVoiceHandlers(
         console.error("temp-vc: channelDelete cleanup failed", { channelId: channel.id, err });
       });
   });
+<<<<<<< HEAD
 
   client.once(Events.ClientReady, (readyClient) => {
     void reconcileTempVoiceChannels(readyClient, options.db, logWriter).catch(
@@ -140,6 +144,8 @@ export function installTempVoiceHandlers(
       }
     );
   });
+=======
+>>>>>>> a8dc0179d3feac4d5b9e187d2883be7c47837ecc
 }
 
 export function formatTempVoiceChannelName(username: string) {
