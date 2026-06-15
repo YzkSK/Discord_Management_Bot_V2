@@ -62,6 +62,43 @@ describe("createComponentsV2TextMessage", () => {
   });
 });
 
+describe("createComponentsV2TextMessage with mediaUrls", () => {
+  it("appends a MediaGallery component when mediaUrls are provided", () => {
+    const url = "https://cdn.discordapp.com/attachments/1/2/image.png";
+    const message = createComponentsV2TextMessage({
+      title: "Test",
+      lines: ["line 1"],
+      mediaUrls: [url]
+    });
+
+    const container = message.components?.[0] as unknown as Record<string, unknown>;
+    const components = container.components as unknown[];
+    assert.equal(components.length, 3); // title TextDisplay + line TextDisplay + MediaGallery
+    const gallery = components[2] as Record<string, unknown>;
+    assert.equal(gallery.type, 12);
+    assert.deepEqual(gallery.items, [{ media: { url } }]);
+  });
+
+  it("caps MediaGallery at 10 items when more than 10 URLs are given", () => {
+    const urls = Array.from({ length: 12 }, (_, i) => `https://cdn.discordapp.com/img${i}.png`);
+    const message = createComponentsV2TextMessage({ title: "Test", mediaUrls: urls });
+
+    const container = message.components?.[0] as unknown as Record<string, unknown>;
+    const components = container.components as unknown[];
+    const gallery = components[1] as Record<string, unknown>;
+    const items = gallery.items as unknown[];
+    assert.equal(items.length, 10);
+  });
+
+  it("does not add a MediaGallery when mediaUrls is empty", () => {
+    const message = createComponentsV2TextMessage({ title: "Test", lines: ["x"], mediaUrls: [] });
+
+    const container = message.components?.[0] as unknown as Record<string, unknown>;
+    const components = container.components as unknown[];
+    assert.equal(components.length, 2); // title + line only, no gallery
+  });
+});
+
 describe("discordTimestamp", () => {
   it("returns Discord formatted timestamp", () => {
     const d = new Date("2026-06-11T12:00:00Z");

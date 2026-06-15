@@ -1,6 +1,6 @@
 import type { DbClient } from "../client.js";
-import { and, desc, eq, ilike, lte, or, sql, type SQL } from "drizzle-orm";
-import { logs } from "../schema/index.js";
+import { and, desc, eq, getTableColumns, ilike, like, lte, or, sql, type SQL } from "drizzle-orm";
+import { discordChannels, logs } from "../schema/index.js";
 
 export interface InsertLogEventInput {
   eventName: string;
@@ -95,8 +95,12 @@ function listLogEventsQuery(
   const filters = buildLogFilters(input);
 
   return db
-    .select()
+    .select({
+      ...getTableColumns(logs),
+      channelName: discordChannels.name
+    })
     .from(logs)
+    .leftJoin(discordChannels, eq(logs.channelId, discordChannels.channelId))
     .where(filters.length > 0 ? and(...filters) : undefined)
     .orderBy(desc(logs.receivedAt))
     .limit(limit);
@@ -110,7 +114,7 @@ function buildLogFilters(input: ListLogEventsInput): SQL[] {
   }
 
   if (input.eventName) {
-    filters.push(eq(logs.eventName, input.eventName));
+    filters.push(like(logs.eventName, `${input.eventName}.%`));
   }
 
   if (input.actorId) {

@@ -274,7 +274,7 @@ async function handleStatusSetup(
 
   const [logChannel, voiceStatusChannel] = await Promise.all([
     guild ? findMarkedLogChannel(guild).catch(() => null) : Promise.resolve(null),
-    guild ? findMarkedVoiceStatusChannel(guild).catch(() => null) : Promise.resolve(null)
+    Promise.resolve(guild ? findMarkedVoiceStatusChannel(guild) : null)
   ]);
 
   await interaction.reply({

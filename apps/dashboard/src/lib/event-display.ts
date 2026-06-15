@@ -20,7 +20,33 @@ export type EventVars = {
   count?: number | null;
   name?: string | null;
   genre?: string | null;
+  voiceStateChanges?: Record<string, { before: unknown; after: unknown }> | null;
 };
+
+const voiceStateChangeLabels: Record<string, [string, string]> = {
+  selfMute:                 ["マイクをミュート",         "マイクのミュートを解除"],
+  selfDeaf:                 ["スピーカーをミュート",     "スピーカーのミュートを解除"],
+  selfVideo:                ["カメラ開始",               "カメラ停止"],
+  streaming:                ["配信開始",                 "配信停止"],
+  serverMute:               ["サーバーミュートを適用",   "サーバーミュートを解除"],
+  serverDeaf:               ["サーバー側でスピーカーミュートを適用", "サーバー側でスピーカーミュートを解除"],
+  suppress:                 ["ステージ発言権なし",       "ステージ発言権あり"],
+  requestToSpeakTimestamp:  ["発言リクエスト",           "発言リクエスト取消"],
+};
+
+function formatVoiceStateChanges(
+  changes: Record<string, { before: unknown; after: unknown }> | null | undefined
+): string | null {
+  if (!changes) return null;
+  const parts = Object.entries(changes)
+    .map(([key, { after }]) => {
+      const labels = voiceStateChangeLabels[key];
+      if (!labels) return null;
+      return after ? labels[0] : labels[1];
+    })
+    .filter((s): s is string => s !== null);
+  return parts.length > 0 ? parts.join("・") : null;
+}
 
 function actor(v: EventVars, fallback = "不明"): string {
   if (v.actorName) return `@${v.actorName}`;
@@ -52,7 +78,12 @@ const eventDescriptions: Record<string, (v: EventVars) => string> = {
   "voice.session.join": (v) => `🎤 ${actor(v)} が${ch(v) ? `${ch(v)}` : "VCチャンネル"} に参加`,
   "voice.session.leave": (v) => `🎤 ${actor(v)} が${ch(v) ? `${ch(v)}` : "VCチャンネル"} から退出`,
   "voice.session.move": (v) => `🎤 ${actor(v)} が${ch(v) ? `${ch(v)}` : "VCチャンネル"} に移動`,
-  "voice.state.update": (_v) => `🎤 音声状態更新`,
+  "voice.state.update": (v) => {
+    const detail = formatVoiceStateChanges(v.voiceStateChanges);
+    return detail
+      ? `🎤 ${actor(v)} が${detail}`
+      : `🎤 ${actor(v)} の音声状態が更新`;
+  },
   "call.started": (v) => `📞 ${ch(v) ? `${ch(v)} で` : ""}通話開始`,
   "call.ended": (v) => `📞 ${ch(v) ? `${ch(v)} の` : ""}通話終了`,
   "call.updated": (_v) => `📞 通話更新`,
@@ -91,9 +122,10 @@ const eventDescriptions: Record<string, (v: EventVars) => string> = {
   "sticker.delete": (_v) => `🖼️ スタンプを削除`,
   "webhook.update": (_v) => `🔗 Webhookを更新`,
   // 募集
-  "recruitment.created": (v) => `🎮 募集作成${v.genre ? ` (${v.genre})` : ""}`,
-  "recruitment.full": (_v) => `🎮 募集が満員に`,
-  "recruitment.closed": (_v) => `🎮 募集を締切`,
+  "recruitment.created":  (v) => `🎮 ${actor(v)} が募集作成${v.genre ? ` (${v.genre})` : ""}`,
+  "recruitment.full":     (v) => `🎮 募集が満員${v.genre ? ` (${v.genre})` : ""}`,
+  "recruitment.closed":   (v) => `🎮 募集を締切${v.genre ? ` (${v.genre})` : ""}`,
+  "recruitment.reopened": (v) => `🎮 募集を再オープン${v.genre ? ` (${v.genre})` : ""}`,
   // TTS
   "tts.session.started": (v) => `🔊 ${actor(v, "")} TTSセッション開始`.trimStart(),
   "tts.session.stopped": (_v) => `🔊 TTSセッション終了`,

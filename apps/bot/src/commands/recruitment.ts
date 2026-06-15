@@ -258,13 +258,13 @@ export async function handleRecruitmentModalSubmit(
     genre: title,
     capacity,
     content,
-    voiceChannelId,
-    autoClose: true
+    voiceChannelId
   });
 
-  const message = await recruitmentChannel.send(
-    createRecruitmentPostMessage(recruitment, loc)
-  );
+  const message = await recruitmentChannel.send({
+    ...createRecruitmentPostMessage(recruitment, loc, 0, [], []),
+    allowedMentions: { parse: [] }
+  });
 
   const recruitmentWithMessage =
     (await setRecruitmentMessageId(context.db, {
@@ -285,8 +285,7 @@ export async function handleRecruitmentModalSubmit(
     ...createComponentsV2TextMessage({
       title: loc.recruitmentCreated,
       lines: [
-        loc.recruitmentPostLink({ url: message.url }),
-        loc.recruitmentAutoCloseStatus({ enabled: true })
+        loc.recruitmentPostLink({ url: message.url })
       ],
       accentColor: EVENT_COLORS.teal,
       privateResponse: true

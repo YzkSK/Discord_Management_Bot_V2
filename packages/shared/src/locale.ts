@@ -61,7 +61,6 @@ type Locale = {
   recruitmentPostCreator: (vars: { id: string }) => string;
   recruitmentPostVc: (vars: { id: string }) => string;
   recruitmentPostNoVc: string;
-  recruitmentPostAutoClose: (vars: { enabled: boolean }) => string;
   recruitmentButtonJoin: string;
   recruitmentButtonLeave: string;
   recruitmentButtonClose: string;
@@ -69,15 +68,29 @@ type Locale = {
   recruitmentNotFoundMessage: string;
   recruitmentNotOpen: string;
   recruitmentNotOpenMessage: string;
+  recruitmentAlreadyJoined: string;
+  recruitmentAlreadyQueued: string;
+  recruitmentQueueJoined: (vars: { position: number }) => string;
+  recruitmentQueueLeft: string;
+  recruitmentPromoted: (vars: { userId: string }) => string;
+  recruitmentButtonReopen: string;
+  recruitmentReopenedSuccess: string;
+  recruitmentAlreadyOpen: string;
+  recruitmentNotJoined: string;
+  recruitmentParticipantsLabel: string;
+  recruitmentNoParticipants: string;
+  recruitmentQueueLabel: string;
   recruitmentJoined: (vars: { current: number; max: number }) => string;
   recruitmentLeft: (vars: { current: number; max: number }) => string;
   recruitmentClosedSuccess: string;
+  recruitmentAlreadyClosed: string;
   recruitmentCannotClose: string;
   recruitmentCannotCloseMessage: string;
   ttsJoinFailed: string;
   ttsJoinVoiceFirst: string;
   ttsAlreadyConnected: string;
   ttsAlreadyConnectedMessage: string;
+  ttsAlreadyConnectedHere: string;
   ttsForceJoinSuggestion: string;
   ttsConnected: string;
   ttsVoiceChannel: (vars: { id: string }) => string;
@@ -99,16 +112,21 @@ type Locale = {
   ttsLeaveFailed: string;
   ttsLeaveNotInGuild: string;
   ttsDisconnected: string;
+  ttsNotConnected: string;
   ttsChannelsCleared: string;
   ttsSpeakerFailed: string;
   ttsSpeakerUpdated: string;
+  ttsSpeakerAlreadySet: string;
   ttsSpeakerUser: (vars: { id: number }) => string;
   ttsSpeakerServerDefault: (vars: { id: number }) => string;
   logEventTitle: (vars: { eventName: string }) => string;
   logEventTimeLabel: string;
   logReason: (vars: { reason: string }) => string;
+  logRecruitmentCreator: (vars: { id: string }) => string;
+  logRecruitmentGenre: (vars: { genre: string }) => string;
   logFieldLabel: (field: string) => string | null;
   logChangeField: (vars: { label: string; before: string; after: string }) => string;
+  logContentChange: (vars: { before: string; after: string }) => string;
   commandSuccess: (vars: { operation: string }) => string;
   commandError: (vars: { reason: string }) => string;
   voiceTempCreatedTitle: string;
@@ -122,20 +140,10 @@ type Locale = {
   ttsRateLimited: string;
   ttsRateLimitedHint: string;
   ttsForceJoinCurrentChannel: (vars: { id: string }) => string;
-  recruitmentAutoCloseStatus: (vars: { enabled: boolean }) => string;
-  recruitmentAutoClosedTitle: string;
-  recruitmentAutoClosedHint: string;
-  recruitmentReopenedTitle: string;
   recruitmentModalTitle: string;
   recruitmentModalFieldTitle: string;
   recruitmentModalFieldCapacity: string;
   recruitmentModalFieldContent: string;
-  recruitmentButtonSettings: string;
-  recruitmentSettingsTitle: string;
-  recruitmentAutoCloseToggleOn: string;
-  recruitmentAutoCloseToggleOff: string;
-  recruitmentAutoCloseUpdated: (vars: { enabled: boolean }) => string;
-  recruitmentNotCreator: string;
   recruitmentCapacityInvalid: string;
   setupStatusTitle: string;
   setupStatusTempVc: (vars: { id: string | null }) => string;
@@ -203,7 +211,6 @@ const locales: Record<GuildLanguage, Locale> = {
     recruitmentPostCreator: ({ id }) => `Creator: <@${id}>`,
     recruitmentPostVc: ({ id }) => `VC: <#${id}>`,
     recruitmentPostNoVc: "VC: none",
-    recruitmentPostAutoClose: ({ enabled }) => `Auto close: ${enabled ? "on" : "off"}`,
     recruitmentButtonJoin: "➕ Join",
     recruitmentButtonLeave: "➖ Leave",
     recruitmentButtonClose: "🔒 Close",
@@ -211,9 +218,22 @@ const locales: Record<GuildLanguage, Locale> = {
     recruitmentNotFoundMessage: "This recruitment post no longer exists.",
     recruitmentNotOpen: "❌ Recruitment is not open",
     recruitmentNotOpenMessage: "This recruitment is already full or closed.",
+    recruitmentAlreadyJoined: "You've already joined this recruitment.",
+    recruitmentAlreadyQueued: "You're already in the queue.",
+    recruitmentQueueJoined: ({ position }) => `✅ Added to queue (position ${position})`,
+    recruitmentQueueLeft: "✅ Removed from the queue.",
+    recruitmentPromoted: ({ userId }) => `<@${userId}> A spot opened up!`,
+    recruitmentButtonReopen: "🔓 Reopen",
+    recruitmentReopenedSuccess: "✅ Recruitment reopened",
+    recruitmentAlreadyOpen: "This recruitment is already open.",
+    recruitmentNotJoined: "You haven't joined this recruitment.",
+    recruitmentParticipantsLabel: "Participants:",
+    recruitmentNoParticipants: "Participants: none",
+    recruitmentQueueLabel: "Queue:",
     recruitmentJoined: ({ current, max }) => `✅ Joined! (${current}/${max})`,
     recruitmentLeft: ({ current, max }) => `✅ Left. (${current}/${max})`,
     recruitmentClosedSuccess: "✅ Recruitment closed",
+    recruitmentAlreadyClosed: "This recruitment is already closed.",
     recruitmentCannotClose: "❌ Cannot close recruitment",
     recruitmentCannotCloseMessage: "Only the creator or a server manager can close this.",
     ttsJoinFailed: "❌ TTS join failed",
@@ -221,6 +241,7 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsAlreadyConnected: "⚠️ TTS already connected",
     ttsAlreadyConnectedMessage:
       "The bot is already connected to another voice channel.",
+    ttsAlreadyConnectedHere: "Already connected to this channel.",
     ttsForceJoinSuggestion:
       "Ask a Dashboard admin or owner to use `/force-join`.",
     ttsConnected: "✅ 🔊 TTS connected",
@@ -246,9 +267,11 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsLeaveFailed: "❌ TTS leave failed",
     ttsLeaveNotInGuild: "This command can only be used in a guild.",
     ttsDisconnected: "🔇 TTS disconnected",
+    ttsNotConnected: "TTS is not connected.",
     ttsChannelsCleared: "Temporary TTS text channels were cleared.",
     ttsSpeakerFailed: "❌ TTS speaker update failed",
     ttsSpeakerUpdated: "✅ TTS speaker updated",
+    ttsSpeakerAlreadySet: "That speaker is already selected.",
     ttsSpeakerUser: ({ id }) => `Your TTS speaker: ${id}`,
     ttsSpeakerServerDefault: ({ id }) => `Server default TTS speaker: ${id}`,
     logEventTitle: ({ eventName }) => {
@@ -275,6 +298,7 @@ const locales: Record<GuildLanguage, Locale> = {
         "recruitment.created": "🎮 Recruitment Created",
         "recruitment.full": "🎮 Recruitment Full",
         "recruitment.closed": "🎮 Recruitment Closed",
+        "recruitment.reopened": "🎮 Recruitment Reopened",
         "tts.session.started": "🔊 TTS Session Started",
         "tts.session.stopped": "🔊 TTS Session Stopped",
         "tts.message.skipped": "🔊 TTS Message Skipped",
@@ -321,6 +345,8 @@ const locales: Record<GuildLanguage, Locale> = {
     },
     logEventTimeLabel: "Event time",
     logReason: ({ reason }) => `Reason: ${reason}`,
+    logRecruitmentCreator: ({ id }) => `Creator: <@${id}>`,
+    logRecruitmentGenre: ({ genre }) => `Genre: ${genre}`,
     logFieldLabel: (field) => ({
       displayName: "Display name",
       nickname: "Nickname",
@@ -332,6 +358,7 @@ const locales: Record<GuildLanguage, Locale> = {
       ownerId: "Owner",
     } as Record<string, string>)[field] ?? null,
     logChangeField: ({ label, before, after }) => `${label}: ${before} → ${after}`,
+    logContentChange: ({ before, after }) => `Content: ${before} → ${after}`,
     commandSuccess: ({ operation }) => `✅ ${operation} completed`,
     commandError: ({ reason }) => `❌ ${reason}`,
     voiceTempCreatedTitle: "✨ Temp VC Created",
@@ -345,20 +372,10 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsRateLimited: "⚡ Slow down",
     ttsRateLimitedHint: "Messages are rate-limited. Wait a moment before sending more.",
     ttsForceJoinCurrentChannel: ({ id }) => `Currently in <#${id}>`,
-    recruitmentAutoCloseStatus: ({ enabled }) => `Auto-close at capacity: ${enabled ? "ON" : "OFF"}`,
-    recruitmentAutoClosedTitle: "🔒 Recruitment closed",
-    recruitmentAutoClosedHint: "Capacity reached — the recruitment has been automatically closed.",
-    recruitmentReopenedTitle: "🟢 Recruitment reopened",
     recruitmentModalTitle: "Create Recruitment",
     recruitmentModalFieldTitle: "Title",
     recruitmentModalFieldCapacity: "Capacity (1–99)",
     recruitmentModalFieldContent: "Details",
-    recruitmentButtonSettings: "⚙️ Settings",
-    recruitmentSettingsTitle: "⚙️ Recruitment Settings",
-    recruitmentAutoCloseToggleOn: "✅ Enable auto-close",
-    recruitmentAutoCloseToggleOff: "🔕 Disable auto-close",
-    recruitmentAutoCloseUpdated: ({ enabled }) => `✅ Auto-close ${enabled ? "enabled" : "disabled"}`,
-    recruitmentNotCreator: "Only the creator can change recruitment settings.",
     recruitmentCapacityInvalid: "Capacity must be an integer between 1 and 99.",
     setupStatusTitle: "📋 Server Configuration",
     setupStatusTempVc: ({ id }) => `Temp VC: ${id ? `<#${id}>` : "Not configured"}`,
@@ -422,7 +439,6 @@ const locales: Record<GuildLanguage, Locale> = {
     recruitmentPostCreator: ({ id }) => `作成者: <@${id}>`,
     recruitmentPostVc: ({ id }) => `VC: <#${id}>`,
     recruitmentPostNoVc: "VC: なし",
-    recruitmentPostAutoClose: ({ enabled }) => `自動締切: ${enabled ? "オン" : "オフ"}`,
     recruitmentButtonJoin: "➕ 参加",
     recruitmentButtonLeave: "➖ 退出",
     recruitmentButtonClose: "🔒 締切",
@@ -430,9 +446,22 @@ const locales: Record<GuildLanguage, Locale> = {
     recruitmentNotFoundMessage: "この募集投稿はすでに存在しません。",
     recruitmentNotOpen: "❌ 募集は受け付けていません",
     recruitmentNotOpenMessage: "この募集は満員または締切済みです。",
+    recruitmentAlreadyJoined: "既に参加済みです。",
+    recruitmentAlreadyQueued: "既に待機リストに入っています。",
+    recruitmentQueueJoined: ({ position }) => `✅ 待機リストに追加されました（${position}番目）`,
+    recruitmentQueueLeft: "✅ 待機リストから外れました。",
+    recruitmentPromoted: ({ userId }) => `<@${userId}> 参加枠が空きました！`,
+    recruitmentButtonReopen: "🔓 再オープン",
+    recruitmentReopenedSuccess: "✅ 募集を再オープンしました",
+    recruitmentAlreadyOpen: "この募集は既に再開されています。",
+    recruitmentNotJoined: "参加していません。",
+    recruitmentParticipantsLabel: "参加者:",
+    recruitmentNoParticipants: "参加者: なし",
+    recruitmentQueueLabel: "待機中:",
     recruitmentJoined: ({ current, max }) => `✅ 参加しました！（${current}/${max}人）`,
     recruitmentLeft: ({ current, max }) => `✅ 退出しました。（${current}/${max}人）`,
     recruitmentClosedSuccess: "✅ 募集を締め切りました",
+    recruitmentAlreadyClosed: "この募集は既に締め切られています。",
     recruitmentCannotClose: "❌ 締め切れません",
     recruitmentCannotCloseMessage: "作成者またはサーバー管理者のみが締め切れます。",
     ttsJoinFailed: "❌ TTS参加失敗",
@@ -440,6 +469,7 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsAlreadyConnected: "⚠️ TTS接続中",
     ttsAlreadyConnectedMessage:
       "ボットはすでに別のボイスチャンネルに接続されています。",
+    ttsAlreadyConnectedHere: "既にこのチャンネルに接続しています。",
     ttsForceJoinSuggestion:
       "ダッシュボード管理者またはオーナーが `/force-join` を使用してください。",
     ttsConnected: "✅ 🔊 TTS接続完了",
@@ -466,9 +496,11 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsLeaveFailed: "❌ TTS退出失敗",
     ttsLeaveNotInGuild: "このコマンドはサーバー内でのみ使用できます。",
     ttsDisconnected: "🔇 TTS切断完了",
+    ttsNotConnected: "TTSは接続していません。",
     ttsChannelsCleared: "一時TTSテキストチャンネルをクリアしました。",
     ttsSpeakerFailed: "❌ TTS話者変更失敗",
     ttsSpeakerUpdated: "✅ TTS話者を更新しました",
+    ttsSpeakerAlreadySet: "既にそのスピーカーが選択されています。",
     ttsSpeakerUser: ({ id }) => `あなたのTTS話者: ${id}`,
     ttsSpeakerServerDefault: ({ id }) => `サーバーデフォルトTTS話者: ${id}`,
     logEventTitle: ({ eventName }) => {
@@ -495,6 +527,7 @@ const locales: Record<GuildLanguage, Locale> = {
         "recruitment.created": "🎮 募集作成",
         "recruitment.full": "🎮 募集満員",
         "recruitment.closed": "🎮 募集締切",
+        "recruitment.reopened": "🎮 募集再オープン",
         "tts.session.started": "🔊 TTSセッション開始",
         "tts.session.stopped": "🔊 TTSセッション終了",
         "tts.message.skipped": "🔊 TTSメッセージスキップ",
@@ -541,6 +574,8 @@ const locales: Record<GuildLanguage, Locale> = {
     },
     logEventTimeLabel: "イベント時刻",
     logReason: ({ reason }) => `理由: ${reason}`,
+    logRecruitmentCreator: ({ id }) => `作成者: <@${id}>`,
+    logRecruitmentGenre: ({ genre }) => `ジャンル: ${genre}`,
     logFieldLabel: (field) => ({
       displayName: "表示名",
       nickname: "ニックネーム",
@@ -552,6 +587,7 @@ const locales: Record<GuildLanguage, Locale> = {
       ownerId: "オーナー",
     } as Record<string, string>)[field] ?? null,
     logChangeField: ({ label, before, after }) => `${label}: ${before} → ${after}`,
+    logContentChange: ({ before, after }) => `内容: ${before} → ${after}`,
     commandSuccess: ({ operation }) => `✅ ${operation}が完了しました`,
     commandError: ({ reason }) => `❌ ${reason}`,
     voiceTempCreatedTitle: "✨ 一時VCが作成された",
@@ -571,20 +607,10 @@ const locales: Record<GuildLanguage, Locale> = {
     ttsRateLimited: "⚡ 送信が速すぎます",
     ttsRateLimitedHint: "メッセージの読み上げにはレート制限があります。少し待ってから再送信してください。",
     ttsForceJoinCurrentChannel: ({ id }) => `現在 <#${id}> に接続中`,
-    recruitmentAutoCloseStatus: ({ enabled }) => `定員到達で自動クローズ: ${enabled ? "ON" : "OFF"}`,
-    recruitmentAutoClosedTitle: "🔒 募集がクローズしました",
-    recruitmentAutoClosedHint: "定員に達したため、募集が自動的にクローズされました。",
-    recruitmentReopenedTitle: "🟢 募集が再オープンしました",
     recruitmentModalTitle: "募集を作成",
     recruitmentModalFieldTitle: "タイトル",
     recruitmentModalFieldCapacity: "定員（1〜99）",
     recruitmentModalFieldContent: "内容",
-    recruitmentButtonSettings: "⚙️ 設定",
-    recruitmentSettingsTitle: "⚙️ 募集設定",
-    recruitmentAutoCloseToggleOn: "✅ 自動締め切りをONにする",
-    recruitmentAutoCloseToggleOff: "🔕 自動締め切りをOFFにする",
-    recruitmentAutoCloseUpdated: ({ enabled }) => `✅ 自動締め切りを${enabled ? "ON" : "OFF"}にしました`,
-    recruitmentNotCreator: "この操作は作成者のみが行えます。",
     recruitmentCapacityInvalid: "定員は1〜99の整数を入力してください。",
     setupStatusTitle: "📋 サーバー設定",
     setupStatusTempVc: ({ id }) => `一時VC: ${id ? `<#${id}>` : "未設定"}`,

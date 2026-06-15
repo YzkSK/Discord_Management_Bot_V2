@@ -14,8 +14,6 @@ describe("buildRecruitmentSummary", () => {
         recruitments: [
           {
             activeParticipantCount: 2,
-            autoClose: true,
-            autoClosed: false,
             capacity: 4,
             channelId: "channel-1",
             closedAt: null,
@@ -31,8 +29,6 @@ describe("buildRecruitmentSummary", () => {
           },
           {
             activeParticipantCount: 3,
-            autoClose: true,
-            autoClosed: true,
             capacity: 3,
             channelId: "channel-2",
             closedAt: updatedAt,
@@ -55,8 +51,6 @@ describe("buildRecruitmentSummary", () => {
         recruitments: [
           {
             activeParticipantCount: 2,
-            autoClose: true,
-            autoClosed: false,
             availableSlots: 2,
             capacity: 4,
             channelId: "channel-1",
@@ -75,8 +69,6 @@ describe("buildRecruitmentSummary", () => {
           },
           {
             activeParticipantCount: 3,
-            autoClose: true,
-            autoClosed: true,
             availableSlots: 0,
             capacity: 3,
             channelId: "channel-2",

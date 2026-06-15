@@ -56,6 +56,10 @@ export async function createTempVoiceChannel(
   return { callSession, tempVoiceChannel };
 }
 
+export async function listAllActiveTempVoiceChannels(db: DbClient) {
+  return db.select().from(tempVoiceChannels);
+}
+
 export async function getActiveTempVoiceChannelByChannelId(
   db: DbClient,
   channelId: string

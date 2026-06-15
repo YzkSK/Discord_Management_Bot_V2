@@ -110,7 +110,7 @@ export function createTempVoiceControlMessage(input: {
 
   const statusLine = [
     isLocked ? "🔒 ロック中" : "🔓 オープン",
-    isHidden ? "🙈 非表示" : "👁️ 表示中"
+    isHidden ? "🚫 非表示" : "🌐 表示中"
   ].join("  ·  ");
 
   const hasPermissionInfo = allowedUserIds.length > 0 || deniedUserIds.length > 0;
@@ -163,8 +163,8 @@ export function createTempVoiceControlMessage(input: {
       ? [createButton(channelId, "unlock", "🔓 解除", ButtonStyle.Secondary)]
       : [createButton(channelId, "lock", "🔒 ロック", ButtonStyle.Secondary)]),
     ...(isHidden
-      ? [createButton(channelId, "show", "👁️ 表示", ButtonStyle.Secondary)]
-      : [createButton(channelId, "hide", "🙈 非表示", ButtonStyle.Secondary)])
+      ? [createButton(channelId, "show", "🌐 表示", ButtonStyle.Secondary)]
+      : [createButton(channelId, "hide", "🚫 非表示", ButtonStyle.Secondary)])
   );
 
   const secondRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -253,16 +253,17 @@ async function updateControlPanel(
 
   if (!panelMessage) return;
 
-  await panelMessage.edit(
-    createTempVoiceControlMessage({
+  await panelMessage.edit({
+    ...createTempVoiceControlMessage({
       ownerId: tempVoice.ownerId,
       tempVoiceChannelId: tempVoice.channelId,
       allowedUserIds,
       deniedUserIds,
       isLocked,
       isHidden
-    })
-  );
+    }),
+    allowedMentions: { parse: [] }
+  });
 }
 
 export async function handleTempVoiceControlInteraction(
@@ -403,6 +404,11 @@ export async function handleTempVoiceControlInteraction(
     }
 
     if (parsed.action === "allow-target") {
+      const targetOw = channel.permissionOverwrites.cache.get(parsed.targetUserId);
+      if (targetOw?.allow.has(PermissionFlagsBits.Connect)) {
+        await replyPrivate(interaction, "既に入室を許可しています", []);
+        return true;
+      }
       try {
         await channel.permissionOverwrites.edit(parsed.targetUserId, { Connect: true });
       } catch {
@@ -420,6 +426,11 @@ export async function handleTempVoiceControlInteraction(
     }
 
     if (parsed.action === "deny-target") {
+      const targetOw = channel.permissionOverwrites.cache.get(parsed.targetUserId);
+      if (targetOw?.deny.has(PermissionFlagsBits.Connect)) {
+        await replyPrivate(interaction, "既に入室を禁止しています", []);
+        return true;
+      }
       try {
         await channel.permissionOverwrites.edit(parsed.targetUserId, { Connect: false });
       } catch {
@@ -472,29 +483,87 @@ export async function handleTempVoiceControlInteraction(
   }
 
   if (parsed.action === "lock") {
-    await channel.permissionOverwrites.edit(guild.roles.everyone.id, { Connect: false });
+    const eo = channel.permissionOverwrites.cache.get(guild.roles.everyone.id);
+    if (eo?.deny.has(PermissionFlagsBits.Connect)) {
+      await replyPrivate(interaction, "既にロックされています", []);
+      return true;
+    }
+    const botId = interaction.client.user.id;
+    try {
+      const currentMemberIds = [...channel.members.keys()];
+      await Promise.all([
+        channel.permissionOverwrites.edit(botId, { Connect: true }),
+        ...currentMemberIds.map((id) => channel.permissionOverwrites.edit(id, { Connect: true }))
+      ]);
+      await channel.permissionOverwrites.edit(guild.roles.everyone.id, { Connect: false });
+    } catch {
+      await replyPermissionOverwriteError(interaction);
+      return true;
+    }
     await replyPrivate(interaction, "✅ 🔒 ロック完了", ["新しいメンバーは接続できなくなりました。"]);
     await updateControlPanel(guild, tempVoiceChannel);
     return true;
   }
 
   if (parsed.action === "unlock") {
-    await channel.permissionOverwrites.edit(guild.roles.everyone.id, { Connect: null });
+    const eo = channel.permissionOverwrites.cache.get(guild.roles.everyone.id);
+    if (!eo?.deny.has(PermissionFlagsBits.Connect)) {
+      await replyPrivate(interaction, "既にロック解除されています", []);
+      return true;
+    }
+    const botId = interaction.client.user.id;
+    try {
+      await channel.permissionOverwrites.edit(guild.roles.everyone.id, { Connect: null });
+      await channel.permissionOverwrites.edit(botId, { Connect: null }).catch(() => undefined);
+    } catch {
+      await replyPermissionOverwriteError(interaction);
+      return true;
+    }
     await replyPrivate(interaction, "✅ 🔓 ロック解除", ["新しいメンバーが接続できるようになりました。"]);
     await updateControlPanel(guild, tempVoiceChannel);
     return true;
   }
 
   if (parsed.action === "hide") {
-    await channel.permissionOverwrites.edit(guild.roles.everyone.id, { ViewChannel: false });
-    await replyPrivate(interaction, "✅ 🙈 非表示", ["チャンネルを非表示にしました。"]);
+    const eo = channel.permissionOverwrites.cache.get(guild.roles.everyone.id);
+    if (eo?.deny.has(PermissionFlagsBits.ViewChannel)) {
+      await replyPrivate(interaction, "既に非表示になっています", []);
+      return true;
+    }
+    const botId = interaction.client.user.id;
+    const currentMemberIds = [...channel.members.keys()];
+    try {
+      await Promise.all([
+        channel.permissionOverwrites.edit(botId, { ViewChannel: true }),
+        ...currentMemberIds.map((id) =>
+          channel.permissionOverwrites.edit(id, { ViewChannel: true, Connect: true })
+        ),
+      ]);
+      await channel.permissionOverwrites.edit(guild.roles.everyone.id, { ViewChannel: false });
+    } catch {
+      await replyPermissionOverwriteError(interaction);
+      return true;
+    }
+    await replyPrivate(interaction, "✅ 🚫 非表示", ["チャンネルを非表示にしました。"]);
     await updateControlPanel(guild, tempVoiceChannel);
     return true;
   }
 
   if (parsed.action === "show") {
-    await channel.permissionOverwrites.edit(guild.roles.everyone.id, { ViewChannel: null });
-    await replyPrivate(interaction, "✅ 👁️ 表示", ["チャンネルを表示しました。"]);
+    const eo = channel.permissionOverwrites.cache.get(guild.roles.everyone.id);
+    if (!eo?.deny.has(PermissionFlagsBits.ViewChannel)) {
+      await replyPrivate(interaction, "既に表示されています", []);
+      return true;
+    }
+    const botId = interaction.client.user.id;
+    try {
+      await channel.permissionOverwrites.edit(guild.roles.everyone.id, { ViewChannel: null });
+      await channel.permissionOverwrites.edit(botId, { ViewChannel: null }).catch(() => undefined);
+    } catch {
+      await replyPermissionOverwriteError(interaction);
+      return true;
+    }
+    await replyPrivate(interaction, "✅ 🌐 表示", ["チャンネルを表示しました。"]);
     await updateControlPanel(guild, tempVoiceChannel);
     return true;
   }
@@ -539,6 +608,7 @@ function isVoiceBasedChannel(
   channel: GuildBasedChannel | null | undefined
 ): channel is GuildBasedChannel & {
   isVoiceBased: () => true;
+  members: Map<string, { id: string }>;
   permissionOverwrites: {
     cache: Map<string, { type: number; allow: { has: (f: bigint) => boolean }; deny: { has: (f: bigint) => boolean } }>;
     edit: (id: string, options: unknown) => Promise<unknown>;
@@ -573,6 +643,15 @@ async function replyPrivate(
       privateResponse: true
     })
   });
+}
+
+async function replyPermissionOverwriteError(
+  interaction: ButtonInteraction | ModalSubmitInteraction | UserSelectMenuInteraction
+) {
+  await replyPrivate(interaction, "❌ 権限エラー", [
+    "Bot がこの VC の権限設定を変更できませんでした。",
+    "Bot ロールに `チャンネルの管理` があり、対象 VC を表示できるか確認してください。"
+  ]);
 }
 
 function isFormAction(action: TempVoiceControlAction) {

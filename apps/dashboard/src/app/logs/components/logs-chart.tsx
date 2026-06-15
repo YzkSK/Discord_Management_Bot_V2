@@ -24,6 +24,17 @@ const CHART_COLORS: Record<string, string> = {
   gray: "#71717A",
 };
 
+const COLOR_LABELS: Record<string, string> = {
+  blue:   "Messages",
+  purple: "Voice / Call",
+  teal:   "Temp VC",
+  green:  "Recruitment",
+  sky:    "TTS",
+  red:    "System",
+  orange: "Audit",
+  gray:   "Config / Dashboard",
+};
+
 const MS_PER_HOUR = 3_600_000;
 const PEAK_HOURS = 24;
 
@@ -80,6 +91,7 @@ export function LogsChart({ logs }: { logs: LogItem[] }) {
             <Bar
               key={key}
               dataKey={key}
+              name={COLOR_LABELS[key] ?? key}
               stackId="a"
               fill={color}
               radius={[2, 2, 0, 0]}

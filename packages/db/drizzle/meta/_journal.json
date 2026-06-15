@@ -92,6 +92,34 @@
       "when": 1781331046412,
       "tag": "0012_romantic_rogue",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1781401684177,
+      "tag": "0013_real_vindicator",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1781401840164,
+      "tag": "0014_premium_goblin_queen",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1781411828664,
+      "tag": "0015_oval_ikaris",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1781416541525,
+      "tag": "0016_funny_captain_marvel",
+      "breakpoints": true
     }
   ]
 }

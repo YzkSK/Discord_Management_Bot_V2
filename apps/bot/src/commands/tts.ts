@@ -1,5 +1,6 @@
 import {
   getGuildConfigByGuildId,
+  getUserTtsSpeaker,
   listDashboardAccessGrants,
   setGuildDefaultTtsSpeaker,
   setUserTtsSpeaker,
@@ -222,6 +223,11 @@ export async function handleJoinCommand(
     return;
   }
 
+  if (result.status === "already-connected") {
+    await replyPrivate(interaction, loc.ttsAlreadyConnectedHere, [], EVENT_COLORS.yellow);
+    return;
+  }
+
   await replyPrivate(interaction, loc.ttsConnected, [
     `${loc.ttsVoiceChannel({ id: target.voiceChannelId })}  ·  ${loc.ttsReadingChannel({ id: target.textChannelId })}`,
     loc.ttsTipMutePrefix
@@ -273,22 +279,26 @@ export async function handleForceJoinCommand(
   }
 
   const result = await context.ttsSessionManager.forceJoin(target);
+
+  if (result.status === "already-connected") {
+    await replyPrivate(interaction, loc.ttsAlreadyConnectedHere, [], EVENT_COLORS.yellow);
+    return;
+  }
+
   await replyPrivate(interaction, loc.ttsConnected, [
     `${loc.ttsVoiceChannel({ id: target.voiceChannelId })}  ·  ${loc.ttsReadingChannel({ id: target.textChannelId })}`
   ], EVENT_COLORS.green);
 
-  if (result.status !== "already-connected") {
-    await writeTtsLog(
-      context,
-      createTtsSessionStartedEvent({
-        actorId: interaction.user.id,
-        guildId: target.guildId,
-        reason: "force-join-command",
-        textChannelId: target.textChannelId,
-        voiceChannelId: target.voiceChannelId
-      })
-    );
-  }
+  await writeTtsLog(
+    context,
+    createTtsSessionStartedEvent({
+      actorId: interaction.user.id,
+      guildId: target.guildId,
+      reason: "force-join-command",
+      textChannelId: target.textChannelId,
+      voiceChannelId: target.voiceChannelId
+    })
+  );
 }
 
 export async function handleLeaveCommand(
@@ -306,6 +316,12 @@ export async function handleLeaveCommand(
   const loc = await resolveGuildLocale(context.db, guildId);
   const voiceChannelId = context.ttsSessionManager.getVoiceChannelId(guildId);
   const wasConnected = context.ttsSessionManager.isConnected(guildId);
+
+  if (!wasConnected) {
+    await replyPrivate(interaction, loc.ttsNotConnected, [], EVENT_COLORS.yellow);
+    return;
+  }
+
   context.ttsSessionManager.leave(guildId);
   await replyPrivate(interaction, loc.ttsDisconnected, [loc.ttsChannelsCleared], EVENT_COLORS.gray);
 
@@ -344,6 +360,11 @@ export async function handleSpeakerCommand(
   const subcommand = interaction.options.getSubcommand();
 
   if (subcommand === "set") {
+    const current = await getUserTtsSpeaker(context.db, { guildId, userId: interaction.user.id });
+    if (current?.speakerId === speakerId) {
+      await replyPrivate(interaction, loc.ttsSpeakerAlreadySet, [], EVENT_COLORS.yellow);
+      return;
+    }
     const setUserSpeaker = context.setUserSpeaker ?? setUserTtsSpeaker;
     await setUserSpeaker(context.db, {
       guildId,

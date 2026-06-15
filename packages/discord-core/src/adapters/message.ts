@@ -28,6 +28,8 @@ export function normalizeMessageUpdate(
 ): NormalizedEvent {
   const eventTimestamp = newMessage.editedAt ?? newMessage.createdAt ?? new Date();
 
+  // newMessage may be a PartialMessage; its attachments collection will be empty
+  // for uncached messages, so no MediaGallery will appear for partial updates.
   return normalizeMessageEvent("message.update", newMessage, eventTimestamp, {
     oldContent: oldMessage.content ?? null,
     newContent: newMessage.content ?? null
@@ -40,6 +42,14 @@ export function normalizeMessageDelete(message: AnyMessage): NormalizedEvent {
     message,
     message.createdAt ?? new Date()
   );
+}
+
+function attachmentPayload(
+  message: AnyMessage
+): Array<{ url: string; name: string; contentType: string | null }> {
+  return [...(message.attachments?.values() ?? [])]
+    .filter(a => a.contentType?.startsWith("image/") || a.contentType?.startsWith("video/"))
+    .map(a => ({ url: a.url, name: a.name, contentType: a.contentType ?? null }));
 }
 
 function normalizeMessageEvent(
@@ -58,6 +68,7 @@ function normalizeMessageEvent(
     messageId: message.id,
     payload: {
       content: message.content ?? null,
+      attachments: attachmentPayload(message),
       createdTimestamp: message.createdTimestamp ?? null,
       partial: message.partial,
       ...extraPayload

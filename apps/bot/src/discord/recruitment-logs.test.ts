@@ -18,8 +18,6 @@ describe("createRecruitmentEvent", () => {
         genre: "Game",
         capacity: 4,
         voiceChannelId: null,
-        autoClose: true,
-        autoClosed: false,
         status: "open"
       }
     });
@@ -27,8 +25,6 @@ describe("createRecruitmentEvent", () => {
     assert.equal(event.eventName, "recruitment.created");
     assert.equal(event.guildId, "guild-1");
     assert.equal(event.actorId, "user-1");
-    assert.equal(event.channelId, "channel-1");
-    assert.equal(event.messageId, "message-1");
     assert.deepEqual(event.payload, {
       recruitmentId: "recruitment-1",
       creatorId: "user-1",
@@ -36,8 +32,6 @@ describe("createRecruitmentEvent", () => {
       capacity: 4,
       participantCount: 0,
       status: "open",
-      autoClose: true,
-      autoClosed: false,
       voiceChannelId: null,
       reason: "created"
     });

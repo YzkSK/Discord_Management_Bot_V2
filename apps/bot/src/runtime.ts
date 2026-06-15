@@ -23,6 +23,8 @@ import { installTtsAnnounceHandler } from "./discord/tts-announce.js";
 import { TtsSessionManager } from "./discord/tts-session.js";
 import { LocalTtsPlaybackQueue } from "./discord/tts-queue.js";
 import { installVoiceActivityHandlers } from "./discord/voice-activity.js";
+import { installChannelNameHandlers } from "./discord/channel-names.js";
+import { installVoiceReconciliation } from "./discord/voice-reconciliation.js";
 import { createVoicevoxClient, getVoicevoxSpeakers } from "./discord/voicevox.js";
 
 export interface BotRuntime {
@@ -86,6 +88,7 @@ function installHandlers(deps: RuntimeDeps) {
   installGatewayLogHandlers(discordClient, { db: db.db, redis: redis.client });
   installTempVoiceHandlers(discordClient, { db: db.db, redis: redis.client });
   installVoiceActivityHandlers(discordClient, { db: db.db, logWriter });
+  installVoiceReconciliation(discordClient, db.db);
   installTtsAutoLeaveHandler(discordClient, { logWriter, ttsSessionManager });
   installTtsAnnounceHandler(discordClient, {
     db: db.db,
@@ -103,6 +106,7 @@ function installHandlers(deps: RuntimeDeps) {
     ttsSessionManager,
     voicevox
   });
+  installChannelNameHandlers(discordClient, db.db);
 }
 
 export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {

@@ -6,6 +6,7 @@ import {
   getCallSessionById,
   getGuildConfigByGuildId,
   listActiveCallSessionMembers,
+  listDiscordChannelNamesByIds,
   markCallSessionMemberLeft,
   updateCallSessionStatusMessage,
   upsertCallSessionMember
@@ -44,7 +45,7 @@ export interface VoiceActivityRepository {
     channelId: string;
     guildId: string;
     startedAt: Date;
-  }) => Promise<VoiceActivitySession>;
+  }) => Promise<{ created: boolean; session: VoiceActivitySession }>;
   endSession: (input: {
     callSessionId: string;
     endedAt: Date;
@@ -73,6 +74,7 @@ export interface VoiceActivityRepository {
 }
 
 export interface VoiceActivityContext {
+  findChannelName?: (channelId: string) => Promise<string | null>;
   ignoredChannelIds?: ReadonlySet<string>;
   now?: () => Date;
   repository: VoiceActivityRepository;
@@ -82,6 +84,7 @@ export interface VoiceActivityContext {
   ) => void | Promise<void>;
   updateVoiceStatus?: (input: {
     activeMemberCount: number;
+    channelName?: string | null;
     endedAt?: Date | null;
     memberIds?: string[];
     session: VoiceActivitySession;
@@ -126,6 +129,10 @@ export function installVoiceActivityHandlers(
   installVoiceStateHandlers(client, {
     onTransition: async (transition) =>
       handleVoiceActivityTransition(transition, {
+        findChannelName: async (channelId) => {
+          const names = await listDiscordChannelNamesByIds(options.db, [channelId]);
+          return names.get(channelId) ?? null;
+        },
         ignoredChannelIds: await resolveIgnoredVoiceActivityChannelIds(
           options.db,
           transition.guildId
@@ -261,12 +268,13 @@ async function handleVoiceJoin(
   let shouldPublishStarted = false;
 
   if (!session) {
-    session = await context.repository.createSession({
+    const result = await context.repository.createSession({
       channelId: transition.newChannelId,
       guildId: transition.guildId,
       startedAt: now
     });
-    shouldPublishStarted = true;
+    session = result.session;
+    shouldPublishStarted = result.created;
   } else {
     activeMembersBeforeJoin = await context.repository.listActiveMembers(
       session.id
@@ -316,6 +324,16 @@ async function handleVoiceJoin(
     joinedAt: now,
     userId: transition.userId
   });
+
+  if (!shouldPublishStarted) {
+    const allActiveMembers = await context.repository.listActiveMembers(session.id);
+    await context.updateVoiceStatus?.({
+      activeMemberCount: allActiveMembers.length,
+      memberIds: allActiveMembers.map((m) => m.userId),
+      session,
+      state: "active"
+    });
+  }
 }
 
 function shouldPublishStartedForExistingSession(input: {
@@ -373,18 +391,18 @@ async function handleVoiceLeave(
   const activeMembers = await context.repository.listActiveMembers(session.id);
 
   if (activeMembers.length > 0) {
+    await context.updateVoiceStatus?.({
+      activeMemberCount: activeMembers.length,
+      memberIds: activeMembers.map((m) => m.userId),
+      session,
+      state: "active"
+    });
     return;
   }
 
   await context.repository.endSession({
     callSessionId: session.id,
     endedAt: now
-  });
-  await context.updateVoiceStatus?.({
-    activeMemberCount: 0,
-    endedAt: now,
-    session,
-    state: "ended"
   });
   await context.writeLog(
     createVoiceActivityEndedEvent({
@@ -395,6 +413,14 @@ async function handleVoiceLeave(
       sessionId: session.id
     })
   );
+  const channelName = await context.findChannelName?.(transition.oldChannelId) ?? null;
+  await context.updateVoiceStatus?.({
+    activeMemberCount: 0,
+    channelName,
+    endedAt: now,
+    session,
+    state: "ended"
+  });
 }
 
 function createVoiceActivityEvent(
@@ -450,11 +476,12 @@ async function refreshActiveVoiceStatus(
   return true;
 }
 
-async function updateDiscordVoiceStatusMessage(
+export async function updateDiscordVoiceStatusMessage(
   client: Client,
   db: DbClient,
   input: {
     activeMemberCount: number;
+    channelName?: string | null;
     endedAt?: Date | null;
     memberIds?: string[];
     session: VoiceActivitySession;
@@ -481,6 +508,7 @@ async function updateDiscordVoiceStatusMessage(
 
   const message = createVoiceStatusMessage({
     channelId: input.session.channelId,
+    channelName: input.channelName ?? null,
     endedAt: input.endedAt ?? null,
     loc,
     memberCount: input.activeMemberCount,
@@ -496,11 +524,11 @@ async function updateDiscordVoiceStatusMessage(
       .catch(() => null);
 
     if (existingMessage) {
-      await existingMessage.edit(message);
+      await existingMessage.edit({ ...message, allowedMentions: { parse: [] } });
       return existingMessage.id;
     }
   }
 
-  const sentMessage = await channel.send(message);
+  const sentMessage = await channel.send({ ...message, allowedMentions: { parse: [] } });
   return sentMessage.id;
 }

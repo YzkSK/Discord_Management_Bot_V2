@@ -18,7 +18,7 @@ export const recruitmentChannelTopicMarker =
 type Recruitment = Awaited<ReturnType<typeof createRecruitment>>;
 type Loc = ReturnType<typeof getLocale>;
 
-export type RecruitmentAction = "close" | "join" | "leave" | "settings" | "toggle-auto-close";
+export type RecruitmentAction = "close" | "join" | "leave" | "reopen";
 
 export const recruitmentCustomIdPrefix = "recruitment";
 
@@ -95,12 +95,70 @@ function localizeStatus(status: string, loc: Loc): string {
 export function createRecruitmentPostMessage(
   recruitment: Recruitment,
   loc: Loc,
-  activeParticipantCount = 0
+  activeParticipantCount = 0,
+  participantIds: string[] = [],
+  queuedIds: string[] = []
 ): MessageCreateOptions & MessageEditOptions {
   const isClosed = recruitment.status === "closed";
   const vcText = recruitment.voiceChannelId
     ? loc.recruitmentPostVc({ id: recruitment.voiceChannelId })
     : loc.recruitmentPostNoVc;
+
+  const participantText =
+    participantIds.length > 0
+      ? `${loc.recruitmentParticipantsLabel}\n${participantIds.map((id) => `<@${id}>`).join("\n")}`
+      : loc.recruitmentNoParticipants;
+
+  const queueText =
+    queuedIds.length > 0
+      ? `${loc.recruitmentQueueLabel}\n${queuedIds.map((id) => `<@${id}>`).join("\n")}`
+      : null;
+
+  const closeOrReopenButton = isClosed
+    ? {
+        type: ComponentType.Button as const,
+        customId: createRecruitmentCustomId("reopen", recruitment.id),
+        label: loc.recruitmentButtonReopen,
+        style: ButtonStyle.Success as const
+      }
+    : {
+        type: ComponentType.Button as const,
+        customId: createRecruitmentCustomId("close", recruitment.id),
+        label: loc.recruitmentButtonClose,
+        style: ButtonStyle.Danger as const
+      };
+
+  const containerComponents = [
+    {
+      type: ComponentType.TextDisplay,
+      content: `## ${loc.recruitmentPostTitle({ title: recruitment.genre })}`
+    },
+    {
+      type: ComponentType.TextDisplay,
+      content: `${localizeStatus(recruitment.status, loc)}  ·  👥 ${activeParticipantCount} / ${recruitment.capacity}`
+    },
+    { type: ComponentType.Separator },
+    {
+      type: ComponentType.TextDisplay,
+      content: recruitment.content
+    },
+    { type: ComponentType.Separator },
+    {
+      type: ComponentType.TextDisplay,
+      content: loc.recruitmentPostCreator({ id: recruitment.creatorId })
+    },
+    {
+      type: ComponentType.TextDisplay,
+      content: vcText
+    },
+    {
+      type: ComponentType.TextDisplay,
+      content: participantText
+    },
+    ...(queueText
+      ? [{ type: ComponentType.TextDisplay, content: queueText }]
+      : [])
+  ];
 
   return {
     flags: MessageFlags.IsComponentsV2,
@@ -108,30 +166,7 @@ export function createRecruitmentPostMessage(
       {
         type: ComponentType.Container,
         accent_color: EVENT_COLORS.teal,
-        components: [
-          {
-            type: ComponentType.TextDisplay,
-            content: `## ${loc.recruitmentPostTitle({ title: recruitment.genre })}`
-          },
-          {
-            type: ComponentType.TextDisplay,
-            content: `${localizeStatus(recruitment.status, loc)}  ·  👥 ${activeParticipantCount} / ${recruitment.capacity}`
-          },
-          { type: ComponentType.Separator },
-          {
-            type: ComponentType.TextDisplay,
-            content: recruitment.content
-          },
-          { type: ComponentType.Separator },
-          {
-            type: ComponentType.TextDisplay,
-            content: loc.recruitmentPostCreator({ id: recruitment.creatorId })
-          },
-          {
-            type: ComponentType.TextDisplay,
-            content: `${vcText}  ·  ${loc.recruitmentPostAutoClose({ enabled: recruitment.autoClose })}`
-          }
-        ]
+        components: containerComponents
       },
       {
         type: ComponentType.ActionRow,
@@ -149,19 +184,7 @@ export function createRecruitmentPostMessage(
             label: loc.recruitmentButtonLeave,
             style: ButtonStyle.Secondary
           },
-          {
-            type: ComponentType.Button,
-            customId: createRecruitmentCustomId("close", recruitment.id),
-            label: loc.recruitmentButtonClose,
-            style: ButtonStyle.Danger,
-            disabled: isClosed
-          },
-          {
-            type: ComponentType.Button,
-            customId: createRecruitmentCustomId("settings", recruitment.id),
-            label: loc.recruitmentButtonSettings,
-            style: ButtonStyle.Secondary
-          }
+          closeOrReopenButton
         ]
       }
     ]
@@ -171,6 +194,6 @@ export function createRecruitmentPostMessage(
 function isRecruitmentAction(value: string | undefined): value is RecruitmentAction {
   return (
     value === "close" || value === "join" || value === "leave" ||
-    value === "settings" || value === "toggle-auto-close"
+    value === "reopen"
   );
 }

@@ -7,8 +7,6 @@ export interface RecruitmentSummaryInput {
 
 export interface RecruitmentSummaryItemInput {
   activeParticipantCount: number;
-  autoClose: boolean;
-  autoClosed: boolean;
   capacity: number;
   channelId: string;
   closedAt: Date | null;
@@ -25,8 +23,6 @@ export interface RecruitmentSummaryItemInput {
 
 export interface RecruitmentSummaryItem {
   activeParticipantCount: number;
-  autoClose: boolean;
-  autoClosed: boolean;
   availableSlots: number;
   capacity: number;
   channelId: string;
@@ -56,8 +52,6 @@ export function buildRecruitmentSummary(
 ): RecruitmentSummary {
   const recruitments = input.recruitments.map((recruitment) => ({
     activeParticipantCount: recruitment.activeParticipantCount,
-    autoClose: recruitment.autoClose,
-    autoClosed: recruitment.autoClosed,
     availableSlots: Math.max(
       0,
       recruitment.capacity - recruitment.activeParticipantCount

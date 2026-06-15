@@ -744,13 +744,13 @@ function voiceStatePayload(state: VoiceState) {
   return {
     userId: state.id,
     channelId: state.channelId,
-    deaf: state.deaf,
-    mute: state.mute,
-    selfDeaf: state.selfDeaf,
-    selfMute: state.selfMute,
-    selfVideo: state.selfVideo,
-    streaming: state.streaming,
-    suppress: state.suppress,
+    serverDeaf: state.serverDeaf ?? false,
+    serverMute: state.serverMute ?? false,
+    selfDeaf: state.selfDeaf ?? false,
+    selfMute: state.selfMute ?? false,
+    selfVideo: state.selfVideo ?? false,
+    streaming: state.streaming ?? false,
+    suppress: state.suppress ?? false,
     requestToSpeakTimestamp: state.requestToSpeakTimestamp
   };
 }

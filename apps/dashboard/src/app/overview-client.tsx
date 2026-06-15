@@ -38,6 +38,20 @@ function extractChannelName(payload: unknown): string | null {
   if (isObj(channel) && typeof channel["name"] === "string") return channel["name"];
   return null;
 }
+function extractVoiceStateChanges(
+  payload: unknown
+): Record<string, { before: unknown; after: unknown }> | null {
+  if (!isObj(payload)) return null;
+  const changes = payload["changes"];
+  if (typeof changes !== "object" || changes === null || Array.isArray(changes)) return null;
+  const result: Record<string, { before: unknown; after: unknown }> = {};
+  for (const [key, val] of Object.entries(changes as Record<string, unknown>)) {
+    if (isObj(val) && "before" in val && "after" in val) {
+      result[key] = { before: val["before"], after: val["after"] };
+    }
+  }
+  return Object.keys(result).length > 0 ? result : null;
+}
 
 interface VoiceSession {
   channelId: string;
@@ -283,6 +297,7 @@ export function OverviewClient({ guildId }: OverviewClientProps) {
                       actorName: extractActorName(log.payload),
                       channelId: log.channelId,
                       channelName: extractChannelName(log.payload),
+                      voiceStateChanges: extractVoiceStateChanges(log.payload),
                     }, guildId)}
                   </p>
                   <span className="shrink-0 text-xs text-zinc-600">

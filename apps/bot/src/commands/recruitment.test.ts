@@ -103,8 +103,8 @@ describe("handleRecruitmentModalSubmit — valid input", () => {
 
     const fakeRecruitment = {
       id: "r1", genre: "Test Title", capacity: 4, content: "Let's play",
-      voiceChannelId: "vc-1", autoClose: true, status: "open" as const,
-      autoClosed: false, closedAt: null, creatorId: "u1",
+      voiceChannelId: "vc-1", status: "open" as const,
+      closedAt: null, creatorId: "u1",
       guildId: "g1", channelId: "recruitment-ch", messageId: null,
       createdAt: new Date(), updatedAt: new Date()
     };

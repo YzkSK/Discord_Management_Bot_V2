@@ -65,6 +65,47 @@ function extractChannelName(payload: unknown): string | null {
   return null;
 }
 
+const knownPayloadLabels: Record<string, string> = {
+  recruitmentId:    "募集ID",
+  creatorId:        "作成者",
+  genre:            "ジャンル",
+  capacity:         "定員",
+  participantCount: "参加者数",
+  status:           "ステータス",
+  voiceChannelId:   "VCチャンネルID",
+  reason:           "理由",
+};
+
+function payloadFieldLabel(key: string): string {
+  return knownPayloadLabels[key] ?? key;
+}
+
+function formatPayloadFieldValue(key: string, value: unknown): string {
+  const str = String(value);
+  if (key === "creatorId") return `@${str}`;
+  return str;
+}
+
+function extractGenre(payload: unknown): string | null {
+  if (!isObj(payload)) return null;
+  return typeof payload["genre"] === "string" ? payload["genre"] : null;
+}
+
+function extractVoiceStateChanges(
+  payload: unknown
+): Record<string, { before: unknown; after: unknown }> | null {
+  if (!isObj(payload)) return null;
+  const changes = payload["changes"];
+  if (!isRecord(changes)) return null;
+  const result: Record<string, { before: unknown; after: unknown }> = {};
+  for (const [key, val] of Object.entries(changes)) {
+    if (isRecord(val) && "before" in val && "after" in val) {
+      result[key] = { before: val["before"], after: val["after"] };
+    }
+  }
+  return Object.keys(result).length > 0 ? result : null;
+}
+
 export function LogsExplorer() {
   const [uiLang, setUiLang] = useState<GuildLanguage>("en");
   const loc = getDashboardLocale(uiLang);
@@ -129,7 +170,8 @@ export function LogsExplorer() {
         actorId: log.actorId,
         actorName: extractActorName(log.payload),
         channelId: log.channelId,
-        channelName: extractChannelName(log.payload),
+        channelName: log.channelName ?? extractChannelName(log.payload),
+        voiceStateChanges: extractVoiceStateChanges(log.payload),
       }).toLowerCase();
       if (!desc.includes(q) && !log.eventName.includes(q)) return false;
     }
@@ -262,7 +304,9 @@ function LogEntry({
     actorId: log.actorId,
     actorName: extractActorName(log.payload),
     channelId: log.channelId,
-    channelName: extractChannelName(log.payload),
+    channelName: log.channelName ?? extractChannelName(log.payload),
+    voiceStateChanges: extractVoiceStateChanges(log.payload),
+    genre: extractGenre(log.payload),
   }, guildId);
   const payload = isRecord(log.payload) ? log.payload : {};
 
@@ -318,7 +362,7 @@ function LogEntry({
               );
             })()}
             {log.channelId && (() => {
-              const name = extractChannelName(log.payload);
+              const name = log.channelName ?? extractChannelName(log.payload);
               return (
                 <div>
                   <dt className="text-zinc-600">チャンネル</dt>
@@ -340,8 +384,8 @@ function LogEntry({
               .slice(0, 6)
               .map(([k, v]) => (
                 <div key={k}>
-                  <dt className="text-zinc-600">{k}</dt>
-                  <dd className="truncate text-zinc-300">{String(v)}</dd>
+                  <dt className="text-zinc-600">{payloadFieldLabel(k)}</dt>
+                  <dd className="truncate text-zinc-300">{formatPayloadFieldValue(k, v)}</dd>
                 </div>
               ))}
           </dl>

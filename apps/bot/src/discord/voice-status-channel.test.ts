@@ -81,6 +81,39 @@ describe("voice status display", () => {
     assert.match(serialized, /<#voice-1>/);
   });
 
+  it("renders ended state with plain text channel name when channelName is provided", () => {
+    const message = createVoiceStatusMessage({
+      channelId: "voice-1",
+      channelName: "general-vc",
+      endedAt: new Date("2026-06-03T00:02:30.000Z"),
+      loc,
+      memberCount: 0,
+      now: new Date("2026-06-03T00:02:30.000Z"),
+      sessionId: "session-1",
+      startedAt: new Date("2026-06-03T00:00:00.000Z")
+    });
+    const serialized = JSON.stringify(message);
+
+    assert.match(serialized, /#general-vc/);
+    assert.doesNotMatch(serialized, /<#voice-1>/);
+  });
+
+  it("renders active state with clickable mention even when channelName is provided", () => {
+    const message = createVoiceStatusMessage({
+      channelId: "voice-1",
+      channelName: "general-vc",
+      loc,
+      memberCount: 1,
+      now: new Date("2026-06-03T00:01:00.000Z"),
+      sessionId: "session-1",
+      startedAt: new Date("2026-06-03T00:00:00.000Z")
+    });
+    const serialized = JSON.stringify(message);
+
+    assert.match(serialized, /<#voice-1>/);
+    assert.doesNotMatch(serialized, /"#general-vc"/);
+  });
+
   it("renders member mentions when memberIds are provided", () => {
     const message = createVoiceStatusMessage({
       channelId: "voice-1",
