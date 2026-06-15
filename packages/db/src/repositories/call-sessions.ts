@@ -13,7 +13,7 @@ export async function createCallSession(
   db: DbClient,
   input: CreateCallSessionInput
 ) {
-  const [callSession] = await db
+  const [newSession] = await db
     .insert(callSessions)
     .values({
       channelId: input.channelId,
@@ -21,13 +21,24 @@ export async function createCallSession(
       startedAt: input.startedAt ?? new Date(),
       status: "active"
     })
+    .onConflictDoNothing()
     .returning();
 
-  if (!callSession) {
-    throw new Error("Failed to create call session.");
+  if (newSession) {
+    return { created: true, session: newSession };
   }
 
-  return callSession;
+  // Concurrent join created the session first — find and return it
+  const existing = await getActiveCallSessionByChannelId(db, {
+    channelId: input.channelId,
+    guildId: input.guildId
+  });
+
+  if (!existing) {
+    throw new Error("Failed to create or retrieve call session.");
+  }
+
+  return { created: false, session: existing };
 }
 
 export async function getActiveCallSessionByChannelId(

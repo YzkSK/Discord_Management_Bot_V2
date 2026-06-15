@@ -346,6 +346,53 @@ describe("voice activity sessions", () => {
     ]);
   });
 
+  it("publishes call.ended even when move and rapid leave overlap (upsertMember race)", async () => {
+    // Regression: when move(A→B) and leave(B→∅) are processed out of order,
+    // upsertMember (from move's join-B) can run after markMemberLeft (from leave-B),
+    // re-activating the member so listActiveMembers returns non-empty and endSession
+    // is never called → call.ended never published.
+    //
+    // The fix (voice-state.ts enqueueTransitionOnKeys) ensures the move always
+    // completes before the leave begins, so we verify the correct order here.
+    const repository = createMemoryRepository();
+    const events: string[] = [];
+    const context = {
+      now: () => new Date("2026-06-03T00:00:05.000Z"),
+      repository,
+      writeLog: async (event: { eventName: string }) => {
+        events.push(event.eventName);
+      }
+    };
+
+    // Simulate: session pre-created by createTempVoiceChannel, owner already a member
+    repository.sessions.push({
+      channelId: "temp-b",
+      guildId: "guild-1",
+      id: "session-1",
+      startedAt: new Date("2026-06-03T00:00:00.000Z"),
+      status: "active",
+      statusMessageId: null
+    });
+    repository.members.push({
+      callSessionId: "session-1",
+      leftAt: null,
+      userId: "user-1"
+    });
+
+    // Correct order (move's join-B then leave-B): both handlers complete in sequence
+    await handleVoiceActivityTransition(
+      { guildId: "guild-1", memberIsBot: false, newChannelId: "temp-b", oldChannelId: "trigger", type: "move", userId: "user-1" },
+      { ...context, ignoredChannelIds: new Set(["trigger"]) }
+    );
+    await handleVoiceActivityTransition(
+      { guildId: "guild-1", memberIsBot: false, newChannelId: null, oldChannelId: "temp-b", type: "leave", userId: "user-1" },
+      context
+    );
+
+    assert.equal(repository.sessions[0]?.status, "ended");
+    assert.deepEqual(events, ["call.started", "call.ended"]);
+  });
+
   it("keeps refreshing active voice status while the session remains active", async () => {
     const delays: number[] = [];
     const refreshes: string[] = [];
@@ -403,6 +450,12 @@ function createMemoryRepository() {
     members,
     sessions,
     async createSession(input) {
+      const existing = sessions.find(
+        (s) => s.channelId === input.channelId && s.status === "active"
+      );
+      if (existing) {
+        return { created: false, session: existing };
+      }
       const session = {
         channelId: input.channelId,
         guildId: input.guildId,
@@ -412,7 +465,7 @@ function createMemoryRepository() {
         statusMessageId: null
       };
       sessions.push(session);
-      return session;
+      return { created: true, session };
     },
     async endSession(input) {
       const session = sessions.find((item) => item.id === input.callSessionId);
