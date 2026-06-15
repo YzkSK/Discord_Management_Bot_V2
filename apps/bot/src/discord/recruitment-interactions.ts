@@ -150,15 +150,16 @@ async function handleJoin(
     listQueuedParticipants(context.db, recruitment.id)
   ]);
 
-  await interaction.message.edit(
-    createRecruitmentPostMessage(
+  await interaction.message.edit({
+    ...createRecruitmentPostMessage(
       updatedRecruitment,
       loc,
       participants.length,
       participants.map((p) => p.userId),
       queued.map((p) => p.userId)
-    )
-  );
+    ),
+    allowedMentions: { parse: [] }
+  });
 
   if (context.logWriter && !isQueued && participants.length >= recruitment.capacity) {
     writeRecruitmentLifecycleLog(context.logWriter, "recruitment.full", {
@@ -255,15 +256,16 @@ async function handleLeave(
     listQueuedParticipants(context.db, recruitment.id)
   ]);
 
-  await interaction.message.edit(
-    createRecruitmentPostMessage(
+  await interaction.message.edit({
+    ...createRecruitmentPostMessage(
       updatedRecruitment,
       loc,
       participants.length,
       participants.map((p) => p.userId),
       queued.map((p) => p.userId)
-    )
-  );
+    ),
+    allowedMentions: { parse: [] }
+  });
 
   await interaction.reply({
     ...createComponentsV2TextMessage({
@@ -298,6 +300,17 @@ async function handleClose(
     return;
   }
 
+  if (recruitment.status === "closed") {
+    await interaction.reply({
+      ...createComponentsV2TextMessage({
+        title: loc.recruitmentAlreadyClosed,
+        accentColor: EVENT_COLORS.yellow,
+        privateResponse: true
+      })
+    });
+    return;
+  }
+
   const updatedRecruitment =
     (await closeRecruitment(context.db, { recruitmentId: recruitment.id })) ??
     recruitment;
@@ -307,15 +320,16 @@ async function handleClose(
     listQueuedParticipants(context.db, recruitment.id)
   ]);
 
-  await interaction.message.edit(
-    createRecruitmentPostMessage(
+  await interaction.message.edit({
+    ...createRecruitmentPostMessage(
       updatedRecruitment,
       loc,
       participants.length,
       participants.map((p) => p.userId),
       queued.map((p) => p.userId)
-    )
-  );
+    ),
+    allowedMentions: { parse: [] }
+  });
 
   if (context.logWriter) {
     writeRecruitmentLifecycleLog(context.logWriter, "recruitment.closed", {
@@ -357,6 +371,17 @@ async function handleReopen(
     return;
   }
 
+  if (recruitment.status !== "closed") {
+    await interaction.reply({
+      ...createComponentsV2TextMessage({
+        title: loc.recruitmentAlreadyOpen,
+        accentColor: EVENT_COLORS.yellow,
+        privateResponse: true
+      })
+    });
+    return;
+  }
+
   const [participants, queued] = await Promise.all([
     listActiveRecruitmentParticipants(context.db, recruitment.id),
     listQueuedParticipants(context.db, recruitment.id)
@@ -372,15 +397,16 @@ async function handleReopen(
       closedAt: null
     })) ?? recruitment;
 
-  await interaction.message.edit(
-    createRecruitmentPostMessage(
+  await interaction.message.edit({
+    ...createRecruitmentPostMessage(
       updatedRecruitment,
       loc,
       participants.length,
       participants.map((p) => p.userId),
       queued.map((p) => p.userId)
-    )
-  );
+    ),
+    allowedMentions: { parse: [] }
+  });
 
   if (context.logWriter) {
     writeRecruitmentLifecycleLog(context.logWriter, "recruitment.reopened", {

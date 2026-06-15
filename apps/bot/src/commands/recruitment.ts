@@ -261,9 +261,10 @@ export async function handleRecruitmentModalSubmit(
     voiceChannelId
   });
 
-  const message = await recruitmentChannel.send(
-    createRecruitmentPostMessage(recruitment, loc, 0, [], [])
-  );
+  const message = await recruitmentChannel.send({
+    ...createRecruitmentPostMessage(recruitment, loc, 0, [], []),
+    allowedMentions: { parse: [] }
+  });
 
   const recruitmentWithMessage =
     (await setRecruitmentMessageId(context.db, {

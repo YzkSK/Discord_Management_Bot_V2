@@ -298,8 +298,8 @@ describe("handleForceJoinCommand — confirmation shows current channel", () => 
 
 function createSpeakerCommandDb() {
   return {
-    select: (selection: Record<string, unknown>) => {
-      if ("language" in selection) {
+    select: (selection?: Record<string, unknown>) => {
+      if (selection && "language" in selection) {
         return {
           from: () => ({
             innerJoin: () => ({
@@ -313,7 +313,11 @@ function createSpeakerCommandDb() {
 
       return {
         from: () => ({
-          where: () => Promise.resolve([])
+          where: () => {
+            const p = Promise.resolve([] as unknown[]) as Promise<unknown[]> & { limit: () => Promise<unknown[]> };
+            p.limit = async () => [];
+            return p;
+          }
         })
       };
     }
