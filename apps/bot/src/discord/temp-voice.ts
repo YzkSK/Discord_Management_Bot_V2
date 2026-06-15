@@ -3,6 +3,7 @@ import {
   type Client,
   ComponentType,
   DiscordAPIError,
+  Events,
   type Guild,
   type GuildBasedChannel,
   MessageFlags,
@@ -20,13 +21,18 @@ import {
   createTempVoiceChannel,
   endTempVoiceChannel,
   getActiveTempVoiceChannelByChannelId,
+  getCallSessionById,
   getGuildConfigByGuildId,
   listActiveCallSessionMembers,
+  listAllActiveTempVoiceChannels,
+  listDiscordChannelNamesByIds,
   markCallSessionMemberLeft,
   scheduleTempVoiceChannelDelete,
   transferTempVoiceChannelOwner,
   upsertCallSessionMember
 } from "@discord-bot/db";
+
+import { updateDiscordVoiceStatusMessage } from "./voice-activity.js";
 
 import {
   installVoiceStateHandlers,
@@ -71,6 +77,65 @@ export function installTempVoiceHandlers(
       );
     }
   });
+
+  client.on(Events.ChannelDelete, (channel) => {
+    void getActiveTempVoiceChannelByChannelId(options.db, channel.id)
+      .then(async (tempVC) => {
+        if (!tempVC) return;
+        const deleted = await endTempVoiceChannel(options.db, { channelId: channel.id });
+        if (!deleted) return;
+
+        if (deleted.controlChannelId) {
+          const guild = client.guilds.cache.get(deleted.guildId);
+          const controlChannel = await guild?.channels
+            .fetch(deleted.controlChannelId)
+            .catch(() => null);
+          if (controlChannel) {
+            suppressTempVoiceChannelLog(controlChannel.id);
+            await controlChannel.delete(tempVoiceDeleteReason).catch(() => undefined);
+          }
+        }
+
+        if (deleted.callSessionId) {
+          const session = await getCallSessionById(options.db, deleted.callSessionId).catch(() => null);
+          if (session) {
+            await updateDiscordVoiceStatusMessage(client, options.db, {
+              activeMemberCount: 0,
+              channelName: "name" in channel ? channel.name : null,
+              endedAt: session.endedAt ?? new Date(),
+              session,
+              state: "ended"
+            }).catch(() => undefined);
+          }
+        }
+
+        await writeTempVoiceLog(logWriter, {
+          eventName: "voice.temp.deleted",
+          guildId: deleted.guildId,
+          actorId: deleted.ownerId,
+          channelId: deleted.channelId,
+          payload: {
+            ownerId: deleted.ownerId,
+            callSessionId: deleted.callSessionId,
+            tempVoiceChannelId: deleted.channelId,
+            tempVoiceChannelName: "name" in channel ? channel.name : null,
+            controlChannelId: deleted.controlChannelId,
+            creationChannelId: deleted.creationChannelId
+          }
+        });
+      })
+      .catch((err: unknown) => {
+        console.error("temp-vc: channelDelete cleanup failed", { channelId: channel.id, err });
+      });
+  });
+
+  client.once(Events.ClientReady, (readyClient) => {
+    void reconcileTempVoiceChannels(readyClient, options.db, logWriter).catch(
+      (err: unknown) => {
+        console.error("temp-vc: startup reconciliation failed", err);
+      }
+    );
+  });
 }
 
 export function formatTempVoiceChannelName(username: string) {
@@ -79,6 +144,86 @@ export function formatTempVoiceChannelName(username: string) {
 
 export function formatTempVoiceControlChannelName(username: string) {
   return `control-${formatTempVoiceChannelName(username)}`;
+}
+
+export function createTempVoiceChannelPermissionOverwrites(input: {
+  botMemberId: string | null | undefined;
+}) {
+  return input.botMemberId
+    ? [
+        {
+          id: input.botMemberId,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.ManageChannels,
+            PermissionFlagsBits.ManageRoles,
+            PermissionFlagsBits.Connect
+          ]
+        }
+      ]
+    : [];
+}
+
+export async function createTempVoiceDiscordChannel(
+  guild: Guild,
+  input: {
+    botMemberId: string | null | undefined;
+    categoryId: string | null;
+    displayName: string;
+  }
+) {
+  const permissionOverwrites = createTempVoiceChannelPermissionOverwrites({
+    botMemberId: input.botMemberId
+  });
+  const baseOptions = {
+    name: formatTempVoiceChannelName(input.displayName),
+    reason: tempVoiceCreateReason,
+    type: ChannelType.GuildVoice
+  } as const;
+  const attempts = [
+    {
+      ...baseOptions,
+      ...(input.categoryId ? { parent: input.categoryId } : {}),
+      ...(permissionOverwrites.length > 0 ? { permissionOverwrites } : {})
+    },
+    ...(input.categoryId
+      ? [
+          {
+            ...baseOptions,
+            ...(permissionOverwrites.length > 0 ? { permissionOverwrites } : {})
+          }
+        ]
+      : []),
+    ...(permissionOverwrites.length > 0
+      ? [
+          {
+            ...baseOptions,
+            ...(input.categoryId ? { parent: input.categoryId } : {})
+          },
+          ...(input.categoryId ? [baseOptions] : [])
+        ]
+      : [])
+  ];
+
+  let lastError: unknown = null;
+  for (const [index, options] of attempts.entries()) {
+    try {
+      return await guild.channels.create(options);
+    } catch (error) {
+      lastError = error;
+      if (!isMissingPermissionsError(error) || index === attempts.length - 1) {
+        throw error;
+      }
+
+      console.warn("temp-vc: voice channel creation forbidden; retrying with fewer constraints", {
+        guildId: guild.id,
+        categoryId: "parent" in options ? input.categoryId : null,
+        hadPermissionOverwrites: "permissionOverwrites" in options
+      });
+    }
+  }
+
+  throw lastError;
 }
 
 async function handleTempVoiceTransition(
@@ -203,11 +348,10 @@ async function createGeneratedChannel(
 
   let channel;
   try {
-    channel = await context.newState.guild.channels.create({
-      name: formatTempVoiceChannelName(member.displayName),
-      ...(input.categoryId ? { parent: input.categoryId } : {}),
-      reason: tempVoiceCreateReason,
-      type: ChannelType.GuildVoice
+    channel = await createTempVoiceDiscordChannel(context.newState.guild, {
+      botMemberId: context.newState.guild.members.me?.id,
+      categoryId: input.categoryId,
+      displayName: member.displayName
     });
   } catch (error) {
     if (error instanceof DiscordAPIError && error.code === RESTJSONErrorCodes.MissingPermissions) {
@@ -320,7 +464,7 @@ async function sendControlChannelMessage(
   channel: TextChannel,
   input: { ownerId: string; tempVoiceChannelId: string }
 ) {
-  await channel.send(createTempVoiceControlMessage(input));
+  await channel.send({ ...createTempVoiceControlMessage(input), allowedMentions: { parse: [] } });
 }
 
 export interface TempVoiceOwnerCandidate {
@@ -502,7 +646,16 @@ async function deleteIfStillEmpty(
   }
 
   suppressTempVoiceChannelLog(freshChannel.id);
-  await freshChannel.delete(tempVoiceDeleteReason);
+  try {
+    await freshChannel.delete(tempVoiceDeleteReason);
+  } catch (error) {
+    if (error instanceof DiscordAPIError && error.code === RESTJSONErrorCodes.UnknownChannel) {
+      // チャンネルはすでに存在しない → DB のクリーンアップだけ続行
+    } else {
+      console.error("temp-vc: failed to delete channel", { channelId: freshChannel.id, error });
+      return;
+    }
+  }
   const deletedTempVoiceChannel = await endTempVoiceChannel(db, {
     channelId: channel.id
   });
@@ -536,6 +689,85 @@ async function deleteIfStillEmpty(
       }
     });
   }
+}
+
+async function reconcileTempVoiceChannels(
+  client: Client,
+  db: DbClient,
+  logWriter: DiscordLogWriter
+) {
+  const tempVCs = await listAllActiveTempVoiceChannels(db);
+  if (tempVCs.length === 0) return;
+
+  let ended = 0;
+  let rescheduled = 0;
+
+  for (const tempVC of tempVCs) {
+    const guild = client.guilds.cache.get(tempVC.guildId);
+    if (!guild) continue;
+
+    const channel = await guild.channels.fetch(tempVC.channelId).catch(() => null);
+
+    if (!channel) {
+      const deleted = await endTempVoiceChannel(db, { channelId: tempVC.channelId }).catch(
+        (err: unknown) => {
+          console.error("temp-vc: reconcile endTempVoiceChannel failed", { channelId: tempVC.channelId, err });
+          return null;
+        }
+      );
+
+      if (deleted?.controlChannelId) {
+        const controlChannel = await guild.channels
+          .fetch(deleted.controlChannelId)
+          .catch(() => null);
+        if (controlChannel) {
+          suppressTempVoiceChannelLog(controlChannel.id);
+          await controlChannel.delete(tempVoiceDeleteReason).catch(() => undefined);
+        }
+      }
+
+      if (deleted?.callSessionId) {
+        const session = await getCallSessionById(db, deleted.callSessionId).catch(() => null);
+        if (session) {
+          const nameMap = await listDiscordChannelNamesByIds(db, [tempVC.channelId]).catch(() => new Map<string, string>());
+          await updateDiscordVoiceStatusMessage(client, db, {
+            activeMemberCount: 0,
+            channelName: nameMap.get(tempVC.channelId) ?? null,
+            endedAt: session.endedAt ?? new Date(),
+            session,
+            state: "ended"
+          }).catch(() => undefined);
+        }
+      }
+
+      if (deleted) {
+        await writeTempVoiceLog(logWriter, {
+          eventName: "voice.temp.deleted",
+          guildId: deleted.guildId,
+          actorId: deleted.ownerId,
+          channelId: deleted.channelId,
+          payload: {
+            ownerId: deleted.ownerId,
+            callSessionId: deleted.callSessionId,
+            tempVoiceChannelId: deleted.channelId,
+            tempVoiceChannelName: null,
+            controlChannelId: deleted.controlChannelId,
+            creationChannelId: deleted.creationChannelId
+          }
+        }).catch(() => undefined);
+      }
+
+      ended++;
+      continue;
+    }
+
+    if (isVoiceBasedChannel(channel) && isEmptyVoiceChannel(channel)) {
+      scheduleDiscordChannelDelete(db, logWriter, channel);
+      rescheduled++;
+    }
+  }
+
+  console.log("temp-vc reconciliation complete", { ended, rescheduled });
 }
 
 async function writeTempVoiceLog(
@@ -575,4 +807,14 @@ function isVoiceBasedChannel(
   channel: GuildBasedChannel | null
 ): channel is VoiceBasedChannel {
   return channel?.isVoiceBased() === true;
+}
+
+function isMissingPermissionsError(error: unknown) {
+  return (
+    (error instanceof DiscordAPIError && error.code === RESTJSONErrorCodes.MissingPermissions) ||
+    (typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === RESTJSONErrorCodes.MissingPermissions)
+  );
 }
