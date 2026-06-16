@@ -13,9 +13,14 @@ import {
 } from "../dashboard-ui";
 import {
   eventColorClasses,
+  extractActorName,
+  extractChannelName,
+  extractVoiceStateChanges,
   formatEventDescription,
   formatRelativeTime,
   getEventColor,
+  isObj,
+  isRecord,
 } from "../../lib/event-display";
 import { formatEventDescriptionJSX } from "../../lib/format-event-jsx";
 import {
@@ -37,35 +42,6 @@ const initialFilters: LogFilters = {
 
 const categoryTabs = getLogCategoryTabs();
 
-function isObj(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
-
-function extractActorName(payload: unknown): string | null {
-  if (!isObj(payload)) return null;
-  const member = payload["member"];
-  if (isObj(member) && typeof member["displayName"] === "string") return member["displayName"];
-  const after = payload["after"];
-  if (isObj(after) && typeof after["displayName"] === "string") return after["displayName"];
-  const user = payload["user"];
-  if (isObj(user) && typeof user["username"] === "string")
-    return (typeof user["globalName"] === "string" ? user["globalName"] : null) ?? user["username"];
-  const author = payload["author"];
-  if (isObj(author) && typeof author["username"] === "string")
-    return (typeof author["globalName"] === "string" ? author["globalName"] : null) ?? author["username"];
-  return null;
-}
-
-function extractChannelName(payload: unknown): string | null {
-  if (!isObj(payload)) return null;
-  const channel = payload["channel"];
-  if (isObj(channel) && typeof channel["name"] === "string") return channel["name"];
-  return null;
-}
 
 const knownPayloadLabels: Record<string, string> = {
   recruitmentId:    "募集ID",
@@ -93,20 +69,6 @@ function extractGenre(payload: unknown): string | null {
   return typeof payload["genre"] === "string" ? payload["genre"] : null;
 }
 
-function extractVoiceStateChanges(
-  payload: unknown
-): Record<string, { before: unknown; after: unknown }> | null {
-  if (!isObj(payload)) return null;
-  const changes = payload["changes"];
-  if (!isRecord(changes)) return null;
-  const result: Record<string, { before: unknown; after: unknown }> = {};
-  for (const [key, val] of Object.entries(changes)) {
-    if (isRecord(val) && "before" in val && "after" in val) {
-      result[key] = { before: val["before"], after: val["after"] };
-    }
-  }
-  return Object.keys(result).length > 0 ? result : null;
-}
 
 export function LogsExplorer() {
   const [uiLang, setUiLang] = useState<GuildLanguage>("en");
