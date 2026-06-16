@@ -5,7 +5,7 @@ import {
   normalizeMessageUpdate
 } from "@discord-bot/discord-core";
 import type { DbClient } from "@discord-bot/db";
-import type { RedisStreamWriter } from "@discord-bot/redis";
+import type { RedisStreamWriter } from "@discord-bot/logger";
 import {
   AuditLogEvent,
   Events,

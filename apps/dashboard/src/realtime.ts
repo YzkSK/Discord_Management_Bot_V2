@@ -2,7 +2,8 @@ import type { Server as HttpServer } from "node:http";
 
 import { parseDashboardAuthEnv } from "@discord-bot/config";
 import { createDbConnection } from "@discord-bot/db";
-import { createRedisConnection, readRealtimeLogEvents } from "@discord-bot/redis";
+import { createRedisConnection } from "@discord-bot/redis";
+import { readRealtimeLogEvents } from "@discord-bot/logger";
 import { decode } from "next-auth/jwt";
 import { Server, type Socket } from "socket.io";
 

@@ -7,7 +7,7 @@ import {
   appendLogEventToStream,
   appendRealtimeLogEventToStream,
   type RedisStreamWriter
-} from "@discord-bot/redis";
+} from "@discord-bot/logger";
 import type { NormalizedEvent } from "@discord-bot/shared";
 import type { HandlerError } from "@discord-bot/discord-core";
 import type { Client } from "discord.js";

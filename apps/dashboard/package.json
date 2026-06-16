@@ -14,6 +14,7 @@
   "dependencies": {
     "@discord-bot/config": "workspace:*",
     "@discord-bot/db": "workspace:*",
+    "@discord-bot/logger": "workspace:*",
     "@discord-bot/redis": "workspace:*",
     "@discord-bot/shared": "workspace:*",
     "@radix-ui/react-popover": "^1.1.6",
