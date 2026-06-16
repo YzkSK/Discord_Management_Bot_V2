@@ -13,6 +13,7 @@ import {
 } from "discord.js";
 
 const auditLogLookupWindowMs = 30_000;
+const AUDIT_LOG_FETCH_LIMIT = 6;
 
 export interface AuditLogLookupResult {
   status: "matched" | "not_found" | "missing_permission" | "missing_guild" | "error";
@@ -54,7 +55,7 @@ export async function lookupAuditLog(
   }
 
   try {
-    const logs = await guild.fetchAuditLogs({ type: action, limit: 6 });
+    const logs = await guild.fetchAuditLogs({ type: action, limit: AUDIT_LOG_FETCH_LIMIT });
     const entry = logs.entries.find((candidate) =>
       isMatchingAuditLogEntry(candidate, action, targetId)
     );
