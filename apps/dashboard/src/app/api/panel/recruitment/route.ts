@@ -9,10 +9,51 @@ import { parseDashboardAuthEnv } from "@discord-bot/config";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { authorizeDashboardApi } from "../../../../dashboard-auth";
+import { fetchGuildChannels } from "../../../../discord-api";
 
 export const dynamic = "force-dynamic";
 
 const env = parseDashboardAuthEnv();
+
+const TEXT_CHANNEL_TYPES = new Set([0, 5]); // GUILD_TEXT, GUILD_ANNOUNCEMENT
+
+export async function GET(request: NextRequest) {
+  const guildId = request.nextUrl.searchParams.get("guildId")?.trim() || undefined;
+  const authorization = await authorizeDashboardApi({
+    request,
+    guildId,
+    requiredRole: "viewer"
+  });
+
+  if (!authorization.allowed) {
+    return NextResponse.json(
+      { error: authorization.error },
+      { status: authorization.status }
+    );
+  }
+
+  const dbConnection = createDbConnection();
+  try {
+    const guildConfig = await getGuildConfigByGuildId(
+      dbConnection.db,
+      authorization.guild.id
+    );
+    const channelId = guildConfig?.recruitmentChannelId ?? null;
+
+    if (channelId) {
+      return NextResponse.json({ channelId, channels: null });
+    }
+
+    const channels = env.DISCORD_BOT_TOKEN
+      ? (await fetchGuildChannels(env.DISCORD_BOT_TOKEN, authorization.guild.id).catch(() => []))
+          .filter((c) => TEXT_CHANNEL_TYPES.has(c.type))
+      : [];
+
+    return NextResponse.json({ channelId: null, channels });
+  } finally {
+    await dbConnection.close();
+  }
+}
 
 const COMPONENT_TYPE_ACTION_ROW = 1;
 const COMPONENT_TYPE_BUTTON = 2;
@@ -57,15 +98,17 @@ export async function POST(request: NextRequest) {
   const dbConnection = createDbConnection();
   try {
     const guildConfig = await getGuildConfigByGuildId(dbConnection.db, authorization.guild.id);
-    const channelId = guildConfig?.recruitmentChannelId;
+    const channelId =
+      guildConfig?.recruitmentChannelId || readBodyString(body, "channelId") || null;
     if (!channelId) {
       return NextResponse.json(
-        { error: "募集チャンネルが設定されていません。サーバー設定から設定してください。" },
+        { error: "投稿先チャンネルを指定してください。" },
         { status: 422 }
       );
     }
 
-    const lang = isGuildLanguage(guildConfig?.language) ? guildConfig.language : "ja";
+    const rawLang = guildConfig?.language;
+    const lang = rawLang && isGuildLanguage(rawLang) ? rawLang : "ja";
     const loc = getLocale(lang);
 
     const recruitment = await createRecruitment(dbConnection.db, {
