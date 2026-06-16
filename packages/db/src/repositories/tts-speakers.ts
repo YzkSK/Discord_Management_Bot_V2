@@ -1,7 +1,8 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 
 import type { DbClient } from "../client.js";
 import { ttsSpeakerSettings } from "../schema/index.js";
+import { normalizeRequiredString } from "./_utils.js";
 
 export interface TtsSpeakerSettingInput {
   guildId: string;
@@ -146,7 +147,12 @@ export async function listUserTtsSpeakers(db: DbClient, guildId: string) {
   const settings = await db
     .select()
     .from(ttsSpeakerSettings)
-    .where(eq(ttsSpeakerSettings.guildId, normalizeRequiredString(guildId, "guildId")));
+    .where(
+      and(
+        eq(ttsSpeakerSettings.guildId, normalizeRequiredString(guildId, "guildId")),
+        isNotNull(ttsSpeakerSettings.userId)
+      )
+    );
 
   return settings.filter(isUserTtsSpeakerSetting);
 }
@@ -207,10 +213,3 @@ export async function clearUserTtsSpeaker(
   return setting ?? null;
 }
 
-function normalizeRequiredString(value: unknown, field: string) {
-  if (typeof value !== "string" || !value.trim()) {
-    throw new Error(`${field} is required.`);
-  }
-
-  return value.trim();
-}

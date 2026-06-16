@@ -151,11 +151,13 @@ async function streamRealtimeLogs(socket: Socket, guildId: string) {
 
   try {
     while (socket.connected) {
-      const events = await readRealtimeLogEvents(
-        redisConnection.client,
-        guildId,
-        lastId
-      );
+      let events;
+      try {
+        events = await readRealtimeLogEvents(redisConnection.client, guildId, lastId);
+      } catch (error) {
+        await new Promise<void>((r) => setTimeout(r, 1000));
+        throw error;
+      }
 
       for (const event of events) {
         lastId = event.id;
