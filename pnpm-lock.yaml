@@ -60,6 +60,9 @@ importers:
       '@discord-bot/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@discord-bot/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       '@discord-bot/redis':
         specifier: workspace:*
         version: link:../../packages/redis

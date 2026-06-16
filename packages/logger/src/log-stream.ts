@@ -3,8 +3,6 @@ import {
   normalizedEventSchema
 } from "@discord-bot/shared";
 
-import type { RedisClient, RedisStreamMessage } from "./client.js";
-
 export const LOGS_STREAM_KEY = "logs:events";
 export const REALTIME_LOGS_STREAM_PREFIX = "rt:logs:";
 
@@ -33,6 +31,11 @@ export interface RedisStreamWriter {
     id: "*",
     fields: Record<string, string>
   ) => Promise<string | null>;
+}
+
+interface RedisStreamMessage {
+  id: string;
+  message: Record<string, string>;
 }
 
 export interface RedisStreamReader {
@@ -133,7 +136,7 @@ function parsePayload(value: string | undefined) {
   try {
     return JSON.parse(value) as unknown;
   } catch (err) {
-    console.warn("redis log-stream: failed to parse payload JSON", { value, err });
+    console.warn("log-stream: failed to parse payload JSON", { value, err });
     return {};
   }
 }
