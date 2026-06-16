@@ -335,6 +335,7 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
           </ul>
         )}
       </div>
+      <PanelDashboard guildId={guildId} />
     </div>
   );
 }
