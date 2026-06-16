@@ -71,7 +71,7 @@ export async function sendEventToConfiguredLogChannel(
     return;
   }
 
-  const channel = await findMarkedLogChannel(guild);
+  const channel = findMarkedLogChannel(guild);
 
   if (!channel) {
     return;
@@ -107,11 +107,9 @@ export async function sendEventToConfiguredLogChannel(
   });
 }
 
-export async function findMarkedLogChannel(guild: Guild) {
-  const channels = await guild.channels.fetch();
-
+export function findMarkedLogChannel(guild: Guild) {
   return (
-    channels.find(
+    guild.channels.cache.find(
       (channel): channel is TextChannel =>
         channel?.type === ChannelType.GuildText &&
         hasLogChannelMarker(channel.topic)

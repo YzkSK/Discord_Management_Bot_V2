@@ -105,10 +105,22 @@ export interface VoiceActivityStatusSchedulerOptions {
   setTimeout?: (handler: () => void, delayMs: number) => void;
 }
 
+const IGNORED_CHANNELS_CACHE_TTL_MS = 60_000;
+
 export function installVoiceActivityHandlers(
   client: Client,
   options: InstallVoiceActivityHandlersOptions
 ) {
+  const ignoredChannelIdsCache = new Map<string, { value: ReadonlySet<string>; expiresAt: number }>();
+
+  const getCachedIgnoredChannelIds = async (guildId: string): Promise<ReadonlySet<string>> => {
+    const cached = ignoredChannelIdsCache.get(guildId);
+    if (cached && cached.expiresAt > Date.now()) return cached.value;
+    const ids = await resolveIgnoredVoiceActivityChannelIds(options.db, guildId);
+    ignoredChannelIdsCache.set(guildId, { value: ids, expiresAt: Date.now() + IGNORED_CHANNELS_CACHE_TTL_MS });
+    return ids;
+  };
+
   const scheduleActiveStatusUpdate = createVoiceActivityStatusScheduler({
     onError: (error, sessionId) =>
       options.logWriter.recordHandlerError({
@@ -133,10 +145,7 @@ export function installVoiceActivityHandlers(
           const names = await listDiscordChannelNamesByIds(options.db, [channelId]);
           return names.get(channelId) ?? null;
         },
-        ignoredChannelIds: await resolveIgnoredVoiceActivityChannelIds(
-          options.db,
-          transition.guildId
-        ),
+        ignoredChannelIds: await getCachedIgnoredChannelIds(transition.guildId),
         repository: createDbVoiceActivityRepository(options.db),
         scheduleActiveStatusUpdate,
         updateVoiceStatus: (input) =>
