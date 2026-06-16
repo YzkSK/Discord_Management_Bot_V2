@@ -2,6 +2,7 @@ import {
   createDbConnection,
   getGuildConfigByGuildId,
   getGuildManagementRoleIds,
+  insertLogEvent,
   updateGuildTempVoiceConfigByGuildId,
   updateGuildTtsConfigByGuildId,
   updateGuildConfigByGuildId,
@@ -154,6 +155,18 @@ export async function PATCH(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    const now = new Date();
+    void insertLogEvent(dbConnection.db, {
+      eventName: "config.updated",
+      guildId: authorization.guild.id,
+      actorId: authorization.userId,
+      channelId: null,
+      messageId: null,
+      eventTimestamp: now,
+      receivedAt: now,
+      payload: { changes: parsedPatch.value }
+    }).catch(() => {/* best-effort */});
 
     const config = await getGuildConfigByGuildId(
       dbConnection.db,

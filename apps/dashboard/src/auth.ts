@@ -1,4 +1,5 @@
 import { parseDashboardAuthEnv } from "@discord-bot/config";
+import { createDbConnection, insertLogEvent } from "@discord-bot/db";
 import type { AuthOptions, Session } from "next-auth";
 import { getServerSession } from "next-auth";
 import type { JWT } from "next-auth/jwt";
@@ -31,6 +32,39 @@ export const authOptions: AuthOptions = {
   ],
   session: {
     strategy: "jwt"
+  },
+  events: {
+    async signIn({ user }) {
+      if (!user.id) return;
+      const db = createDbConnection();
+      const now = new Date();
+      void insertLogEvent(db.db, {
+        eventName: "dashboard.login",
+        guildId: null,
+        actorId: user.id,
+        channelId: null,
+        messageId: null,
+        eventTimestamp: now,
+        receivedAt: now,
+        payload: {}
+      }).catch(() => {/* best-effort */}).finally(() => void db.close());
+    },
+    async signOut({ token }) {
+      const userId = (token as JWT | null)?.sub;
+      if (!userId) return;
+      const db = createDbConnection();
+      const now = new Date();
+      void insertLogEvent(db.db, {
+        eventName: "dashboard.logout",
+        guildId: null,
+        actorId: userId,
+        channelId: null,
+        messageId: null,
+        eventTimestamp: now,
+        receivedAt: now,
+        payload: {}
+      }).catch(() => {/* best-effort */}).finally(() => void db.close());
+    }
   },
   callbacks: {
     async jwt({ account, token }) {
