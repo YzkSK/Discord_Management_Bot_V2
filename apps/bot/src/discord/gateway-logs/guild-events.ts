@@ -1,5 +1,6 @@
 import { AuditLogEvent, Events, type Client, type GuildMember, type PartialGuildMember } from "discord.js";
 import { applyAuditLog, lookupAuditLog, writeWithAuditLog } from "../audit-log.js";
+import type { InviteCache } from "./invite-cache.js";
 import {
   createGuildEvent,
   diffRecord,
@@ -9,7 +10,11 @@ import {
   type WriteEventFn
 } from "./payloads.js";
 
-export function installGuildGatewayLogHandlers(client: Client, write: WriteEventFn) {
+export function installGuildGatewayLogHandlers(
+  client: Client,
+  write: WriteEventFn,
+  inviteCache: InviteCache
+) {
   client.on(Events.GuildUpdate, (oldGuild, newGuild) => {
     writeWithAuditLog(
       write,
@@ -25,11 +30,21 @@ export function installGuildGatewayLogHandlers(client: Client, write: WriteEvent
   });
 
   client.on(Events.GuildMemberAdd, (member) => {
-    write(
-      createGuildEvent("member.join", member.guild, {
-        member: memberPayload(member)
-      }, member.id)
-    );
+    void (async () => {
+      let usedInvite = null;
+      try {
+        const currentInvites = await member.guild.invites.fetch();
+        usedInvite = inviteCache.detectUsed(member.guild.id, currentInvites);
+      } catch {
+        // No MANAGE_GUILD permission
+      }
+      write(
+        createGuildEvent("member.join", member.guild, {
+          member: memberPayload(member),
+          usedInvite
+        }, member.id)
+      );
+    })();
   });
 
   client.on(Events.GuildMemberRemove, (member) => {

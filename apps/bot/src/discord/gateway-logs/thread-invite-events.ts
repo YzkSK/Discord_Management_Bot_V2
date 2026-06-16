@@ -1,5 +1,6 @@
 import { AuditLogEvent, Events, type Client } from "discord.js";
 import { getInviteGuild, writeWithAuditLog } from "../audit-log.js";
+import type { InviteCache } from "./invite-cache.js";
 import {
   createInviteEvent,
   createThreadEvent,
@@ -44,8 +45,23 @@ export function installThreadGatewayLogHandlers(client: Client, write: WriteEven
   });
 }
 
-export function installInviteGatewayLogHandlers(client: Client, write: WriteEventFn) {
+export function installInviteGatewayLogHandlers(
+  client: Client,
+  write: WriteEventFn,
+  inviteCache: InviteCache
+) {
+  client.once(Events.ClientReady, (readyClient) => {
+    for (const guild of readyClient.guilds.cache.values()) {
+      void inviteCache.initGuild(guild);
+    }
+  });
+
+  client.on(Events.GuildCreate, (guild) => {
+    void inviteCache.initGuild(guild);
+  });
+
   client.on(Events.InviteCreate, (invite) => {
+    if (invite.guild) inviteCache.set(invite.guild.id, invite);
     writeWithAuditLog(
       write,
       createInviteEvent("invite.create", invite),
@@ -56,9 +72,11 @@ export function installInviteGatewayLogHandlers(client: Client, write: WriteEven
   });
 
   client.on(Events.InviteDelete, (invite) => {
+    const guildId = invite.guild?.id;
+    const cached = guildId ? inviteCache.getAndDelete(guildId, invite.code) : null;
     writeWithAuditLog(
       write,
-      createInviteEvent("invite.delete", invite),
+      createInviteEvent("invite.delete", invite, cached),
       getInviteGuild(invite),
       AuditLogEvent.InviteDelete,
       invite.code

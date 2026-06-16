@@ -77,6 +77,26 @@ function installHandlers(deps: RuntimeDeps) {
   const { db, discordClient, env, redis, ttsPlaybackQueue, ttsSessionManager, voicevox, voicevoxBaseUrl, logWriter } = deps;
 
   installDiscordLifecycleLogging(discordClient);
+  discordClient.rest.on("rateLimited", (info) => {
+    void logWriter.write({
+      eventName: "system.rate_limit",
+      guildId: null,
+      actorId: null,
+      channelId: null,
+      messageId: null,
+      eventTimestamp: new Date(),
+      receivedAt: new Date(),
+      payload: {
+        route: info.route,
+        timeToReset: info.timeToReset,
+        limit: info.limit,
+        method: info.method,
+        hash: info.hash
+      }
+    }).catch((error: unknown) => {
+      console.warn("failed to write rate_limit log event", { error });
+    });
+  });
   installGuildRegistrationHandlers(discordClient, { db: db.db });
   installInteractionRouter(discordClient, {
     db: db.db,
