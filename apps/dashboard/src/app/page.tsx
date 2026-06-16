@@ -32,7 +32,7 @@ export default async function HomePage() {
       session={session}
       title="Overview"
     >
-      <OverviewClient guildId={guildId} />
+      <OverviewClient guildId={guildId} role={role} />
     </DashboardShell>
   );
 }

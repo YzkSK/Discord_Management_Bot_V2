@@ -21,7 +21,6 @@ const dashboardNavGroups: DashboardNavGroup[] = [
   {
     label: "Features",
     items: [
-      { href: "/panel", label: "Panel", description: "TTS話者・辞書・募集作成" },
       { href: "/voice", label: "Voice", description: "VC sessions and temporary VC management" },
       { href: "/recruitment", label: "Recruitment", description: "Recruitment posts and status management" },
       { href: "/tts", label: "TTS", description: "Text-to-speech configuration" },

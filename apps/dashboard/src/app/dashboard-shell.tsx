@@ -5,7 +5,6 @@ import { useState } from "react";
 import type { Session } from "next-auth";
 import {
   LayoutDashboard,
-  LayoutPanelLeft,
   Mic2,
   ClipboardList,
   Headphones,
@@ -33,7 +32,6 @@ interface DashboardShellProps {
 
 const icons: Record<string, ReactNode> = {
   "/": <LayoutDashboard className="h-4 w-4" />,
-  "/panel": <LayoutPanelLeft className="h-4 w-4" />,
   "/voice": <Headphones className="h-4 w-4" />,
   "/recruitment": <ClipboardList className="h-4 w-4" />,
   "/tts": <Mic2 className="h-4 w-4" />,
