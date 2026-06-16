@@ -5,13 +5,6 @@ import { AlertTriangle, Save } from "lucide-react";
 import type { GuildLanguage } from "@discord-bot/shared";
 import { isGuildLanguage } from "@discord-bot/shared";
 import { getDashboardLocale, detectBrowserLanguage } from "../../lib/locale";
-import {
-  removeAccessGrant,
-  toAccessGrantPayload,
-  upsertAccessGrant,
-  type DashboardAccessGrant,
-  type GrantableAccessRole
-} from "./access-grants";
 import { buildSettingsSectionSummaries, type SettingsSectionKey } from "./settings-sections";
 import { AccessGrantsTab } from "./components/AccessGrantsTab";
 import { LogsSettingsTab } from "./components/LogsSettingsTab";
@@ -21,9 +14,10 @@ import { VoiceSettingsTab } from "./components/VoiceSettingsTab";
 import {
   FeatureStatus,
   type SettingsResponse,
-  type TtsDictionaryEntry,
   type TtsSettingsResponse
 } from "./components/shared";
+import { useTtsSettings } from "./hooks/useTtsSettings";
+import { useAccessGrants } from "./hooks/useAccessGrants";
 
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
@@ -38,35 +32,19 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   const [tempVcCategoryId, setTempVcCategoryId] = useState("");
   const [ttsTextChannelId, setTtsTextChannelId] = useState("");
   const [recruitmentChannelId, setRecruitmentChannelId] = useState("");
-  const [ttsSettings, setTtsSettings] = useState<TtsSettingsResponse | null>(null);
-  const [ttsDefaultSpeakerId, setTtsDefaultSpeakerId] = useState("");
-  const [ttsUserSpeakerUserId, setTtsUserSpeakerUserId] = useState("");
-  const [ttsUserSpeakerId, setTtsUserSpeakerId] = useState("");
-  const [ttsDictionaryScope, setTtsDictionaryScope] = useState<"guild" | "user">("guild");
-  const [ttsDictionaryUserId, setTtsDictionaryUserId] = useState("");
-  const [ttsDictionaryFromText, setTtsDictionaryFromText] = useState("");
-  const [ttsDictionaryToText, setTtsDictionaryToText] = useState("");
-  const [ttsDictionaryPriority, setTtsDictionaryPriority] = useState("0");
-  const [ttsDictionaryEnabled, setTtsDictionaryEnabled] = useState(true);
   const [uiLang, setUiLang] = useState<GuildLanguage>("en");
-  const [managementRoleIds, setManagementRoleIds] = useState<string[]>([]);
-  const [accessGrants, setAccessGrants] = useState<DashboardAccessGrant[]>([]);
-  const [grantTargetType, setGrantTargetType] = useState<"user" | "role">("user");
-  const [grantTargetId, setGrantTargetId] = useState("");
-  const [grantRole, setGrantRole] = useState<GrantableAccessRole>("viewer");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [savingTtsDictionary, setSavingTtsDictionary] = useState(false);
-  const [savingTtsSpeaker, setSavingTtsSpeaker] = useState(false);
-  const [savingRoles, setSavingRoles] = useState(false);
-  const [savingGrant, setSavingGrant] = useState(false);
-  const [deletingGrantKey, setDeletingGrantKey] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"logs" | "voice" | "tts" | "recruitment" | "access">("logs");
-  const [confirmRoleRemoval, setConfirmRoleRemoval] = useState(false);
 
   const loc = getDashboardLocale(uiLang);
+
+  const isOwner = settings?.accessRole === "owner";
+
+  const tts = useTtsSettings(settings?.guildId ?? null, loc, setError, setMessage);
+  const access = useAccessGrants(settings?.guildId ?? null, isOwner, loc, setError, setMessage);
 
   const logModeOptions = [
     { label: loc.logModeFull, value: "full" },
@@ -96,24 +74,11 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
         if (isGuildLanguage(data.language)) {
           setUiLang(data.language);
         }
-        setManagementRoleIds(data.dashboardManagementRoleIds);
-        return Promise.all([
-          fetchTtsSettings(data.guildId).then((tts) => {
-            setTtsSettings(tts);
-            setTtsDefaultSpeakerId(
-              tts.guildDefaultSpeaker?.speakerId.toString() ?? ""
-            );
-          }),
-          data.accessRole === "owner"
-            ? fetchAccessGrants(data.guildId).then((grants) => {
-                setAccessGrants(grants);
-              })
-            : Promise.resolve()
-        ]);
+        access.initManagementRoles(data.dashboardManagementRoleIds);
       })
       .catch((e: unknown) => setError(toErrorMessage(e)))
       .finally(() => setLoading(false));
-  }, [guildId]);
+  }, [guildId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dirtyCount = useMemo(() => {
     if (!settings) return 0;
@@ -131,12 +96,11 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
     if (!settings) return;
     setSaving(true); setError(null); setMessage(null);
     try {
-      const logsDirty = logMode !== (settings.logMode) || language !== (settings.language);
+      const logsDirty = logMode !== settings.logMode || language !== settings.language;
       const voiceDirty =
         tempVcCreateChannelId !== (settings.features.tempVc.createChannelId ?? "") ||
         tempVcCategoryId !== (settings.features.tempVc.categoryId ?? "");
-      const ttsChannelDirty =
-        ttsTextChannelId !== (settings.features.tts.textChannelId ?? "");
+      const ttsChannelDirty = ttsTextChannelId !== (settings.features.tts.textChannelId ?? "");
       const recruitmentDirty =
         recruitmentChannelId !== (settings.features.recruitment.channelId ?? "");
 
@@ -173,173 +137,6 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
     setRecruitmentChannelId(settings.features.recruitment.channelId ?? "");
   }
 
-  async function saveTtsDefaultSpeaker() {
-    if (!settings) return;
-    setSavingTtsSpeaker(true); setError(null); setMessage(null);
-    try {
-      const data = await patchTtsSpeaker({
-        guildId: settings.guildId,
-        speakerId: Number(ttsDefaultSpeakerId),
-        target: "guild-default"
-      });
-      setTtsDefaultSpeakerId(data.setting.speakerId.toString());
-      const tts = await fetchTtsSettings(settings.guildId);
-      setTtsSettings(tts);
-      setMessage(loc.ttsSpeakerSaved);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTtsSpeaker(false); }
-  }
-
-  async function saveTtsUserSpeaker() {
-    if (!settings) return;
-    setSavingTtsSpeaker(true); setError(null); setMessage(null);
-    try {
-      await patchTtsSpeaker({
-        guildId: settings.guildId,
-        speakerId: Number(ttsUserSpeakerId),
-        target: "user",
-        userId: ttsUserSpeakerUserId
-      });
-      setTtsUserSpeakerId("");
-      setTtsUserSpeakerUserId("");
-      setTtsSettings(await fetchTtsSettings(settings.guildId));
-      setMessage(loc.ttsSpeakerSaved);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTtsSpeaker(false); }
-  }
-
-  async function deleteTtsSpeaker(input: {
-    target: "guild-default" | "user";
-    userId?: string;
-  }) {
-    if (!settings) return;
-    setSavingTtsSpeaker(true); setError(null); setMessage(null);
-    try {
-      await deleteTtsSpeakerSetting({
-        guildId: settings.guildId,
-        ...input
-      });
-      if (input.target === "guild-default") setTtsDefaultSpeakerId("");
-      setTtsSettings(await fetchTtsSettings(settings.guildId));
-      setMessage(loc.ttsSpeakerDeleted);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTtsSpeaker(false); }
-  }
-
-  async function saveTtsDictionaryEntry() {
-    if (!settings) return;
-    setSavingTtsDictionary(true); setError(null); setMessage(null);
-    try {
-      await patchTtsDictionaryEntry({
-        fromText: ttsDictionaryFromText,
-        guildId: settings.guildId,
-        isEnabled: ttsDictionaryEnabled,
-        priority: Number(ttsDictionaryPriority),
-        scope: ttsDictionaryScope,
-        toText: ttsDictionaryToText,
-        ...(ttsDictionaryScope === "user" ? { userId: ttsDictionaryUserId } : {})
-      });
-      setTtsDictionaryFromText("");
-      setTtsDictionaryToText("");
-      setTtsDictionaryUserId("");
-      setTtsDictionaryPriority("0");
-      setTtsDictionaryEnabled(true);
-      setTtsSettings(await fetchTtsSettings(settings.guildId));
-      setMessage(loc.ttsDictionarySaved);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTtsDictionary(false); }
-  }
-
-  async function deleteTtsDictionary(entry: TtsDictionaryEntry) {
-    if (!settings) return;
-    setSavingTtsDictionary(true); setError(null); setMessage(null);
-    try {
-      await deleteTtsDictionaryEntry({
-        fromText: entry.fromText,
-        guildId: settings.guildId,
-        scope: entry.scope,
-        ...(entry.userId ? { userId: entry.userId } : {})
-      });
-      setTtsSettings(await fetchTtsSettings(settings.guildId));
-      setMessage(loc.ttsDictionaryDeleted);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTtsDictionary(false); }
-  }
-
-  function requestSaveManagementRoles() {
-    if (!settings) return;
-    const removedAny = settings.dashboardManagementRoleIds.some(
-      (id) => !managementRoleIds.includes(id)
-    );
-    if (removedAny) {
-      setConfirmRoleRemoval(true);
-    } else {
-      void doSaveManagementRoles();
-    }
-  }
-
-  async function doSaveManagementRoles() {
-    if (!settings) return;
-    setConfirmRoleRemoval(false);
-    setSavingRoles(true); setError(null); setMessage(null);
-    try {
-      await updateManagementRoles(settings.guildId, managementRoleIds);
-      setSettings((s) => s ? { ...s, dashboardManagementRoleIds: managementRoleIds } : s);
-      setMessage(loc.accessRolesUpdated);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingRoles(false); }
-  }
-
-  async function saveAccessGrant() {
-    if (!settings) return;
-    const payload = toAccessGrantPayload({
-      guildId: settings.guildId,
-      targetType: grantTargetType,
-      targetId: grantTargetId,
-      role: grantRole
-    });
-
-    if (!payload.targetId) {
-      setError(loc.accessGrantTargetRequired);
-      return;
-    }
-
-    setSavingGrant(true); setError(null); setMessage(null);
-    try {
-      const grant = await upsertDashboardAccessGrant(payload);
-      setAccessGrants((current) => upsertAccessGrant(current, grant));
-      setGrantTargetId("");
-      setMessage(loc.accessGrantSaved);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingGrant(false); }
-  }
-
-  async function deleteAccessGrant(grant: DashboardAccessGrant) {
-    if (!settings) return;
-    const key = accessGrantKey(grant);
-    setDeletingGrantKey(key); setError(null); setMessage(null);
-    try {
-      await deleteDashboardAccessGrant({
-        guildId: settings.guildId,
-        targetType: grant.targetType,
-        targetId: grant.targetId
-      });
-      setAccessGrants((current) => removeAccessGrant(current, grant));
-      setMessage(loc.accessGrantDeleted);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setDeletingGrantKey(null); }
-  }
-
-  async function updateAccessGrantRole(
-    grant: DashboardAccessGrant,
-    role: GrantableAccessRole
-  ) {
-    if (!settings || grant.role === role) return;
-    setError(null); setMessage(null);
-    try {
-      const updatedGrant = await upsertDashboardAccessGrant({
-        guildId: settings.guildId,
-        targetType: grant.targetType,
-        targetId: grant.targetId,
-        role
-      });
-      setAccessGrants((current) => upsertAccessGrant(current, updatedGrant));
-      setMessage(loc.accessGrantUpdated);
-    } catch (e) { setError(toErrorMessage(e)); }
-  }
-
   if (loading) {
     return <p className="text-sm text-zinc-500">{loc.loading}…</p>;
   }
@@ -352,10 +149,8 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
     );
   }
 
-  const isOwner = settings.accessRole === "owner";
   const canEditTts = settings.accessRole !== "viewer";
   const summaries = buildSettingsSectionSummaries(settings.features);
-
   const isDirty = dirtyCount > 0;
 
   const tabDefs = [
@@ -452,36 +247,36 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
         {activeTab === "tts" && (
           <TtsSettingsTab
             settings={settings}
-            ttsSettings={ttsSettings}
+            ttsSettings={tts.ttsSettings}
             ttsTextChannelId={ttsTextChannelId}
-            ttsDefaultSpeakerId={ttsDefaultSpeakerId}
-            ttsUserSpeakerUserId={ttsUserSpeakerUserId}
-            ttsUserSpeakerId={ttsUserSpeakerId}
-            ttsDictionaryScope={ttsDictionaryScope}
-            ttsDictionaryUserId={ttsDictionaryUserId}
-            ttsDictionaryFromText={ttsDictionaryFromText}
-            ttsDictionaryToText={ttsDictionaryToText}
-            ttsDictionaryPriority={ttsDictionaryPriority}
-            ttsDictionaryEnabled={ttsDictionaryEnabled}
+            ttsDefaultSpeakerId={tts.ttsDefaultSpeakerId}
+            ttsUserSpeakerUserId={tts.ttsUserSpeakerUserId}
+            ttsUserSpeakerId={tts.ttsUserSpeakerId}
+            ttsDictionaryScope={tts.ttsDictionaryScope}
+            ttsDictionaryUserId={tts.ttsDictionaryUserId}
+            ttsDictionaryFromText={tts.ttsDictionaryFromText}
+            ttsDictionaryToText={tts.ttsDictionaryToText}
+            ttsDictionaryPriority={tts.ttsDictionaryPriority}
+            ttsDictionaryEnabled={tts.ttsDictionaryEnabled}
             canEditTts={canEditTts}
-            savingTtsDictionary={savingTtsDictionary}
-            savingTtsSpeaker={savingTtsSpeaker}
+            savingTtsDictionary={tts.savingTtsDictionary}
+            savingTtsSpeaker={tts.savingTtsSpeaker}
             loc={loc}
             onTtsTextChannelIdChange={setTtsTextChannelId}
-            onTtsDefaultSpeakerIdChange={setTtsDefaultSpeakerId}
-            onTtsUserSpeakerUserIdChange={setTtsUserSpeakerUserId}
-            onTtsUserSpeakerIdChange={setTtsUserSpeakerId}
-            onTtsDictionaryScopeChange={setTtsDictionaryScope}
-            onTtsDictionaryUserIdChange={setTtsDictionaryUserId}
-            onTtsDictionaryFromTextChange={setTtsDictionaryFromText}
-            onTtsDictionaryToTextChange={setTtsDictionaryToText}
-            onTtsDictionaryPriorityChange={setTtsDictionaryPriority}
-            onTtsDictionaryEnabledChange={setTtsDictionaryEnabled}
-            onSaveTtsDefaultSpeaker={() => void saveTtsDefaultSpeaker()}
-            onSaveTtsUserSpeaker={() => void saveTtsUserSpeaker()}
-            onDeleteTtsSpeaker={(input) => void deleteTtsSpeaker(input)}
-            onSaveTtsDictionaryEntry={() => void saveTtsDictionaryEntry()}
-            onDeleteTtsDictionary={(entry) => void deleteTtsDictionary(entry)}
+            onTtsDefaultSpeakerIdChange={tts.setTtsDefaultSpeakerId}
+            onTtsUserSpeakerUserIdChange={tts.setTtsUserSpeakerUserId}
+            onTtsUserSpeakerIdChange={tts.setTtsUserSpeakerId}
+            onTtsDictionaryScopeChange={tts.setTtsDictionaryScope}
+            onTtsDictionaryUserIdChange={tts.setTtsDictionaryUserId}
+            onTtsDictionaryFromTextChange={tts.setTtsDictionaryFromText}
+            onTtsDictionaryToTextChange={tts.setTtsDictionaryToText}
+            onTtsDictionaryPriorityChange={tts.setTtsDictionaryPriority}
+            onTtsDictionaryEnabledChange={tts.setTtsDictionaryEnabled}
+            onSaveTtsDefaultSpeaker={() => void tts.saveTtsDefaultSpeaker()}
+            onSaveTtsUserSpeaker={() => void tts.saveTtsUserSpeaker()}
+            onDeleteTtsSpeaker={(input) => void tts.deleteTtsSpeaker(input)}
+            onSaveTtsDictionaryEntry={() => void tts.saveTtsDictionaryEntry()}
+            onDeleteTtsDictionary={(entry) => void tts.deleteTtsDictionary(entry)}
           />
         )}
 
@@ -497,27 +292,27 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
         {activeTab === "access" && isOwner && (
           <AccessGrantsTab
             settings={settings}
-            accessGrants={accessGrants}
-            grantTargetType={grantTargetType}
-            grantTargetId={grantTargetId}
-            grantRole={grantRole}
-            managementRoleIds={managementRoleIds}
-            savingGrant={savingGrant}
-            savingRoles={savingRoles}
-            deletingGrantKey={deletingGrantKey}
+            accessGrants={access.accessGrants}
+            grantTargetType={access.grantTargetType}
+            grantTargetId={access.grantTargetId}
+            grantRole={access.grantRole}
+            managementRoleIds={access.managementRoleIds}
+            savingGrant={access.savingGrant}
+            savingRoles={access.savingRoles}
+            deletingGrantKey={access.deletingGrantKey}
             loc={loc}
-            onGrantTargetTypeChange={setGrantTargetType}
-            onGrantTargetIdChange={setGrantTargetId}
-            onGrantRoleChange={setGrantRole}
+            onGrantTargetTypeChange={access.setGrantTargetType}
+            onGrantTargetIdChange={access.setGrantTargetId}
+            onGrantRoleChange={access.setGrantRole}
             onManagementRoleChange={(id, checked) => {
-              setManagementRoleIds((prev) =>
+              access.setManagementRoleIds((prev) =>
                 checked ? [...prev, id] : prev.filter((x) => x !== id)
               );
             }}
-            onSaveAccessGrant={() => void saveAccessGrant()}
-            onDeleteAccessGrant={(grant) => void deleteAccessGrant(grant)}
-            onUpdateAccessGrantRole={(grant, role) => void updateAccessGrantRole(grant, role)}
-            onRequestSaveManagementRoles={requestSaveManagementRoles}
+            onSaveAccessGrant={() => void access.saveAccessGrant()}
+            onDeleteAccessGrant={(grant) => void access.deleteAccessGrant(grant)}
+            onUpdateAccessGrantRole={(grant, role) => void access.updateAccessGrantRole(grant, role)}
+            onRequestSaveManagementRoles={access.requestSaveManagementRoles}
           />
         )}
       </div>
@@ -554,7 +349,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
       )}
 
       {/* 管理ロール削除確認モーダル */}
-      {confirmRoleRemoval && (
+      {access.confirmRoleRemoval && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-lg border border-zinc-700 bg-zinc-900 p-5 shadow-xl">
             <div className="flex items-start gap-3">
@@ -568,7 +363,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
             </div>
             <div className="mt-4 flex justify-end gap-2">
               <Button
-                onClick={() => setConfirmRoleRemoval(false)}
+                onClick={() => access.setConfirmRoleRemoval(false)}
                 size="sm"
                 type="button"
                 variant="ghost"
@@ -576,7 +371,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
                 キャンセル
               </Button>
               <Button
-                onClick={() => void doSaveManagementRoles()}
+                onClick={() => void access.doSaveManagementRoles()}
                 size="sm"
                 type="button"
                 variant="destructive"
@@ -626,10 +421,7 @@ async function updateTempVcSettings(
     body: JSON.stringify({
       guildId,
       section: "tempVc",
-      values: {
-        createChannelId,
-        categoryId
-      }
+      values: { createChannelId, categoryId }
     }),
     headers: { "content-type": "application/json" },
     method: "PATCH"
@@ -643,9 +435,7 @@ async function updateTtsSettings(guildId: string, textChannelId: string) {
     body: JSON.stringify({
       guildId,
       section: "tts",
-      values: {
-        textChannelId
-      }
+      values: { textChannelId }
     }),
     headers: { "content-type": "application/json" },
     method: "PATCH"
@@ -665,143 +455,6 @@ async function updateRecruitmentSettings(
   });
   if (!res.ok) throw new Error("Failed to save recruitment settings");
   return (await res.json()) as SettingsResponse;
-}
-
-async function fetchTtsSettings(guildId: string): Promise<TtsSettingsResponse> {
-  const query = new URLSearchParams({ guildId });
-  const r = await fetch(`/api/tts-settings?${query.toString()}`, { cache: "no-store" });
-  if (!r.ok) throw new Error(`Failed to load TTS settings (${r.status})`);
-  return (await r.json()) as TtsSettingsResponse;
-}
-
-async function patchTtsSpeaker(input:
-  | {
-      guildId: string;
-      speakerId: number;
-      target: "guild-default";
-    }
-  | {
-      guildId: string;
-      speakerId: number;
-      target: "user";
-      userId: string;
-    }
-) {
-  const r = await fetch("/api/tts-settings", {
-    body: JSON.stringify({ ...input, kind: "speaker" }),
-    headers: { "content-type": "application/json" },
-    method: "PATCH"
-  });
-  if (!r.ok) throw new Error(`Failed to save TTS speaker (${r.status})`);
-  return (await r.json()) as { setting: { speakerId: number } };
-}
-
-async function deleteTtsSpeakerSetting(input:
-  | {
-      guildId: string;
-      target: "guild-default";
-    }
-  | {
-      guildId: string;
-      target: "user";
-      userId?: string;
-    }
-) {
-  const r = await fetch("/api/tts-settings", {
-    body: JSON.stringify({ ...input, kind: "speaker" }),
-    headers: { "content-type": "application/json" },
-    method: "DELETE"
-  });
-  if (!r.ok) throw new Error(`Failed to delete TTS speaker (${r.status})`);
-}
-
-async function patchTtsDictionaryEntry(input: {
-  fromText: string;
-  guildId: string;
-  isEnabled: boolean;
-  priority: number;
-  scope: "guild" | "user";
-  toText: string;
-  userId?: string;
-}) {
-  const r = await fetch("/api/tts-settings", {
-    body: JSON.stringify({ ...input, kind: "dictionary" }),
-    headers: { "content-type": "application/json" },
-    method: "PATCH"
-  });
-  if (!r.ok) throw new Error(`Failed to save TTS dictionary (${r.status})`);
-}
-
-async function deleteTtsDictionaryEntry(input: {
-  fromText: string;
-  guildId: string;
-  scope: "guild" | "user";
-  userId?: string;
-}) {
-  const r = await fetch("/api/tts-settings", {
-    body: JSON.stringify({ ...input, kind: "dictionary" }),
-    headers: { "content-type": "application/json" },
-    method: "DELETE"
-  });
-  if (!r.ok) throw new Error(`Failed to delete TTS dictionary (${r.status})`);
-}
-
-async function updateManagementRoles(guildId: string, roleIds: string[]) {
-  const r = await fetch("/api/settings", {
-    body: JSON.stringify({ guildId, dashboardManagementRoleIds: roleIds }),
-    headers: { "content-type": "application/json" },
-    method: "PATCH"
-  });
-  if (!r.ok) throw new Error(`Failed to save roles (${r.status})`);
-}
-
-interface AccessGrantsResponse {
-  grants: DashboardAccessGrant[];
-}
-
-async function fetchAccessGrants(guildId: string): Promise<DashboardAccessGrant[]> {
-  const query = new URLSearchParams({ guildId });
-  const r = await fetch(`/api/dashboard-access?${query.toString()}`, { cache: "no-store" });
-  if (!r.ok) throw new Error(`Failed to load dashboard access grants (${r.status})`);
-  const data = (await r.json()) as AccessGrantsResponse;
-  return data.grants;
-}
-
-async function upsertDashboardAccessGrant(input: {
-  guildId: string;
-  targetType: "user" | "role";
-  targetId: string;
-  role: GrantableAccessRole;
-}) {
-  const r = await fetch("/api/dashboard-access", {
-    body: JSON.stringify(input),
-    headers: { "content-type": "application/json" },
-    method: "PATCH"
-  });
-  if (!r.ok) throw new Error(`Failed to save dashboard access grant (${r.status})`);
-  const data = (await r.json()) as { grant: DashboardAccessGrant };
-  return data.grant;
-}
-
-async function deleteDashboardAccessGrant(input: {
-  guildId: string;
-  targetType: "user" | "role";
-  targetId: string;
-}) {
-  const r = await fetch("/api/dashboard-access", {
-    body: JSON.stringify(input),
-    headers: { "content-type": "application/json" },
-    method: "DELETE"
-  });
-  if (!r.ok) throw new Error(`Failed to delete dashboard access grant (${r.status})`);
-}
-
-function accessGrantKey(grant: {
-  guildId: string;
-  targetType: string;
-  targetId: string;
-}) {
-  return `${grant.guildId}:${grant.targetType}:${grant.targetId}`;
 }
 
 function sectionLabel(
