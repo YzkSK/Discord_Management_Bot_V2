@@ -57,8 +57,8 @@ export async function GET(
     if (guildId) {
       const dbConnection2 = createDbConnection();
       upsertDiscordChannel(dbConnection2.db, { channelId, guildId, name: channel.name })
-        .finally(() => dbConnection2.close())
-        .catch((err) => console.error("[discord/channels] upsert failed:", err));
+        .catch((err) => console.error("[discord/channels] upsert failed:", err))
+        .finally(() => dbConnection2.close());
     }
     return NextResponse.json(channel);
   } catch (err) {
