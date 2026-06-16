@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { getDashboardSession } from "../../auth";
 import { getDashboardPageRole } from "../../dashboard-auth";
+import { Forbidden } from "../../components/forbidden";
 import { DashboardShell } from "../dashboard-shell";
 import { HealthDashboard } from "./health-dashboard";
 
@@ -21,8 +22,7 @@ export default async function HealthPage() {
   if (!guildId) redirect("/guild");
 
   const role = await getDashboardPageRole(guildId);
-
-  if (role === "viewer" || role === null) redirect("/");
+  const allowed = role === "admin" || role === "owner";
 
   return (
     <DashboardShell
@@ -34,7 +34,7 @@ export default async function HealthPage() {
       session={session}
       title="System Health"
     >
-      <HealthDashboard />
+      {allowed ? <HealthDashboard /> : <Forbidden />}
     </DashboardShell>
   );
 }
