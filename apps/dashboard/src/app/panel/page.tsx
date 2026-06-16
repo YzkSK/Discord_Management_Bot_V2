@@ -4,11 +4,11 @@ import { redirect } from "next/navigation";
 import { getDashboardSession } from "../../auth";
 import { getDashboardPageRole } from "../../dashboard-auth";
 import { DashboardShell } from "../dashboard-shell";
-import { HealthDashboard } from "./health-dashboard";
+import { PanelDashboard } from "./panel-dashboard";
 
 export const dynamic = "force-dynamic";
 
-export default async function HealthPage() {
+export default async function PanelPage() {
   const session = await getDashboardSession();
   if (!session?.user) redirect("/login");
 
@@ -22,19 +22,17 @@ export default async function HealthPage() {
 
   const role = await getDashboardPageRole(guildId);
 
-  if (role === "viewer" || role === null) redirect("/");
-
   return (
     <DashboardShell
-      currentPath="/health"
-      description="Dependency status, latency, and failure visibility"
+      currentPath="/panel"
+      description="TTS話者の変更、辞書の登録、募集の作成"
       guildId={guildId}
       guildName={guildName}
       role={role}
       session={session}
-      title="System Health"
+      title="パネル"
     >
-      <HealthDashboard />
+      <PanelDashboard guildId={guildId} />
     </DashboardShell>
   );
 }

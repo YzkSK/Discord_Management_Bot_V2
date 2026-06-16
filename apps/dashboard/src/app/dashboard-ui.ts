@@ -2,6 +2,7 @@ export interface DashboardNavItem {
   href: string;
   label: string;
   description: string;
+  minRole?: "admin" | "owner";
 }
 
 export interface DashboardNavGroup {
@@ -14,12 +15,13 @@ const dashboardNavGroups: DashboardNavGroup[] = [
     label: "Activity",
     items: [
       { href: "/", label: "Overview", description: "KPIs and recent activity" },
-      { href: "/logs", label: "Logs", description: "Event history and real-time notifications" },
+      { href: "/logs", label: "Logs", description: "Event history and real-time notifications", minRole: "admin" },
     ],
   },
   {
     label: "Features",
     items: [
+      { href: "/panel", label: "Panel", description: "TTS話者・辞書・募集作成" },
       { href: "/voice", label: "Voice", description: "VC sessions and temporary VC management" },
       { href: "/recruitment", label: "Recruitment", description: "Recruitment posts and status management" },
       { href: "/tts", label: "TTS", description: "Text-to-speech configuration" },
@@ -29,7 +31,7 @@ const dashboardNavGroups: DashboardNavGroup[] = [
     label: "System",
     items: [
       { href: "/settings", label: "Settings", description: "Server settings and access management" },
-      { href: "/health", label: "Health", description: "Dependency service status" },
+      { href: "/health", label: "Health", description: "Dependency service status", minRole: "admin" },
     ],
   },
 ];

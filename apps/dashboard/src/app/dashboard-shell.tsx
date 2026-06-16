@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { Session } from "next-auth";
 import {
   LayoutDashboard,
+  LayoutPanelLeft,
   Mic2,
   ClipboardList,
   Headphones,
@@ -25,12 +26,14 @@ interface DashboardShellProps {
   description?: string;
   guildId: string;
   guildName: string | null;
+  role?: "viewer" | "admin" | "owner" | null | undefined;
   session: Session | null;
   title: string;
 }
 
 const icons: Record<string, ReactNode> = {
   "/": <LayoutDashboard className="h-4 w-4" />,
+  "/panel": <LayoutPanelLeft className="h-4 w-4" />,
   "/voice": <Headphones className="h-4 w-4" />,
   "/recruitment": <ClipboardList className="h-4 w-4" />,
   "/tts": <Mic2 className="h-4 w-4" />,
@@ -39,6 +42,15 @@ const icons: Record<string, ReactNode> = {
   "/settings": <Settings className="h-4 w-4" />,
 };
 
+const roleRank: Record<string, number> = { viewer: 1, admin: 2, owner: 3 };
+
+function canSeeItem(itemMinRole: string | undefined, role: string | null | undefined) {
+  if (!itemMinRole) return true;
+  if (role === undefined) return true;
+  if (!role) return false;
+  return (roleRank[role] ?? 0) >= (roleRank[itemMinRole] ?? 99);
+}
+
 export function DashboardShell({
   actions,
   children,
@@ -46,11 +58,16 @@ export function DashboardShell({
   description,
   guildId,
   guildName,
+  role,
   session,
   title,
 }: DashboardShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const groups = getDashboardNavGroups();
+  const allGroups = getDashboardNavGroups();
+  const groups = allGroups.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => canSeeItem(item.minRole, role))
+  })).filter((group) => group.items.length > 0);
 
   const sidebarContent = (
     <div className="flex h-full flex-col">

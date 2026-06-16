@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 import { getDashboardSession } from "../../auth";
+import { getDashboardPageRole } from "../../dashboard-auth";
 import { DashboardShell } from "../dashboard-shell";
 import { VoiceDashboard } from "./voice-dashboard";
 
@@ -19,12 +20,15 @@ export default async function VoicePage() {
 
   if (!guildId) redirect("/guild");
 
+  const role = await getDashboardPageRole(guildId);
+
   return (
     <DashboardShell
       currentPath="/voice"
       description="Current calls, Temp VC state, and setup shortcuts"
       guildId={guildId}
       guildName={guildName}
+      role={role}
       session={session}
       title="Voice"
     >

@@ -2,6 +2,7 @@ import { parseDashboardAuthEnv } from "@discord-bot/config";
 import { createDbConnection } from "@discord-bot/db";
 import type { DashboardAccessRole } from "@discord-bot/shared";
 import { getToken } from "next-auth/jwt";
+import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 
 import { resolveDashboardAccess } from "./authorization";
@@ -129,7 +130,8 @@ export async function authorizeDashboardApi(
     return {
       allowed: true,
       guild: discordGuild,
-      role: access.role
+      role: access.role,
+      userId: token.sub
     } as const;
   } finally {
     await dbConnection.close();
@@ -142,4 +144,61 @@ async function fetchAuthorizedMemberRoleIds(guildId: string, userId: string) {
   }
 
   return fetchGuildMemberRoleIds(env.DISCORD_BOT_TOKEN, guildId, userId);
+}
+
+export async function getDashboardPageRole(guildId: string): Promise<"viewer" | "admin" | "owner" | null> {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((c) => `${c.name}=${c.value}`)
+    .join("; ");
+
+  const token = await getToken({
+    req: { headers: { cookie: cookieHeader } } as unknown as Parameters<typeof getToken>[0]["req"],
+    ...(authOptions.secret ? { secret: authOptions.secret } : {})
+  });
+
+  if (!token?.sub) {
+    return null;
+  }
+
+  const accessToken = await getUsableDiscordAccessToken({
+    clientId: env.DISCORD_CLIENT_ID,
+    clientSecret: env.DISCORD_CLIENT_SECRET,
+    token: toDashboardDiscordToken(token)
+  });
+
+  let isGuildOwner = false;
+  let roleIds: string[] = [];
+
+  if (accessToken.ok) {
+    try {
+      const discordGuild = await fetchCurrentUserGuildById(
+        accessToken.accessToken,
+        guildId
+      );
+      if (discordGuild) {
+        isGuildOwner = discordGuild.owner;
+        if (!isGuildOwner) {
+          roleIds = await fetchAuthorizedMemberRoleIds(guildId, token.sub);
+        }
+      }
+    } catch {
+    }
+  }
+
+  const dbConnection = createDbConnection();
+  try {
+    const access = await resolveDashboardAccess({
+      db: dbConnection.db,
+      guildId,
+      userId: token.sub,
+      isGuildOwner,
+      roleIds
+    });
+    if (!access.allowed || !("role" in access) || !access.role) return null;
+    return access.role;
+  } finally {
+    await dbConnection.close();
+  }
 }
