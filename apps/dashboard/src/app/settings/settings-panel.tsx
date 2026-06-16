@@ -468,7 +468,7 @@ function sectionLabel(
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("ja-JP", { dateStyle: "short", timeStyle: "medium" }).format(
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "short", timeStyle: "medium" }).format(
     new Date(value)
   );
 }
