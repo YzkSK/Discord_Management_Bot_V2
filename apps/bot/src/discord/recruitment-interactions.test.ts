@@ -333,7 +333,8 @@ describe("handleRecruitmentButtonInteraction — leave: promotes from queue", ()
         set: () => ({
           where: () => ({ returning: async () => [{ ...recruitment, status: "full" }] })
         })
-      })
+      }),
+      transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn(db)
     };
 
     const interaction = {
