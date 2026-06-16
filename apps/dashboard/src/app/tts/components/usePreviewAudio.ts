@@ -26,9 +26,10 @@ export function usePreviewAudio() {
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
       audioRef.current = audio;
-      audio.onended = () => { URL.revokeObjectURL(url); setPlayingId(null); audioRef.current = null; };
-      audio.onerror = () => { URL.revokeObjectURL(url); setPlayingId(null); audioRef.current = null; };
-      void audio.play();
+      const cleanup = () => { URL.revokeObjectURL(url); setPlayingId(null); audioRef.current = null; };
+      audio.onended = cleanup;
+      audio.onerror = cleanup;
+      audio.play().catch(cleanup);
     } catch (err: unknown) {
       console.warn("tts-dashboard: audio preview playback failed", err);
       setPlayingId(null);
