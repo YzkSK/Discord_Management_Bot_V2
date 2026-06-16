@@ -128,7 +128,8 @@ export const logs = pgTable(
     guildIdIdx: index("logs_guild_id_idx").on(table.guildId),
     actorIdIdx: index("logs_actor_id_idx").on(table.actorId),
     channelIdIdx: index("logs_channel_id_idx").on(table.channelId),
-    receivedAtIdx: index("logs_received_at_idx").on(table.receivedAt)
+    receivedAtIdx: index("logs_received_at_idx").on(table.receivedAt),
+    guildReceivedAtIdx: index("logs_guild_received_at_idx").on(table.guildId, table.receivedAt)
   })
 );
 
@@ -232,6 +233,9 @@ export const callSessionMembers = pgTable(
     callSessionMembersSessionJoinedIdx: index(
       "call_session_members_session_joined_idx"
     ).on(table.callSessionId, table.joinedAt),
+    callSessionMembersActiveIdx: index("call_session_members_active_idx")
+      .on(table.callSessionId)
+      .where(sql`${table.leftAt} IS NULL`),
     joinOrderCheck: check(
       "call_session_members_join_order_check",
       sql`${table.joinOrder} >= 0`
@@ -275,6 +279,10 @@ export const recruitments = pgTable(
     statusCheck: check(
       "recruitments_status_check",
       sql`${table.status} in ('open', 'full', 'closed')`
+    ),
+    closedAtRequiredCheck: check(
+      "recruitments_closed_at_required",
+      sql`(${table.status} != 'closed' OR ${table.closedAt} IS NOT NULL)`
     )
   })
 );
@@ -306,7 +314,11 @@ export const recruitmentParticipants = pgTable(
     ).on(table.recruitmentId, table.userId),
     recruitmentParticipantsRecruitmentJoinedIdx: index(
       "recruitment_participants_recruitment_joined_idx"
-    ).on(table.recruitmentId, table.joinedAt)
+    ).on(table.recruitmentId, table.joinedAt),
+    queuedAtRequiredCheck: check(
+      "recruitment_participants_queued_at_required",
+      sql`(${table.isQueued} = false OR ${table.queuedAt} IS NOT NULL)`
+    )
   })
 );
 
