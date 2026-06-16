@@ -115,7 +115,7 @@ function buildLogFilters(input: ListLogEventsInput): SQL[] {
   }
 
   if (input.eventName) {
-    filters.push(like(logs.eventName, `${input.eventName}.%`));
+    filters.push(like(logs.eventName, `${input.eventName}%`));
   }
 
   if (input.actorId) {
@@ -131,10 +131,11 @@ function buildLogFilters(input: ListLogEventsInput): SQL[] {
   }
 
   if (input.search) {
+    const escapedSearch = input.search.replace(/[%_\\]/g, "\\$&");
     filters.push(
       or(
-        ilike(logs.eventName, `%${input.search}%`),
-        ilike(sql`${logs.payload}::text`, `%${input.search}%`)
+        ilike(logs.eventName, `%${escapedSearch}%`),
+        ilike(sql`${logs.payload}::text`, `%${escapedSearch}%`)
       )!
     );
   }
