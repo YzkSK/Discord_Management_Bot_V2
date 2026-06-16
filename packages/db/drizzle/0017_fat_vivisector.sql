@@ -1,0 +1,4 @@
+CREATE INDEX "call_session_members_active_idx" ON "call_session_members" USING btree ("call_session_id") WHERE "call_session_members"."left_at" IS NULL;--> statement-breakpoint
+CREATE INDEX "logs_guild_received_at_idx" ON "logs" USING btree ("guild_id","received_at");--> statement-breakpoint
+ALTER TABLE "recruitment_participants" ADD CONSTRAINT "recruitment_participants_queued_at_required" CHECK (("recruitment_participants"."is_queued" = false OR "recruitment_participants"."queued_at" IS NOT NULL));--> statement-breakpoint
+ALTER TABLE "recruitments" ADD CONSTRAINT "recruitments_closed_at_required" CHECK (("recruitments"."status" != 'closed' OR "recruitments"."closed_at" IS NOT NULL));
