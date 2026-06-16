@@ -13,6 +13,12 @@ COPY packages/shared/package.json packages/shared/package.json
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
+# Placeholder values satisfy schema validation during next build's module
+# evaluation phase. Real secrets are injected at runtime via env_file/environment.
+ARG DISCORD_CLIENT_SECRET=build-placeholder
+ARG NEXTAUTH_SECRET=build-placeholder
+ENV DISCORD_CLIENT_SECRET=$DISCORD_CLIENT_SECRET
+ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
 COPY . .
 RUN pnpm --filter @discord-bot/dashboard... build
 
