@@ -16,12 +16,14 @@ export function installGuildGatewayLogHandlers(
   inviteCache: InviteCache
 ) {
   client.on(Events.GuildUpdate, (oldGuild, newGuild) => {
+    const before = guildPayload(oldGuild);
+    const after = guildPayload(newGuild);
     writeWithAuditLog(
       write,
       createGuildEvent("guild.update", newGuild, {
-        before: guildPayload(oldGuild),
-        after: guildPayload(newGuild),
-        changes: diffRecord(guildPayload(oldGuild), guildPayload(newGuild))
+        before,
+        after,
+        changes: diffRecord(before, after)
       }),
       newGuild,
       AuditLogEvent.GuildUpdate,
@@ -56,12 +58,14 @@ export function installGuildGatewayLogHandlers(
     const newTimeout = newMember.communicationDisabledUntilTimestamp ?? null;
     const eventName = oldTimeout !== newTimeout ? "member.timeout" : "member.update";
 
+    const before = memberPayload(oldMember);
+    const after = memberPayload(newMember);
     writeWithAuditLog(
       write,
       createGuildEvent(eventName, newMember.guild, {
-        before: memberPayload(oldMember),
-        after: memberPayload(newMember),
-        changes: diffRecord(memberPayload(oldMember), memberPayload(newMember))
+        before,
+        after,
+        changes: diffRecord(before, after)
       }, newMember.id),
       newMember.guild,
       AuditLogEvent.MemberUpdate,

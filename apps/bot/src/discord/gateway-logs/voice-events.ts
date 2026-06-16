@@ -6,6 +6,19 @@ import {
 import { Events, type Client, type VoiceState } from "discord.js";
 import { createVoiceEvent, type WriteEventFn } from "./payloads.js";
 
+const GUILD_CONFIG_CACHE_TTL_MS = 60_000;
+
+type GuildConfig = Awaited<ReturnType<typeof getGuildConfigByGuildId>>;
+const guildConfigCache = new Map<string, { value: GuildConfig; expiresAt: number }>();
+
+async function getCachedGuildConfig(db: DbClient, guildId: string): Promise<GuildConfig> {
+  const cached = guildConfigCache.get(guildId);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+  const config = await getGuildConfigByGuildId(db, guildId);
+  guildConfigCache.set(guildId, { value: config, expiresAt: Date.now() + GUILD_CONFIG_CACHE_TTL_MS });
+  return config;
+}
+
 export function installVoiceGatewayLogHandlers(
   client: Client,
   write: WriteEventFn,
@@ -76,7 +89,7 @@ async function shouldSuppressTempVoiceStateEvent(
   newState: VoiceState,
   db: DbClient
 ) {
-  const config = await getGuildConfigByGuildId(db, newState.guild.id);
+  const config = await getCachedGuildConfig(db, newState.guild.id);
 
   if (!config?.tempVoiceCreateChannelId) {
     return false;

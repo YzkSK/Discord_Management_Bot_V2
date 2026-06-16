@@ -178,9 +178,8 @@ function createDiscordVoiceAdapter(): TtsVoiceAdapter {
       player.play(resource);
       try {
         await entersState(player, AudioPlayerStatus.Idle, TTS_PLAYBACK_TIMEOUT_MS);
-      } catch (err) {
+      } finally {
         player.stop(true);
-        throw err;
       }
     }
   };
