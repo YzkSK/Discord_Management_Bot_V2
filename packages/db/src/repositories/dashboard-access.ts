@@ -72,21 +72,22 @@ export async function listDashboardAccessGrants(
   input: ListDashboardAccessGrantsInput
 ) {
   const roleIds = input.roleIds ?? [];
-  const targetFilters = [
-    and(
-      eq(dashboardAccessGrants.targetType, "user"),
-      eq(dashboardAccessGrants.targetId, input.userId)
-    )
-  ];
 
-  if (roleIds.length > 0) {
-    targetFilters.push(
-      and(
-        eq(dashboardAccessGrants.targetType, "role"),
-        inArray(dashboardAccessGrants.targetId, roleIds)
-      )
-    );
-  }
+  const userFilter = and(
+    eq(dashboardAccessGrants.targetType, "user"),
+    eq(dashboardAccessGrants.targetId, input.userId)
+  );
+
+  const grantFilter =
+    roleIds.length > 0
+      ? or(
+          userFilter,
+          and(
+            eq(dashboardAccessGrants.targetType, "role"),
+            inArray(dashboardAccessGrants.targetId, roleIds)
+          )
+        )
+      : userFilter;
 
   return db
     .select({
@@ -99,7 +100,7 @@ export async function listDashboardAccessGrants(
     .where(
       and(
         eq(dashboardAccessGrants.guildId, input.guildId),
-        or(...targetFilters)
+        grantFilter
       )
     )
     .then((grants) =>

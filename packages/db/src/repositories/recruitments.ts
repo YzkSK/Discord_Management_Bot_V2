@@ -307,25 +307,28 @@ export async function promoteFromQueue(
   db: DbClient,
   recruitmentId: string
 ) {
-  const [first] = await db
-    .select()
-    .from(recruitmentParticipants)
-    .where(
-      and(
-        eq(recruitmentParticipants.recruitmentId, recruitmentId),
-        isNull(recruitmentParticipants.leftAt),
-        eq(recruitmentParticipants.isQueued, true)
+  return db.transaction(async (tx) => {
+    const [first] = await tx
+      .select()
+      .from(recruitmentParticipants)
+      .where(
+        and(
+          eq(recruitmentParticipants.recruitmentId, recruitmentId),
+          isNull(recruitmentParticipants.leftAt),
+          eq(recruitmentParticipants.isQueued, true)
+        )
       )
-    )
-    .orderBy(asc(recruitmentParticipants.queuedAt))
-    .limit(1);
+      .orderBy(asc(recruitmentParticipants.queuedAt))
+      .limit(1);
 
-  if (!first) return null;
+    if (!first) return null;
 
-  await db
-    .update(recruitmentParticipants)
-    .set({ isQueued: false, queuedAt: null, updatedAt: sql`now()` })
-    .where(eq(recruitmentParticipants.id, first.id));
+    const [updated] = await tx
+      .update(recruitmentParticipants)
+      .set({ isQueued: false, queuedAt: null, updatedAt: sql`now()` })
+      .where(eq(recruitmentParticipants.id, first.id))
+      .returning();
 
-  return { userId: first.userId };
+    return updated ? { userId: updated.userId } : null;
+  });
 }
