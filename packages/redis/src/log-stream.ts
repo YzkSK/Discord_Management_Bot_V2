@@ -8,6 +8,9 @@ import type { RedisClient, RedisStreamMessage } from "./client.js";
 export const LOGS_STREAM_KEY = "logs:events";
 export const REALTIME_LOGS_STREAM_PREFIX = "rt:logs:";
 
+const DEFAULT_BLOCK_MS = 5000;
+const DEFAULT_READ_COUNT = 25;
+
 export interface AppendLogEventOptions {
   realtimeEnabled?: boolean;
 }
@@ -93,8 +96,8 @@ export async function readRealtimeLogEvents(
   const result = await redis.xRead(
     [{ key: `${REALTIME_LOGS_STREAM_PREFIX}${guildId}`, id: lastId }],
     {
-      BLOCK: options.blockMs ?? 5000,
-      COUNT: options.count ?? 25
+      BLOCK: options.blockMs ?? DEFAULT_BLOCK_MS,
+      COUNT: options.count ?? DEFAULT_READ_COUNT
     }
   );
 
