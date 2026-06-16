@@ -2,7 +2,6 @@ import { parseDashboardAuthEnv } from "@discord-bot/config";
 import { createDbConnection } from "@discord-bot/db";
 import type { DashboardAccessRole } from "@discord-bot/shared";
 import { getToken } from "next-auth/jwt";
-import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 
 import { resolveDashboardAccess } from "./authorization";
@@ -14,7 +13,8 @@ import {
 import {
   DiscordApiError,
   fetchCurrentUserGuildById,
-  fetchGuildMemberRoleIds
+  fetchGuildMemberRoleIds,
+  fetchGuildOwnerId
 } from "./discord-api";
 
 const env = parseDashboardAuthEnv();
@@ -147,44 +147,20 @@ async function fetchAuthorizedMemberRoleIds(guildId: string, userId: string) {
 }
 
 export async function getDashboardPageRole(guildId: string): Promise<"viewer" | "admin" | "owner" | null> {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore
-    .getAll()
-    .map((c) => `${c.name}=${c.value}`)
-    .join("; ");
-
-  const token = await getToken({
-    req: { headers: { cookie: cookieHeader } } as unknown as Parameters<typeof getToken>[0]["req"],
-    ...(authOptions.secret ? { secret: authOptions.secret } : {})
-  });
-
-  if (!token?.sub) {
-    return null;
-  }
-
-  const accessToken = await getUsableDiscordAccessToken({
-    clientId: env.DISCORD_CLIENT_ID,
-    clientSecret: env.DISCORD_CLIENT_SECRET,
-    token: toDashboardDiscordToken(token)
-  });
+  const session = await getDashboardSession();
+  const userId = session?.user?.id;
+  if (!userId) return null;
 
   let isGuildOwner = false;
   let roleIds: string[] = [];
 
-  if (accessToken.ok) {
-    try {
-      const discordGuild = await fetchCurrentUserGuildById(
-        accessToken.accessToken,
-        guildId
-      );
-      if (discordGuild) {
-        isGuildOwner = discordGuild.owner;
-        if (!isGuildOwner) {
-          roleIds = await fetchAuthorizedMemberRoleIds(guildId, token.sub);
-        }
-      }
-    } catch {
-    }
+  if (env.DISCORD_BOT_TOKEN) {
+    const [ownerId, memberRoleIds] = await Promise.all([
+      fetchGuildOwnerId(env.DISCORD_BOT_TOKEN, guildId).catch(() => null),
+      fetchGuildMemberRoleIds(env.DISCORD_BOT_TOKEN, guildId, userId).catch(() => [])
+    ]);
+    isGuildOwner = ownerId === userId;
+    roleIds = memberRoleIds;
   }
 
   const dbConnection = createDbConnection();
@@ -192,7 +168,7 @@ export async function getDashboardPageRole(guildId: string): Promise<"viewer" | 
     const access = await resolveDashboardAccess({
       db: dbConnection.db,
       guildId,
-      userId: token.sub,
+      userId,
       isGuildOwner,
       roleIds
     });
