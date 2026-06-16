@@ -118,14 +118,6 @@ export function toRealtimeLogMessage(message: RedisStreamMessage) {
   };
 }
 
-export function asRedisStreamWriter(redis: RedisClient): RedisStreamWriter {
-  return {
-    xAdd(key, id, fields) {
-      return redis.xAdd(key, id, fields);
-    }
-  };
-}
-
 function emptyToNull(value: string | undefined) {
   return value ? value : null;
 }
