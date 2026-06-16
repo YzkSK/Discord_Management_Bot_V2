@@ -657,13 +657,14 @@ async function updateTtsSettings(guildId: string, textChannelId: string) {
 async function updateRecruitmentSettings(
   guildId: string,
   values: { channelId: string | null }
-) {
+): Promise<SettingsResponse> {
   const res = await fetch("/api/settings", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ guildId, section: "recruitment", values })
   });
   if (!res.ok) throw new Error("Failed to save recruitment settings");
+  return (await res.json()) as SettingsResponse;
 }
 
 async function fetchTtsSettings(guildId: string): Promise<TtsSettingsResponse> {

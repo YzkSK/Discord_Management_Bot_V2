@@ -39,6 +39,7 @@ interface GuildCacheEntry {
 // Avoid hammering Discord's /users/@me/guilds endpoint on every API request
 const guildListCache = new Map<string, GuildCacheEntry>();
 const GUILD_CACHE_TTL_MS = 60_000;
+const GUILD_CACHE_MAX_SIZE = 100;
 
 export async function fetchCurrentUserGuilds(
   accessToken: string
@@ -59,6 +60,10 @@ export async function fetchCurrentUserGuilds(
     );
   }
   const guilds = (await response.json()) as DiscordOAuthGuild[];
+  if (guildListCache.size >= GUILD_CACHE_MAX_SIZE) {
+    const oldest = guildListCache.keys().next().value;
+    if (oldest !== undefined) guildListCache.delete(oldest);
+  }
   guildListCache.set(accessToken, { guilds, expiresAt: Date.now() + GUILD_CACHE_TTL_MS });
   return guilds;
 }
