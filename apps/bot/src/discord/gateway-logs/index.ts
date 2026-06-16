@@ -9,6 +9,7 @@ import { installChannelGatewayLogHandlers } from "./channel-events.js";
 import { installEmojiStickerGatewayLogHandlers } from "./emoji-sticker-events.js";
 import { installGuildGatewayLogHandlers } from "./guild-events.js";
 import { installIntegrationGatewayLogHandlers } from "./integration-events.js";
+import { installPollAuditGatewayLogHandlers } from "./poll-audit-events.js";
 import { createInviteCache } from "./invite-cache.js";
 import { installMessageGatewayLogHandlers } from "./message-events.js";
 import { installRoleGatewayLogHandlers } from "./role-events.js";
@@ -47,6 +48,7 @@ export function installGatewayLogHandlers(
   installInviteGatewayLogHandlers(client, write, inviteCache);
   installAutoModGatewayLogHandlers(client, write);
   installIntegrationGatewayLogHandlers(client, write);
+  installPollAuditGatewayLogHandlers(client, write);
   installScheduledEventGatewayLogHandlers(client, write);
   installStageGatewayLogHandlers(client, write);
   installEmojiStickerGatewayLogHandlers(client, write);
