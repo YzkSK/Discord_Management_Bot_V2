@@ -7,6 +7,7 @@ import { createDiscordLogWriter } from "../log-writer.js";
 import { installChannelGatewayLogHandlers } from "./channel-events.js";
 import { installEmojiStickerGatewayLogHandlers } from "./emoji-sticker-events.js";
 import { installGuildGatewayLogHandlers } from "./guild-events.js";
+import { createInviteCache } from "./invite-cache.js";
 import { installMessageGatewayLogHandlers } from "./message-events.js";
 import { installRoleGatewayLogHandlers } from "./role-events.js";
 import { installThreadGatewayLogHandlers, installInviteGatewayLogHandlers } from "./thread-invite-events.js";
@@ -34,11 +35,12 @@ export function installGatewayLogHandlers(
     });
   };
 
-  installGuildGatewayLogHandlers(client, write);
+  const inviteCache = createInviteCache();
+  installGuildGatewayLogHandlers(client, write, inviteCache);
   installChannelGatewayLogHandlers(client, write);
   installRoleGatewayLogHandlers(client, write);
   installThreadGatewayLogHandlers(client, write);
-  installInviteGatewayLogHandlers(client, write);
+  installInviteGatewayLogHandlers(client, write, inviteCache);
   installEmojiStickerGatewayLogHandlers(client, write);
   installMessageGatewayLogHandlers(client, write);
   installVoiceGatewayLogHandlers(client, write, options.db);

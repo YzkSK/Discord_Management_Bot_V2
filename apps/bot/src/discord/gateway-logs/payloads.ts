@@ -17,6 +17,7 @@ import {
   type User,
   type VoiceState
 } from "discord.js";
+import type { CachedInvite } from "./invite-cache.js";
 import type { Guild } from "discord.js";
 
 export type WriteEventFn = (event: NormalizedEvent) => void;
@@ -66,20 +67,24 @@ export function createThreadEvent(
   });
 }
 
-export function createInviteEvent(eventName: string, invite: Invite): NormalizedEvent {
+export function createInviteEvent(
+  eventName: string,
+  invite: Invite,
+  cached?: CachedInvite | null
+): NormalizedEvent {
   return createEvent(eventName, {
     guildId: invite.guild?.id ?? null,
-    actorId: invite.inviter?.id ?? null,
+    actorId: invite.inviter?.id ?? cached?.inviterId ?? null,
     channelId: invite.channel?.id ?? null,
     messageId: null,
     payload: {
       invite: {
         code: invite.code,
         url: invite.url,
-        maxAge: invite.maxAge,
-        maxUses: invite.maxUses,
-        temporary: invite.temporary,
-        uses: invite.uses
+        maxAge: invite.maxAge ?? cached?.maxAge ?? null,
+        maxUses: invite.maxUses ?? cached?.maxUses ?? null,
+        temporary: invite.temporary ?? cached?.temporary ?? null,
+        uses: invite.uses ?? cached?.uses ?? null
       },
       inviter: invite.inviter ? userPayload(invite.inviter) : null
     }
