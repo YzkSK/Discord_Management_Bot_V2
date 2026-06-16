@@ -73,7 +73,7 @@ export function toHandlerErrorLogInput(
     actorId: parsedEvent.actorId,
     channelId: parsedEvent.channelId,
     messageId: parsedEvent.messageId,
-    eventTimestamp: input.receivedAt ?? new Date(),
+    eventTimestamp: parsedEvent.eventTimestamp,
     receivedAt: input.receivedAt ?? new Date(),
     realtimeEnabled: resolveRealtimeEnabled("system.handler.error"),
     payload: {
