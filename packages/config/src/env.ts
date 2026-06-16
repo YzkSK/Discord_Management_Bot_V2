@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import { loadRootEnv } from "./dotenv.js";
 
+loadRootEnv();
+
 const logLevelSchema = z.enum(["trace", "debug", "info", "warn", "error"]);
 
 export const appEnvSchema = z.object({
@@ -41,25 +43,21 @@ export type RedisEnv = z.infer<typeof redisEnvSchema>;
 export type DashboardAuthEnv = z.infer<typeof dashboardAuthEnvSchema>;
 
 export function parseAppEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
-  loadRootEnv();
   return appEnvSchema.parse(env);
 }
 
 export function parseDatabaseEnv(
   env: NodeJS.ProcessEnv = process.env
 ): DatabaseEnv {
-  loadRootEnv();
   return databaseEnvSchema.parse(env);
 }
 
 export function parseRedisEnv(env: NodeJS.ProcessEnv = process.env): RedisEnv {
-  loadRootEnv();
   return redisEnvSchema.parse(env);
 }
 
 export function parseDashboardAuthEnv(
   env: NodeJS.ProcessEnv = process.env
 ): DashboardAuthEnv {
-  loadRootEnv();
   return dashboardAuthEnvSchema.parse(env);
 }
