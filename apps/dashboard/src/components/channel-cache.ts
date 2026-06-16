@@ -28,7 +28,10 @@ export function fetchCachedDiscordChannel(
     })
     .catch(() => ({ id: channelId, name: channelId }))
     .then((data) => {
-      if (cache.size >= MAX_CACHE_SIZE) cache.clear();
+      if (cache.size >= MAX_CACHE_SIZE) {
+        const oldest = cache.keys().next().value;
+        if (oldest !== undefined) cache.delete(oldest);
+      }
       cache.set(channelId, data);
       inflight.delete(channelId);
       return data;
