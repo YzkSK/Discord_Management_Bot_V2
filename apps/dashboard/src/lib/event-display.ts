@@ -1,5 +1,3 @@
-// apps/dashboard/src/lib/event-display.ts
-
 export type EventColorKey =
   | "blue"
   | "purple"
@@ -207,6 +205,51 @@ export const eventColorClasses: Record<EventColorKey, { dot: string; badge: stri
   sky:    { dot: "bg-sky-500",    badge: "bg-sky-500/10 text-sky-400",       border: "border-sky-500/20" },
   gray:   { dot: "bg-zinc-500",   badge: "bg-zinc-500/10 text-zinc-400",     border: "border-zinc-500/20" },
 };
+
+export function isObj(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+export function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+export function extractActorName(payload: unknown): string | null {
+  if (!isObj(payload)) return null;
+  const member = payload["member"];
+  if (isObj(member) && typeof member["displayName"] === "string") return member["displayName"];
+  const after = payload["after"];
+  if (isObj(after) && typeof after["displayName"] === "string") return after["displayName"];
+  const user = payload["user"];
+  if (isObj(user) && typeof user["username"] === "string")
+    return (typeof user["globalName"] === "string" ? user["globalName"] : null) ?? user["username"];
+  const author = payload["author"];
+  if (isObj(author) && typeof author["username"] === "string")
+    return (typeof author["globalName"] === "string" ? author["globalName"] : null) ?? author["username"];
+  return null;
+}
+
+export function extractChannelName(payload: unknown): string | null {
+  if (!isObj(payload)) return null;
+  const channel = payload["channel"];
+  if (isObj(channel) && typeof channel["name"] === "string") return channel["name"];
+  return null;
+}
+
+export function extractVoiceStateChanges(
+  payload: unknown
+): Record<string, { before: unknown; after: unknown }> | null {
+  if (!isObj(payload)) return null;
+  const changes = payload["changes"];
+  if (!isRecord(changes)) return null;
+  const result: Record<string, { before: unknown; after: unknown }> = {};
+  for (const [key, val] of Object.entries(changes)) {
+    if (isRecord(val) && "before" in val && "after" in val) {
+      result[key] = { before: val["before"], after: val["after"] };
+    }
+  }
+  return Object.keys(result).length > 0 ? result : null;
+}
 
 export function getActorText(vars: EventVars): string | null {
   if (vars.actorName) return `@${vars.actorName}`;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AreaChart,
   Area,
@@ -13,46 +13,14 @@ import { Activity, Mic2, Users, Volume2 } from "lucide-react";
 
 import {
   eventColorClasses,
+  extractActorName,
+  extractChannelName,
+  extractVoiceStateChanges,
   formatRelativeTime,
   getEventColor,
 } from "../lib/event-display";
 import { formatEventDescriptionJSX } from "../lib/format-event-jsx";
 import { PanelDashboard } from "./panel/panel-dashboard";
-
-function isObj(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
-function extractActorName(payload: unknown): string | null {
-  if (!isObj(payload)) return null;
-  const member = payload["member"];
-  if (isObj(member) && typeof member["displayName"] === "string") return member["displayName"];
-  const after = payload["after"];
-  if (isObj(after) && typeof after["displayName"] === "string") return after["displayName"];
-  const user = payload["user"];
-  if (isObj(user) && typeof user["username"] === "string")
-    return (typeof user["globalName"] === "string" ? user["globalName"] : null) ?? user["username"];
-  return null;
-}
-function extractChannelName(payload: unknown): string | null {
-  if (!isObj(payload)) return null;
-  const channel = payload["channel"];
-  if (isObj(channel) && typeof channel["name"] === "string") return channel["name"];
-  return null;
-}
-function extractVoiceStateChanges(
-  payload: unknown
-): Record<string, { before: unknown; after: unknown }> | null {
-  if (!isObj(payload)) return null;
-  const changes = payload["changes"];
-  if (typeof changes !== "object" || changes === null || Array.isArray(changes)) return null;
-  const result: Record<string, { before: unknown; after: unknown }> = {};
-  for (const [key, val] of Object.entries(changes as Record<string, unknown>)) {
-    if (isObj(val) && "before" in val && "after" in val) {
-      result[key] = { before: val["before"], after: val["after"] };
-    }
-  }
-  return Object.keys(result).length > 0 ? result : null;
-}
 
 interface VoiceSession {
   channelId: string;
@@ -88,33 +56,30 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  const load = useMemo(
-    () => async () => {
-      setLoading(true);
-      setError(false);
-      try {
-        const res = await fetch(
-          `/api/overview?guildId=${encodeURIComponent(guildId)}`,
-          { cache: "no-store" }
-        );
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await fetch(
+        `/api/overview?guildId=${encodeURIComponent(guildId)}`,
+        { cache: "no-store" }
+      );
 
-        if (!res.ok) {
-          setError(true);
-          return;
-        }
-
-        const data = await res.json();
-        setSessions(data.sessions ?? []);
-        setRecruitments(data.recruitments ?? []);
-        setRecentLogs(data.logItems ?? []);
-      } catch {
+      if (!res.ok) {
         setError(true);
-      } finally {
-        setLoading(false);
+        return;
       }
-    },
-    [guildId]
-  );
+
+      const data = await res.json();
+      setSessions(data.sessions ?? []);
+      setRecruitments(data.recruitments ?? []);
+      setRecentLogs(data.logItems ?? []);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [guildId]);
 
   useEffect(() => {
     void load();
