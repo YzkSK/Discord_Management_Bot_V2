@@ -43,6 +43,7 @@ export const realtimeDefaultEnabledEvents = [
   "recruitment.created",
   "recruitment.full",
   "recruitment.closed",
+  "recruitment.reopened",
   "tts.session.started",
   "tts.session.stopped",
   "system.bot.crashed",

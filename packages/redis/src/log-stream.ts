@@ -111,8 +111,8 @@ export function toRealtimeLogMessage(message: RedisStreamMessage) {
     actorId: emptyToNull(message.message.actor_id),
     channelId: emptyToNull(message.message.channel_id),
     messageId: emptyToNull(message.message.message_id),
-    eventTimestamp: message.message.event_timestamp ?? "",
-    receivedAt: message.message.received_at ?? "",
+    eventTimestamp: message.message.event_timestamp ? new Date(message.message.event_timestamp) : new Date(0),
+    receivedAt: message.message.received_at ? new Date(message.message.received_at) : new Date(0),
     realtimeEnabled: message.message.realtime_enabled === "1",
     payload: parsePayload(message.message.payload)
   };

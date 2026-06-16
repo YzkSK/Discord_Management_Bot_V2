@@ -59,6 +59,7 @@ function defaultHandlerErrorReporter(error: HandlerError) {
   console.error("event handler failed", {
     eventName: error.event.eventName,
     handlerName: error.handlerName,
-    receivedAt: error.receivedAt
+    receivedAt: error.receivedAt,
+    error: error.error,
   });
 }
