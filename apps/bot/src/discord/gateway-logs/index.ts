@@ -11,6 +11,7 @@ import { installGuildGatewayLogHandlers } from "./guild-events.js";
 import { createInviteCache } from "./invite-cache.js";
 import { installMessageGatewayLogHandlers } from "./message-events.js";
 import { installRoleGatewayLogHandlers } from "./role-events.js";
+import { installScheduledEventGatewayLogHandlers } from "./scheduled-event-events.js";
 import { installStageGatewayLogHandlers } from "./stage-events.js";
 import { installThreadGatewayLogHandlers, installInviteGatewayLogHandlers } from "./thread-invite-events.js";
 import { installVoiceGatewayLogHandlers } from "./voice-events.js";
@@ -44,6 +45,7 @@ export function installGatewayLogHandlers(
   installThreadGatewayLogHandlers(client, write);
   installInviteGatewayLogHandlers(client, write, inviteCache);
   installAutoModGatewayLogHandlers(client, write);
+  installScheduledEventGatewayLogHandlers(client, write);
   installStageGatewayLogHandlers(client, write);
   installEmojiStickerGatewayLogHandlers(client, write);
   installMessageGatewayLogHandlers(client, write);
