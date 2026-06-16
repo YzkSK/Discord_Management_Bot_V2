@@ -12,7 +12,7 @@ const baseEnv = {
   NEXTAUTH_SECRET: "secret",
   PUBLIC_DASHBOARD_URL: "http://localhost:3000",
   REDIS_URL: "redis://localhost:6379",
-  SESSION_ENCRYPTION_KEY: "key",
+  SESSION_ENCRYPTION_KEY: "aaaabbbbccccddddeeeeffffgggghhhh",
   VOICEVOX_URL: "http://localhost:50021"
 };
 

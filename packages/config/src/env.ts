@@ -14,7 +14,7 @@ export const appEnvSchema = z.object({
   VOICEVOX_URL: z.string().url(),
   VOICEVOX_SPEAKER_ID: z.coerce.number().int().nonnegative().default(2),
   NEXTAUTH_SECRET: z.string().min(1),
-  SESSION_ENCRYPTION_KEY: z.string().min(1),
+  SESSION_ENCRYPTION_KEY: z.string().min(32),
   PUBLIC_DASHBOARD_URL: z.string().url(),
   LOG_LEVEL: logLevelSchema.default("info")
 });
@@ -30,8 +30,8 @@ export const redisEnvSchema = appEnvSchema.pick({
 export const dashboardAuthEnvSchema = z.object({
   DISCORD_BOT_TOKEN: z.string().optional(),
   DISCORD_CLIENT_ID: z.string().default(""),
-  DISCORD_CLIENT_SECRET: z.string().default(""),
-  NEXTAUTH_SECRET: z.string().optional(),
+  DISCORD_CLIENT_SECRET: z.string().min(1),
+  NEXTAUTH_SECRET: z.string().min(1),
   NEXTAUTH_URL: z.string().url().optional()
 });
 
