@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 import { getDashboardSession } from "../../auth";
+import { getDashboardPageRole } from "../../dashboard-auth";
 import { DashboardShell } from "../dashboard-shell";
 import { SettingsPanel } from "./settings-panel";
 
@@ -19,12 +20,15 @@ export default async function SettingsPage() {
 
   if (!guildId) redirect("/guild");
 
+  const role = await getDashboardPageRole(guildId);
+
   return (
     <DashboardShell
       currentPath="/settings"
       description="Log mode, access control, and guild configuration"
       guildId={guildId}
       guildName={guildName}
+      role={role}
       session={session}
       title="Settings"
     >

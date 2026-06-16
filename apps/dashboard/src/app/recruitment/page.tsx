@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getDashboardSession } from "../../auth";
+import { getDashboardPageRole } from "../../dashboard-auth";
 import { DashboardShell } from "../dashboard-shell";
 import { RecruitmentDashboard } from "./recruitment-dashboard";
 
@@ -19,12 +20,15 @@ export default async function RecruitmentPage() {
 
   if (!guildId) redirect("/guild");
 
+  const role = await getDashboardPageRole(guildId);
+
   return (
     <DashboardShell
       currentPath="/recruitment"
       description="Recruitment posts, status, participant counts, and setup shortcuts"
       guildId={guildId}
       guildName={guildName}
+      role={role}
       session={session}
       title="Recruitment"
     >

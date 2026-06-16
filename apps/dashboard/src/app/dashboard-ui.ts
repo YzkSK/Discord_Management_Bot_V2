@@ -2,6 +2,7 @@ export interface DashboardNavItem {
   href: string;
   label: string;
   description: string;
+  minRole?: "admin" | "owner";
 }
 
 export interface DashboardNavGroup {
@@ -14,7 +15,7 @@ const dashboardNavGroups: DashboardNavGroup[] = [
     label: "Activity",
     items: [
       { href: "/", label: "Overview", description: "KPIs and recent activity" },
-      { href: "/logs", label: "Logs", description: "Event history and real-time notifications" },
+      { href: "/logs", label: "Logs", description: "Event history and real-time notifications", minRole: "admin" },
     ],
   },
   {
@@ -29,7 +30,7 @@ const dashboardNavGroups: DashboardNavGroup[] = [
     label: "System",
     items: [
       { href: "/settings", label: "Settings", description: "Server settings and access management" },
-      { href: "/health", label: "Health", description: "Dependency service status" },
+      { href: "/health", label: "Health", description: "Dependency service status", minRole: "admin" },
     ],
   },
 ];

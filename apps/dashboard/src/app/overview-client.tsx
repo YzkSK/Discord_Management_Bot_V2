@@ -17,6 +17,7 @@ import {
   getEventColor,
 } from "../lib/event-display";
 import { formatEventDescriptionJSX } from "../lib/format-event-jsx";
+import { PanelDashboard } from "./panel/panel-dashboard";
 
 function isObj(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
@@ -77,9 +78,10 @@ interface LogItem {
 
 interface OverviewClientProps {
   guildId: string;
+  role?: "viewer" | "admin" | "owner" | null;
 }
 
-export function OverviewClient({ guildId }: OverviewClientProps) {
+export function OverviewClient({ guildId, role }: OverviewClientProps) {
   const [sessions, setSessions] = useState<VoiceSession[]>([]);
   const [recruitments, setRecruitments] = useState<Recruitment[]>([]);
   const [recentLogs, setRecentLogs] = useState<LogItem[]>([]);
@@ -173,6 +175,30 @@ export function OverviewClient({ guildId }: OverviewClientProps) {
         >
           再試行
         </button>
+      </div>
+    );
+  }
+
+  const isViewer = role === "viewer";
+
+  if (isViewer) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="grid grid-cols-2 gap-4">
+          {[
+            { label: "アクティブ VC", value: activeVcCount, icon: <Mic2 className="h-4 w-4" /> },
+            { label: "進行中の募集", value: openRecruitCount, icon: <Users className="h-4 w-4" /> },
+          ].map((kpi) => (
+            <div key={kpi.label} className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-zinc-500">{kpi.label}</p>
+                <span className="text-zinc-500">{kpi.icon}</span>
+              </div>
+              <p className="mt-2 text-2xl font-bold text-zinc-100">{kpi.value}</p>
+            </div>
+          ))}
+        </div>
+        <PanelDashboard guildId={guildId} />
       </div>
     );
   }
@@ -309,6 +335,7 @@ export function OverviewClient({ guildId }: OverviewClientProps) {
           </ul>
         )}
       </div>
+      <PanelDashboard guildId={guildId} />
     </div>
   );
 }

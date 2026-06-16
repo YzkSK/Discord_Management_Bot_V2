@@ -95,6 +95,22 @@ export async function fetchGuildMemberRoleIds(
   return member.roles;
 }
 
+export async function fetchGuildOwnerId(
+  botToken: string,
+  guildId: string
+): Promise<string | null> {
+  const response = await fetch(
+    `${discordApiBaseUrl}/guilds/${guildId}`,
+    {
+      headers: { Authorization: `Bot ${botToken}` },
+      cache: "no-store"
+    }
+  );
+  if (!response.ok) return null;
+  const guild = (await response.json()) as { owner_id: string };
+  return guild.owner_id ?? null;
+}
+
 export async function fetchGuildRoles(
   botToken: string,
   guildId: string

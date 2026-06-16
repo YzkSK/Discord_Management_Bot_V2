@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getDashboardSession } from "../../auth";
+import { getDashboardPageRole } from "../../dashboard-auth";
+import { Forbidden } from "../../components/forbidden";
 import { DashboardShell } from "../dashboard-shell";
 import { HealthDashboard } from "./health-dashboard";
 
@@ -19,16 +21,20 @@ export default async function HealthPage() {
 
   if (!guildId) redirect("/guild");
 
+  const role = await getDashboardPageRole(guildId);
+  const allowed = role === "admin" || role === "owner";
+
   return (
     <DashboardShell
       currentPath="/health"
       description="Dependency status, latency, and failure visibility"
       guildId={guildId}
       guildName={guildName}
+      role={role}
       session={session}
       title="System Health"
     >
-      <HealthDashboard />
+      {allowed ? <HealthDashboard /> : <Forbidden />}
     </DashboardShell>
   );
 }

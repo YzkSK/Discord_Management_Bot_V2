@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 import { getDashboardSession } from "../auth";
+import { getDashboardPageRole } from "../dashboard-auth";
 import { DashboardShell } from "./dashboard-shell";
 import { OverviewClient } from "./overview-client";
 
@@ -19,16 +20,19 @@ export default async function HomePage() {
 
   if (!guildId) redirect("/guild");
 
+  const role = await getDashboardPageRole(guildId);
+
   return (
     <DashboardShell
       currentPath="/"
       description="Server activity and KPIs"
       guildId={guildId}
       guildName={guildName}
+      role={role}
       session={session}
       title="Overview"
     >
-      <OverviewClient guildId={guildId} />
+      <OverviewClient guildId={guildId} role={role} />
     </DashboardShell>
   );
 }
