@@ -4,6 +4,7 @@ import type { NormalizedEvent } from "@discord-bot/shared";
 import type { Client } from "discord.js";
 
 import { createDiscordLogWriter } from "../log-writer.js";
+import { installAutoModGatewayLogHandlers } from "./automod-events.js";
 import { installChannelGatewayLogHandlers } from "./channel-events.js";
 import { installEmojiStickerGatewayLogHandlers } from "./emoji-sticker-events.js";
 import { installGuildGatewayLogHandlers } from "./guild-events.js";
@@ -42,6 +43,7 @@ export function installGatewayLogHandlers(
   installRoleGatewayLogHandlers(client, write);
   installThreadGatewayLogHandlers(client, write);
   installInviteGatewayLogHandlers(client, write, inviteCache);
+  installAutoModGatewayLogHandlers(client, write);
   installStageGatewayLogHandlers(client, write);
   installEmojiStickerGatewayLogHandlers(client, write);
   installMessageGatewayLogHandlers(client, write);
