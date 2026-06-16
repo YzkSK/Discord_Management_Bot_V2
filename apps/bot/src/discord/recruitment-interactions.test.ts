@@ -334,7 +334,16 @@ describe("handleRecruitmentButtonInteraction — leave: promotes from queue", ()
           where: () => ({ returning: async () => [{ ...recruitment, status: "full" }] })
         })
       }),
-      transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn(db)
+      transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn({
+        select: (s?: Record<string, unknown>) => db.select(s),
+        update: () => ({
+          set: () => ({
+            where: () => ({
+              returning: async () => [{ id: "p2", userId: "queued-user", isQueued: false, queuedAt: null }]
+            })
+          })
+        })
+      })
     };
 
     const interaction = {
