@@ -6,10 +6,29 @@ import {
   type CommandContext
 } from "../commands/index.js";
 import { createDiscordLogWriter } from "./log-writer.js";
+import { createEvent } from "./gateway-logs/payloads.js";
 import { handleRecruitmentButtonInteraction } from "./recruitment-interactions.js";
 import { handleForceJoinButtonInteraction } from "../commands/tts.js";
 import { handleTempVoiceControlInteraction } from "./temp-voice-controls.js";
 import { handleRecruitmentModalSubmit } from "../commands/recruitment.js";
+
+function writeHandlerError(
+  context: CommandContext,
+  type: string,
+  guildId: string | null,
+  details: Record<string, unknown>,
+  error: unknown
+) {
+  void context.logWriter?.write(
+    createEvent("system.handler.error", {
+      guildId,
+      actorId: null,
+      channelId: null,
+      messageId: null,
+      payload: { type, error: String(error), ...details }
+    })
+  ).catch(() => {/* best-effort */});
+}
 
 export function installInteractionRouter(client: Client, context: CommandContext) {
   const commandContext: CommandContext = {
@@ -36,6 +55,7 @@ export function installInteractionRouter(client: Client, context: CommandContext
             guildId: interaction.guildId,
             error
           });
+          writeHandlerError(commandContext, "button", interaction.guildId, { customId: interaction.customId }, error);
         });
       return;
     }
@@ -53,6 +73,7 @@ export function installInteractionRouter(client: Client, context: CommandContext
             guildId: interaction.guildId,
             error
           });
+          writeHandlerError(commandContext, "modal", interaction.guildId, { customId: interaction.customId }, error);
         });
       return;
     }
@@ -65,6 +86,7 @@ export function installInteractionRouter(client: Client, context: CommandContext
             guildId: interaction.guildId,
             error
           });
+          writeHandlerError(commandContext, "user_select", interaction.guildId, { customId: interaction.customId }, error);
         }
       );
       return;
@@ -77,6 +99,7 @@ export function installInteractionRouter(client: Client, context: CommandContext
           guildId: interaction.guildId,
           error
         });
+        writeHandlerError(commandContext, "autocomplete", interaction.guildId, { commandName: interaction.commandName }, error);
       });
       return;
     }
@@ -91,6 +114,7 @@ export function installInteractionRouter(client: Client, context: CommandContext
         guildId: interaction.guildId,
         error
       });
+      writeHandlerError(commandContext, "chat_input", interaction.guildId, { commandName: interaction.commandName }, error);
     });
   });
 }
