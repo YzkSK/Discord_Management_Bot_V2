@@ -10,6 +10,7 @@ export interface RecruitmentSummaryItemInput {
   capacity: number;
   channelId: string;
   closedAt: Date | null;
+  deadlineAt: Date | null;
   content: string;
   createdAt: Date;
   creatorId: string;
@@ -27,6 +28,7 @@ export interface RecruitmentSummaryItem {
   capacity: number;
   channelId: string;
   closedAt: string | null;
+  deadlineAt: string | null;
   content: string;
   createdAt: string;
   creatorId: string;
@@ -59,6 +61,7 @@ export function buildRecruitmentSummary(
     capacity: recruitment.capacity,
     channelId: recruitment.channelId,
     closedAt: recruitment.closedAt?.toISOString() ?? null,
+    deadlineAt: recruitment.deadlineAt?.toISOString() ?? null,
     content: recruitment.content,
     createdAt: recruitment.createdAt.toISOString(),
     creatorId: recruitment.creatorId,

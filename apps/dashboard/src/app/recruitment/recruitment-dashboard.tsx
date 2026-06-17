@@ -6,6 +6,11 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import { formatRelativeTime } from "../../lib/event-display";
+import { useDeadlineCountdown } from "../../hooks/use-deadline-countdown";
+import {
+  COUNTDOWN_THRESHOLD_24H_MS,
+  COUNTDOWN_THRESHOLD_1H_MS
+} from "@discord-bot/shared";
 import { ErrorAlert } from "../../components/error-alert";
 import { useDashboardData } from "../../hooks/use-dashboard-data";
 
@@ -17,6 +22,7 @@ interface RecruitmentItem {
   capacity: number;
   channelId: string;
   closedAt: string | null;
+  deadlineAt: string | null;
   content: string;
   createdAt: string;
   creatorId: string;
@@ -69,6 +75,68 @@ const GENRE_EMOJI: Record<string, string> = {
 
 function genreEmoji(genre: string): string {
   return GENRE_EMOJI[genre] ?? "🎮";
+}
+
+function DeadlineText({ deadlineAt }: { deadlineAt: string | null }) {
+  const countdown = useDeadlineCountdown(deadlineAt);
+
+  if (!countdown || !deadlineAt) return null;
+
+  const { msLeft } = countdown;
+
+  if (msLeft <= 0) {
+    return <span className="text-xs text-red-400">締め切り済み</span>;
+  }
+
+  if (msLeft > COUNTDOWN_THRESHOLD_24H_MS) {
+    const date = new Date(deadlineAt).toLocaleString("ja-JP", {
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+    return <span className="text-xs text-zinc-500">締め切り：{date}</span>;
+  }
+
+  if (msLeft > COUNTDOWN_THRESHOLD_1H_MS) {
+    const hours = Math.floor(msLeft / COUNTDOWN_THRESHOLD_1H_MS);
+    const minutes = Math.floor((msLeft % COUNTDOWN_THRESHOLD_1H_MS) / 60_000);
+    return (
+      <span className="text-xs text-amber-400">
+        締め切りまで {hours}時間{minutes}分
+      </span>
+    );
+  }
+
+  const minutes = Math.max(1, Math.floor(msLeft / 60_000));
+  return (
+    <span className="text-xs text-red-400">締め切りまで {minutes}分</span>
+  );
+}
+
+function RecruitmentCard({ r }: { r: RecruitmentItem }) {
+  return (
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+      <div className="flex items-start gap-2">
+        <span className="mt-0.5 text-lg leading-none">{genreEmoji(r.genre)}</span>
+        <div className="flex-1 min-w-0">
+          <p className="truncate text-sm font-medium text-zinc-200">{r.genre}</p>
+          {r.content && (
+            <p className="mt-0.5 line-clamp-2 text-xs text-zinc-500">{r.content}</p>
+          )}
+          <p className="mt-0.5 text-xs text-zinc-600">
+            {formatRelativeTime(new Date(r.createdAt))} 作成
+          </p>
+          {r.status !== "closed" && (
+            <div className="mt-0.5">
+              <DeadlineText deadlineAt={r.deadlineAt} />
+            </div>
+          )}
+        </div>
+      </div>
+      <CapacityBar current={r.activeParticipantCount} max={r.capacity} />
+    </div>
+  );
 }
 
 function CapacityBar({
@@ -216,33 +284,7 @@ export function RecruitmentDashboard({ guildId }: { guildId: string }) {
                 </div>
               ) : (
                 grouped[status].map((r) => (
-                  <div
-                    key={r.id}
-                    className="rounded-lg border border-zinc-800 bg-zinc-900 p-3"
-                  >
-                    <div className="flex items-start gap-2">
-                      <span className="mt-0.5 text-lg leading-none">
-                        {genreEmoji(r.genre)}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate text-sm font-medium text-zinc-200">
-                          {r.genre}
-                        </p>
-                        {r.content && (
-                          <p className="mt-0.5 line-clamp-2 text-xs text-zinc-500">
-                            {r.content}
-                          </p>
-                        )}
-                        <p className="mt-0.5 text-xs text-zinc-600">
-                          {formatRelativeTime(new Date(r.createdAt))} 作成
-                        </p>
-                      </div>
-                    </div>
-                    <CapacityBar
-                      current={r.activeParticipantCount}
-                      max={r.capacity}
-                    />
-                  </div>
+                  <RecruitmentCard key={r.id} r={r} />
                 ))
               )}
             </div>

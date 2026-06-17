@@ -1,5 +1,12 @@
 import { isGuildLanguage, type GuildLanguage } from "./locale.js";
 
+export const RECRUITMENT_DEADLINE_DEFAULT_DAYS = 7;
+export const RECRUITMENT_DEADLINE_MAX_DAYS = 30;
+export const REOPEN_DEADLINE_HOURS = 24;
+export const COUNTDOWN_THRESHOLD_24H_MS = 24 * 60 * 60 * 1000;
+export const COUNTDOWN_THRESHOLD_1H_MS = 60 * 60 * 1000;
+export const RECRUITMENT_SCHEDULER_INTERVAL_MS = 60_000;
+
 export const dashboardLogModes = ["full", "metadata_only", "disabled"] as const;
 export type DashboardLogMode = (typeof dashboardLogModes)[number];
 

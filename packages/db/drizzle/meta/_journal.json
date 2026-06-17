@@ -127,6 +127,13 @@
       "when": 1781623724620,
       "tag": "0017_fat_vivisector",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1781710450481,
+      "tag": "0018_sweet_starjammers",
+      "breakpoints": true
     }
   ]
 }

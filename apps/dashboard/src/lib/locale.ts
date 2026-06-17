@@ -162,6 +162,11 @@ type DashboardLocale = {
   recruitmentTableTitle: string;
   recruitmentUpdated: string;
   recruitmentVoiceChannelId: string;
+  recruitmentDeadlineLabel: string;
+  recruitmentDeadlinePlaceholder: string;
+  recruitmentDeadlineAbsolute: (vars: { date: string }) => string;
+  recruitmentDeadlineHours: (vars: { hours: number; minutes: number }) => string;
+  recruitmentDeadlineMinutes: (vars: { minutes: number }) => string;
 };
 
 const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
@@ -321,7 +326,12 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     recruitmentStatus: "Status",
     recruitmentTableTitle: "Recruitment Posts",
     recruitmentUpdated: "Updated",
-    recruitmentVoiceChannelId: "Voice Channel ID"
+    recruitmentVoiceChannelId: "Voice Channel ID",
+    recruitmentDeadlineLabel: "Deadline (days)",
+    recruitmentDeadlinePlaceholder: "1–30 (default: 7 days)",
+    recruitmentDeadlineAbsolute: ({ date }) => `Closes: ${date}`,
+    recruitmentDeadlineHours: ({ hours, minutes }) => `Closes in ${hours}h ${minutes}m`,
+    recruitmentDeadlineMinutes: ({ minutes }) => `Closes in ${minutes}m`
   },
   ja: {
     loadGuild: "Guildを読み込む",
@@ -479,7 +489,12 @@ const dashboardLocales: Record<GuildLanguage, DashboardLocale> = {
     recruitmentStatus: "状態",
     recruitmentTableTitle: "募集一覧",
     recruitmentUpdated: "更新",
-    recruitmentVoiceChannelId: "VC ID"
+    recruitmentVoiceChannelId: "VC ID",
+    recruitmentDeadlineLabel: "締め切り（日数）",
+    recruitmentDeadlinePlaceholder: "1〜30（省略で7日）",
+    recruitmentDeadlineAbsolute: ({ date }) => `締め切り：${date}`,
+    recruitmentDeadlineHours: ({ hours, minutes }) => `締め切りまで ${hours}時間${minutes}分`,
+    recruitmentDeadlineMinutes: ({ minutes }) => `締め切りまで ${minutes}分`
   }
 };
 

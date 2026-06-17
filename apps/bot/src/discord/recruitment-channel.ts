@@ -8,7 +8,11 @@ import {
 } from "discord.js";
 import { EVENT_COLORS } from "./components-v2.js";
 import type { createRecruitment } from "@discord-bot/db";
-import type { getLocale } from "@discord-bot/shared";
+import {
+  type getLocale,
+  COUNTDOWN_THRESHOLD_24H_MS,
+  COUNTDOWN_THRESHOLD_1H_MS
+} from "@discord-bot/shared";
 
 export const recruitmentChannelTopicMarker =
   "[discord-management-bot:recruitment]";
@@ -78,6 +82,31 @@ function localizeStatus(status: string, loc: Loc): string {
   return loc.recruitmentStatusClosed;
 }
 
+function formatDeadlineText(deadlineAt: Date | null, loc: Loc): string | null {
+  if (!deadlineAt) return null;
+
+  const msLeft = deadlineAt.getTime() - Date.now();
+
+  if (msLeft <= 0) {
+    return loc.recruitmentPostExpired;
+  }
+
+  if (msLeft > COUNTDOWN_THRESHOLD_24H_MS) {
+    return loc.recruitmentPostDeadlineAbsolute({
+      timestamp: Math.floor(deadlineAt.getTime() / 1000)
+    });
+  }
+
+  if (msLeft > COUNTDOWN_THRESHOLD_1H_MS) {
+    const hours = Math.floor(msLeft / COUNTDOWN_THRESHOLD_1H_MS);
+    const minutes = Math.floor((msLeft % COUNTDOWN_THRESHOLD_1H_MS) / 60_000);
+    return loc.recruitmentPostDeadlineHours({ hours, minutes });
+  }
+
+  const minutes = Math.max(1, Math.floor(msLeft / 60_000));
+  return loc.recruitmentPostDeadlineMinutes({ minutes });
+}
+
 export function createRecruitmentPostMessage(
   recruitment: Recruitment,
   loc: Loc,
@@ -89,6 +118,9 @@ export function createRecruitmentPostMessage(
   const vcText = recruitment.voiceChannelId
     ? loc.recruitmentPostVc({ id: recruitment.voiceChannelId })
     : loc.recruitmentPostNoVc;
+  const deadlineText = isClosed
+    ? null
+    : formatDeadlineText(recruitment.deadlineAt, loc);
 
   const participantText =
     participantIds.length > 0
@@ -137,6 +169,9 @@ export function createRecruitmentPostMessage(
       type: ComponentType.TextDisplay,
       content: vcText
     },
+    ...(deadlineText
+      ? [{ type: ComponentType.TextDisplay, content: deadlineText }]
+      : []),
     {
       type: ComponentType.TextDisplay,
       content: participantText

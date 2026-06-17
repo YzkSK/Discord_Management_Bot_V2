@@ -257,6 +257,7 @@ export const recruitments = pgTable(
     voiceChannelId: text("voice_channel_id"),
     status: text("status").notNull().default("open"),
     closedAt: timestamp("closed_at", { withTimezone: true }),
+    deadlineAt: timestamp("deadline_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

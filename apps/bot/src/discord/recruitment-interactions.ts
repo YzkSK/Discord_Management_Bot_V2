@@ -14,10 +14,11 @@ import {
   listActiveRecruitmentParticipants,
   listQueuedParticipants,
   promoteFromQueue,
+  reopenRecruitment,
   updateRecruitmentStatus,
   type RecruitmentStatus
 } from "@discord-bot/db";
-import { getLocale } from "@discord-bot/shared";
+import { getLocale, REOPEN_DEADLINE_HOURS } from "@discord-bot/shared";
 
 import { createComponentsV2TextMessage, EVENT_COLORS } from "./components-v2.js";
 import {
@@ -360,12 +361,13 @@ async function handleReopen(
   const activeParticipants = await listActiveRecruitmentParticipants(context.db, recruitment.id);
   const nextStatus: RecruitmentStatus =
     activeParticipants.length >= recruitment.capacity ? "full" : "open";
+  const deadlineAt = new Date(Date.now() + REOPEN_DEADLINE_HOURS * 60 * 60 * 1000);
 
   const updatedRecruitment =
-    (await updateRecruitmentStatus(context.db, {
+    (await reopenRecruitment(context.db, {
       recruitmentId: recruitment.id,
       status: nextStatus,
-      closedAt: null
+      deadlineAt
     })) ?? recruitment;
 
   const { participants } = await refreshRecruitmentMessage(interaction, context, updatedRecruitment, loc);
