@@ -137,6 +137,42 @@ export async function listGuildDashboardAccessGrants(
     );
 }
 
+export async function getGuildsWithUserAccessGrant(
+  db: DbClient,
+  userId: string,
+  guildIds: string[]
+): Promise<string[]> {
+  if (guildIds.length === 0) return [];
+  const rows = await db
+    .select({ guildId: dashboardAccessGrants.guildId })
+    .from(dashboardAccessGrants)
+    .where(
+      and(
+        inArray(dashboardAccessGrants.guildId, guildIds),
+        eq(dashboardAccessGrants.targetType, "user"),
+        eq(dashboardAccessGrants.targetId, userId)
+      )
+    );
+  return rows.map((r) => r.guildId);
+}
+
+export async function getGuildsWithRoleAccessGrants(
+  db: DbClient,
+  guildIds: string[]
+): Promise<string[]> {
+  if (guildIds.length === 0) return [];
+  const rows = await db
+    .selectDistinct({ guildId: dashboardAccessGrants.guildId })
+    .from(dashboardAccessGrants)
+    .where(
+      and(
+        inArray(dashboardAccessGrants.guildId, guildIds),
+        eq(dashboardAccessGrants.targetType, "role")
+      )
+    );
+  return rows.map((r) => r.guildId);
+}
+
 export async function deleteDashboardAccessGrant(
   db: DbClient,
   input: DeleteDashboardAccessGrantInput
