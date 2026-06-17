@@ -5,7 +5,7 @@ import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 
 import { resolveDashboardAccess } from "./authorization";
-import { authOptions, getDashboardSession } from "./auth";
+import { getAuthOptions, getDashboardSession } from "./auth";
 import {
   getUsableDiscordAccessToken,
   toDashboardDiscordToken
@@ -17,7 +17,10 @@ import {
   fetchGuildOwnerId
 } from "./discord-api";
 
-const env = parseDashboardAuthEnv();
+let _env: ReturnType<typeof parseDashboardAuthEnv> | undefined;
+function getEnv() {
+  return (_env ??= parseDashboardAuthEnv());
+}
 
 export interface DashboardApiAuthorizationInput {
   request: NextRequest;
@@ -48,7 +51,7 @@ export async function authorizeDashboardApi(
 
   const token = await getToken({
     req: input.request,
-    ...(authOptions.secret ? { secret: authOptions.secret } : {})
+    ...(getAuthOptions().secret ? { secret: getAuthOptions().secret } : {})
   });
 
   if (!token?.sub || (!token.discordAccessToken && !token.discordRefreshToken)) {
@@ -60,8 +63,8 @@ export async function authorizeDashboardApi(
   }
 
   const accessToken = await getUsableDiscordAccessToken({
-    clientId: env.DISCORD_CLIENT_ID,
-    clientSecret: env.DISCORD_CLIENT_SECRET,
+    clientId: getEnv().DISCORD_CLIENT_ID,
+    clientSecret: getEnv().DISCORD_CLIENT_SECRET,
     token: toDashboardDiscordToken(token)
   });
 
@@ -139,11 +142,12 @@ export async function authorizeDashboardApi(
 }
 
 async function fetchAuthorizedMemberRoleIds(guildId: string, userId: string) {
-  if (!env.DISCORD_BOT_TOKEN) {
+  const botToken = getEnv().DISCORD_BOT_TOKEN;
+  if (!botToken) {
     return [];
   }
 
-  return fetchGuildMemberRoleIds(env.DISCORD_BOT_TOKEN, guildId, userId);
+  return fetchGuildMemberRoleIds(botToken, guildId, userId);
 }
 
 export async function getDashboardPageRole(guildId: string): Promise<"viewer" | "admin" | "owner" | null> {
@@ -154,10 +158,11 @@ export async function getDashboardPageRole(guildId: string): Promise<"viewer" | 
   let isGuildOwner = false;
   let roleIds: string[] = [];
 
-  if (env.DISCORD_BOT_TOKEN) {
+  const botToken = getEnv().DISCORD_BOT_TOKEN;
+  if (botToken) {
     const [ownerId, memberRoleIds] = await Promise.all([
-      fetchGuildOwnerId(env.DISCORD_BOT_TOKEN, guildId).catch(() => null),
-      fetchGuildMemberRoleIds(env.DISCORD_BOT_TOKEN, guildId, userId).catch(() => [])
+      fetchGuildOwnerId(botToken, guildId).catch(() => null),
+      fetchGuildMemberRoleIds(botToken, guildId, userId).catch(() => [])
     ]);
     isGuildOwner = ownerId === userId;
     roleIds = memberRoleIds;

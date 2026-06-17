@@ -3,7 +3,7 @@ import { parseDashboardAuthEnv } from "@discord-bot/config";
 import { getToken } from "next-auth/jwt";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { authOptions } from "../../../auth";
+import { getAuthOptions } from "../../../auth";
 import {
   getUsableDiscordAccessToken,
   toDashboardDiscordToken
@@ -17,9 +17,9 @@ import { hasDirectManagementPermission } from "./guild-filter";
 
 export const dynamic = "force-dynamic";
 
-const env = parseDashboardAuthEnv();
-
 export async function GET(request: NextRequest) {
+  const env = parseDashboardAuthEnv();
+  const authOptions = getAuthOptions();
   const token = await getToken({
     req: request,
     ...(authOptions.secret ? { secret: authOptions.secret } : {})

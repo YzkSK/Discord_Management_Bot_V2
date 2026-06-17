@@ -22,7 +22,8 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const env = parseDashboardAuthEnv();
+let _env: ReturnType<typeof parseDashboardAuthEnv> | undefined;
+function getEnv() { return (_env ??= parseDashboardAuthEnv()); }
 
 export async function GET(request: NextRequest) {
   const guildId = optionalParam(request.nextUrl.searchParams, "guildId");
@@ -59,12 +60,13 @@ export async function GET(request: NextRequest) {
       authorization.guild.id
     );
 
-    const availableRoles = authorization.guild.owner && env.DISCORD_BOT_TOKEN
-      ? await fetchGuildRoles(env.DISCORD_BOT_TOKEN, authorization.guild.id).catch(() => [])
+    const botToken = getEnv().DISCORD_BOT_TOKEN;
+    const availableRoles = authorization.guild.owner && botToken
+      ? await fetchGuildRoles(botToken, authorization.guild.id).catch(() => [])
       : undefined;
 
-    const channelsData = env.DISCORD_BOT_TOKEN
-      ? await fetchGuildChannels(env.DISCORD_BOT_TOKEN, authorization.guild.id).catch(() => [])
+    const channelsData = botToken
+      ? await fetchGuildChannels(botToken, authorization.guild.id).catch(() => [])
       : [];
 
     const availableTextChannels = channelsData

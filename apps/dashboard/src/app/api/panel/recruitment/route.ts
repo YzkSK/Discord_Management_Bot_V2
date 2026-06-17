@@ -13,7 +13,8 @@ import { fetchGuildChannels } from "../../../../discord-api";
 
 export const dynamic = "force-dynamic";
 
-const env = parseDashboardAuthEnv();
+let _env: ReturnType<typeof parseDashboardAuthEnv> | undefined;
+function getEnv() { return (_env ??= parseDashboardAuthEnv()); }
 
 const TEXT_CHANNEL_TYPES = new Set([0, 5]); // GUILD_TEXT, GUILD_ANNOUNCEMENT
 
@@ -44,8 +45,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ channelId, channels: null });
     }
 
-    const channels = env.DISCORD_BOT_TOKEN
-      ? (await fetchGuildChannels(env.DISCORD_BOT_TOKEN, authorization.guild.id).catch(() => []))
+    const botToken = getEnv().DISCORD_BOT_TOKEN;
+    const channels = botToken
+      ? (await fetchGuildChannels(botToken, authorization.guild.id).catch(() => []))
           .filter((c) => TEXT_CHANNEL_TYPES.has(c.type))
       : [];
 
@@ -215,7 +217,8 @@ function buildRecruitmentMessage(
 }
 
 async function postDiscordMessage(channelId: string, payload: unknown) {
-  if (!env.DISCORD_BOT_TOKEN) {
+  const botToken = getEnv().DISCORD_BOT_TOKEN;
+  if (!botToken) {
     return null;
   }
 
@@ -224,7 +227,7 @@ async function postDiscordMessage(channelId: string, payload: unknown) {
     {
       method: "POST",
       headers: {
-        Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+        Authorization: `Bot ${botToken}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify(payload)

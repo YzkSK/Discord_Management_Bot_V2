@@ -4,7 +4,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { authorizeDashboardApi } from "../../../../../dashboard-auth";
 import { fetchDiscordApiChannel } from "../../../../../lib/discord-channel";
 
-const env = parseDashboardAuthEnv();
+let _env: ReturnType<typeof parseDashboardAuthEnv> | undefined;
+function getEnv() { return (_env ??= parseDashboardAuthEnv()); }
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,8 @@ export async function GET(
     await dbConnection.close();
   }
 
-  if (!env.DISCORD_BOT_TOKEN) {
+  const botToken = getEnv().DISCORD_BOT_TOKEN;
+  if (!botToken) {
     return NextResponse.json(
       { error: "Bot token not configured" },
       { status: 503 }
@@ -50,7 +52,7 @@ export async function GET(
   }
 
   try {
-    const channel = await fetchDiscordApiChannel(channelId, env.DISCORD_BOT_TOKEN);
+    const channel = await fetchDiscordApiChannel(channelId, botToken);
     if (!channel) {
       return NextResponse.json({ error: "Channel not found" }, { status: 404 });
     }
