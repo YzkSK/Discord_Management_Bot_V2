@@ -17,7 +17,11 @@ import {
   getGuildConfigByGuildId,
   setRecruitmentMessageId
 } from "@discord-bot/db";
-import { getLocale } from "@discord-bot/shared";
+import {
+  getLocale,
+  RECRUITMENT_DEADLINE_DEFAULT_DAYS,
+  RECRUITMENT_DEADLINE_MAX_DAYS
+} from "@discord-bot/shared";
 
 import { createComponentsV2TextMessage, EVENT_COLORS } from "../discord/components-v2.js";
 import {
@@ -140,6 +144,7 @@ async function handleRecruitmentCreate(
   const TITLE_MAX_LENGTH = 80;
   const CAPACITY_MAX_LENGTH = 2;
   const CONTENT_MAX_LENGTH = 1000;
+  const DEADLINE_MAX_LENGTH = 2;
 
   const modal = new ModalBuilder()
     .setCustomId("recruitment-create-modal")
@@ -166,10 +171,19 @@ async function handleRecruitmentCreate(
     .setMaxLength(CONTENT_MAX_LENGTH)
     .setRequired(true);
 
+  const deadlineInput = new TextInputBuilder()
+    .setCustomId("deadline_days")
+    .setLabel(loc.recruitmentModalFieldDeadline)
+    .setPlaceholder(loc.recruitmentModalFieldDeadlinePlaceholder)
+    .setStyle(TextInputStyle.Short)
+    .setMaxLength(DEADLINE_MAX_LENGTH)
+    .setRequired(false);
+
   modal.addComponents(
     new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
     new ActionRowBuilder<TextInputBuilder>().addComponents(capacityInput),
-    new ActionRowBuilder<TextInputBuilder>().addComponents(contentInput)
+    new ActionRowBuilder<TextInputBuilder>().addComponents(contentInput),
+    new ActionRowBuilder<TextInputBuilder>().addComponents(deadlineInput)
   );
 
   await interaction.showModal(modal);
@@ -209,6 +223,23 @@ export async function handleRecruitmentModalSubmit(
     });
     return true;
   }
+
+  const deadlineRaw = interaction.fields.getTextInputValue("deadline_days").trim();
+  const deadlineDays = deadlineRaw === ""
+    ? RECRUITMENT_DEADLINE_DEFAULT_DAYS
+    : parseInt(deadlineRaw, 10);
+  if (isNaN(deadlineDays) || deadlineDays < 1 || deadlineDays > RECRUITMENT_DEADLINE_MAX_DAYS) {
+    await interaction.reply({
+      ...createComponentsV2TextMessage({
+        title: loc.recruitmentFailed,
+        lines: [loc.recruitmentDeadlineInvalid],
+        accentColor: EVENT_COLORS.red,
+        privateResponse: true
+      })
+    });
+    return true;
+  }
+  const deadlineAt = new Date(Date.now() + deadlineDays * 24 * 60 * 60 * 1000);
 
   const loadChannelId = context.loadRecruitmentChannelId ??
     ((guildId: string) =>
@@ -251,7 +282,8 @@ export async function handleRecruitmentModalSubmit(
     genre: title,
     capacity,
     content,
-    voiceChannelId
+    voiceChannelId,
+    deadlineAt
   });
 
   const message = await recruitmentChannel.send({

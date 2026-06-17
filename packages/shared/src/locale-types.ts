@@ -146,7 +146,14 @@ export type Locale = {
   recruitmentModalFieldTitle: string;
   recruitmentModalFieldCapacity: string;
   recruitmentModalFieldContent: string;
+  recruitmentModalFieldDeadline: string;
+  recruitmentModalFieldDeadlinePlaceholder: string;
   recruitmentCapacityInvalid: string;
+  recruitmentDeadlineInvalid: string;
+  recruitmentPostDeadlineAbsolute: (vars: { timestamp: number }) => string;
+  recruitmentPostDeadlineHours: (vars: { hours: number; minutes: number }) => string;
+  recruitmentPostDeadlineMinutes: (vars: { minutes: number }) => string;
+  recruitmentPostExpired: string;
   setupStatusTitle: string;
   setupStatusTempVc: (vars: { id: string | null }) => string;
   setupStatusLogs: (vars: { id: string | null }) => string;
