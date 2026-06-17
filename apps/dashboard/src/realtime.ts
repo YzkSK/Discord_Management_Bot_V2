@@ -2,7 +2,8 @@ import type { Server as HttpServer } from "node:http";
 
 import { parseDashboardAuthEnv } from "@discord-bot/config";
 import { createDbConnection } from "@discord-bot/db";
-import { createRedisConnection, readRealtimeLogEvents } from "@discord-bot/redis";
+import { createRedisConnection } from "@discord-bot/redis";
+import { readRealtimeLogEvents } from "@discord-bot/logger";
 import { decode } from "next-auth/jwt";
 import { Server, type Socket } from "socket.io";
 
@@ -150,11 +151,13 @@ async function streamRealtimeLogs(socket: Socket, guildId: string) {
 
   try {
     while (socket.connected) {
-      const events = await readRealtimeLogEvents(
-        redisConnection.client,
-        guildId,
-        lastId
-      );
+      let events;
+      try {
+        events = await readRealtimeLogEvents(redisConnection.client, guildId, lastId);
+      } catch (error) {
+        await new Promise<void>((r) => setTimeout(r, 1000));
+        throw error;
+      }
 
       for (const event of events) {
         lastId = event.id;

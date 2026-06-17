@@ -29,12 +29,14 @@ export function installChannelGatewayLogHandlers(client: Client, write: WriteEve
   });
 
   client.on(Events.ChannelUpdate, (oldChannel, newChannel) => {
+    const before = channelPayload(oldChannel);
+    const after = channelPayload(newChannel);
     writeWithAuditLog(
       write,
       createChannelEvent("channel.update", newChannel, {
-        before: channelPayload(oldChannel),
-        after: channelPayload(newChannel),
-        changes: diffRecord(channelPayload(oldChannel), channelPayload(newChannel))
+        before,
+        after,
+        changes: diffRecord(before, after)
       }),
       getChannelGuild(newChannel),
       AuditLogEvent.ChannelUpdate,

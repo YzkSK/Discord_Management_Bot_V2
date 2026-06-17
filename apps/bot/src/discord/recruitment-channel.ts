@@ -1,8 +1,6 @@
 import {
   ButtonStyle,
-  ChannelType,
   ComponentType,
-  type Guild,
   type MessageCreateOptions,
   type MessageEditOptions,
   MessageFlags,
@@ -71,18 +69,6 @@ export async function markRecruitmentChannel(channel: TextChannel) {
   await channel.setTopic(
     appendRecruitmentChannelMarker(channel.topic),
     "Configured as the bot recruitment channel."
-  );
-}
-
-export async function findMarkedRecruitmentChannel(guild: Guild) {
-  const channels = await guild.channels.fetch();
-
-  return (
-    channels.find(
-      (channel): channel is TextChannel =>
-        channel?.type === ChannelType.GuildText &&
-        hasRecruitmentChannelMarker(channel.topic)
-    ) ?? null
   );
 }
 

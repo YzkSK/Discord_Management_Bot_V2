@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import { getDashboardSession } from "../../../../../auth";
 import { buildAvatarUrl, fetchDiscordApiUser } from "../../../../../lib/discord-user";
 
-const env = parseDashboardAuthEnv();
+let _env: ReturnType<typeof parseDashboardAuthEnv> | undefined;
+function getEnv() { return (_env ??= parseDashboardAuthEnv()); }
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,8 @@ export async function GET(
 
   const { userId } = await params;
 
-  if (!env.DISCORD_BOT_TOKEN) {
+  const botToken = getEnv().DISCORD_BOT_TOKEN;
+  if (!botToken) {
     return NextResponse.json(
       { error: "Bot token not configured" },
       { status: 503 }
@@ -26,7 +28,7 @@ export async function GET(
   }
 
   try {
-    const user = await fetchDiscordApiUser(userId, env.DISCORD_BOT_TOKEN);
+    const user = await fetchDiscordApiUser(userId, botToken);
     if (!user) {
       return NextResponse.json({
         id: userId,

@@ -15,7 +15,6 @@ export interface HandlerError {
 export interface EventDispatcher {
   dispatch: (event: NormalizedEvent) => void;
   register: (handler: EventHandler) => void;
-  handlerCount: () => number;
 }
 
 export interface EventDispatcherOptions {
@@ -47,10 +46,6 @@ export function createEventDispatcher(
 
     register(handler) {
       handlers.push(handler);
-    },
-
-    handlerCount() {
-      return handlers.length;
     }
   };
 }
@@ -59,6 +54,7 @@ function defaultHandlerErrorReporter(error: HandlerError) {
   console.error("event handler failed", {
     eventName: error.event.eventName,
     handlerName: error.handlerName,
-    receivedAt: error.receivedAt
+    receivedAt: error.receivedAt,
+    error: error.error,
   });
 }

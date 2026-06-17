@@ -2,6 +2,7 @@ import { and, asc, desc, eq, isNull, or, sql } from "drizzle-orm";
 
 import type { DbClient } from "../client.js";
 import { ttsDictionaryEntries } from "../schema/index.js";
+import { normalizeRequiredString } from "./_utils.js";
 
 export const ttsDictionaryScopes = ["guild", "user"] as const;
 export type TtsDictionaryScope = (typeof ttsDictionaryScopes)[number];
@@ -145,6 +146,7 @@ export async function listEffectiveTtsDictionaryEntries(
     .where(
       and(
         eq(ttsDictionaryEntries.guildId, input.guildId),
+        eq(ttsDictionaryEntries.isEnabled, true),
         or(
           eq(ttsDictionaryEntries.scope, "guild"),
           and(
@@ -232,14 +234,6 @@ function entryIdentityFilter(input: DeleteTtsDictionaryEntryInput) {
     userFilter,
     eq(ttsDictionaryEntries.fromText, normalizeRequiredString(input.fromText, "fromText"))
   );
-}
-
-function normalizeRequiredString(value: unknown, field: string) {
-  if (typeof value !== "string" || !value.trim()) {
-    throw new Error(`${field} is required.`);
-  }
-
-  return value.trim();
 }
 
 function scopeRank(scope: TtsDictionaryScope) {

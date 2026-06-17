@@ -1,6 +1,6 @@
 import type { ChatInputCommandInteraction } from "discord.js";
 import type { DbClient } from "@discord-bot/db";
-import type { RedisStreamWriter } from "@discord-bot/redis";
+import type { RedisStreamWriter } from "@discord-bot/logger";
 
 import { createComponentsV2TextMessage } from "../discord/components-v2.js";
 import type { DiscordLogWriter } from "../discord/log-writer.js";

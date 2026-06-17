@@ -315,9 +315,7 @@ export async function handleLeaveCommand(
 
   const loc = await resolveGuildLocale(context.db, guildId);
   const voiceChannelId = context.ttsSessionManager.getVoiceChannelId(guildId);
-  const wasConnected = context.ttsSessionManager.isConnected(guildId);
-
-  if (!wasConnected) {
+  if (!context.ttsSessionManager.isConnected(guildId)) {
     await replyPrivate(interaction, loc.ttsNotConnected, [], EVENT_COLORS.yellow);
     return;
   }
@@ -325,17 +323,15 @@ export async function handleLeaveCommand(
   context.ttsSessionManager.leave(guildId);
   await replyPrivate(interaction, loc.ttsDisconnected, [loc.ttsChannelsCleared], EVENT_COLORS.gray);
 
-  if (wasConnected) {
-    await writeTtsLog(
-      context,
-      createTtsSessionStoppedEvent({
-        actorId: interaction.user.id,
-        guildId,
-        reason: "leave-command",
-        voiceChannelId
-      })
-    );
-  }
+  await writeTtsLog(
+    context,
+    createTtsSessionStoppedEvent({
+      actorId: interaction.user.id,
+      guildId,
+      reason: "leave-command",
+      voiceChannelId
+    })
+  );
 }
 
 export async function handleSpeakerCommand(

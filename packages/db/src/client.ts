@@ -4,10 +4,6 @@ import postgres from "postgres";
 
 import * as schema from "./schema/index.js";
 
-export function createDbClient(databaseUrl = parseDatabaseEnv().DATABASE_URL) {
-  return createDbConnection(databaseUrl).db;
-}
-
 export function createDbConnection(databaseUrl = parseDatabaseEnv().DATABASE_URL) {
   const client = postgres(databaseUrl, {
     max: 10,
@@ -20,5 +16,5 @@ export function createDbConnection(databaseUrl = parseDatabaseEnv().DATABASE_URL
   };
 }
 
-export type DbClient = ReturnType<typeof createDbClient>;
 export type DbConnection = ReturnType<typeof createDbConnection>;
+export type DbClient = DbConnection["db"];

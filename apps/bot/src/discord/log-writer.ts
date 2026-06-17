@@ -7,7 +7,7 @@ import {
   appendLogEventToStream,
   appendRealtimeLogEventToStream,
   type RedisStreamWriter
-} from "@discord-bot/redis";
+} from "@discord-bot/logger";
 import type { NormalizedEvent } from "@discord-bot/shared";
 import type { HandlerError } from "@discord-bot/discord-core";
 import type { Client } from "discord.js";
@@ -34,19 +34,18 @@ export function createDiscordLogWriter(
     async write(event) {
       const realtimeEnabled = resolveRealtimeEnabled(event.eventName);
 
-      await logIngestion.ingest(event, { realtimeEnabled });
-      await appendLogEventToStream(options.redis, event, { realtimeEnabled });
-      await sendEventToConfiguredLogChannel(client, event, options.db).catch(
-        (error: unknown) => {
-          console.warn("failed to send log event to configured channel", error);
-        }
-      );
-
-      if (realtimeEnabled) {
-        await appendRealtimeLogEventToStream(options.redis, event, {
-          realtimeEnabled
-        });
-      }
+      await Promise.all([
+        logIngestion.ingest(event, { realtimeEnabled }),
+        appendLogEventToStream(options.redis, event, { realtimeEnabled }),
+        sendEventToConfiguredLogChannel(client, event, options.db).catch(
+          (error: unknown) => {
+            console.warn("failed to send log event to configured channel", error);
+          }
+        ),
+        realtimeEnabled
+          ? appendRealtimeLogEventToStream(options.redis, event, { realtimeEnabled })
+          : Promise.resolve()
+      ]);
     },
 
     async recordHandlerError(error) {

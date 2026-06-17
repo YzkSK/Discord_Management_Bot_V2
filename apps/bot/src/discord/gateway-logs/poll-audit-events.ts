@@ -1,9 +1,7 @@
 import {
   Events,
   type Client,
-  type GuildAuditLogsEntry,
-  type PollAnswer,
-  type User
+  type PollAnswer
 } from "discord.js";
 import { createGuildEvent, userPayload, type WriteEventFn } from "./payloads.js";
 

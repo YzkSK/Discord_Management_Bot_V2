@@ -7,11 +7,18 @@ COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml turbo.json tsconfig.base.j
 COPY apps/dashboard/package.json apps/dashboard/package.json
 COPY packages/config/package.json packages/config/package.json
 COPY packages/db/package.json packages/db/package.json
+COPY packages/logger/package.json packages/logger/package.json
 COPY packages/redis/package.json packages/redis/package.json
 COPY packages/shared/package.json packages/shared/package.json
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
+# Placeholder values satisfy schema validation during next build's module
+# evaluation phase. Real secrets are injected at runtime via env_file/environment.
+ARG DISCORD_CLIENT_SECRET=build-placeholder
+ARG NEXTAUTH_SECRET=build-placeholder
+ENV DISCORD_CLIENT_SECRET=$DISCORD_CLIENT_SECRET
+ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
 COPY . .
 RUN pnpm --filter @discord-bot/dashboard... build
 

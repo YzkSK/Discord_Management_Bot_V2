@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import { loadRootEnv } from "./dotenv.js";
 
+loadRootEnv();
+
 const logLevelSchema = z.enum(["trace", "debug", "info", "warn", "error"]);
 
 export const appEnvSchema = z.object({
@@ -14,7 +16,7 @@ export const appEnvSchema = z.object({
   VOICEVOX_URL: z.string().url(),
   VOICEVOX_SPEAKER_ID: z.coerce.number().int().nonnegative().default(2),
   NEXTAUTH_SECRET: z.string().min(1),
-  SESSION_ENCRYPTION_KEY: z.string().min(1),
+  SESSION_ENCRYPTION_KEY: z.string().min(32),
   PUBLIC_DASHBOARD_URL: z.string().url(),
   LOG_LEVEL: logLevelSchema.default("info")
 });
@@ -30,8 +32,8 @@ export const redisEnvSchema = appEnvSchema.pick({
 export const dashboardAuthEnvSchema = z.object({
   DISCORD_BOT_TOKEN: z.string().optional(),
   DISCORD_CLIENT_ID: z.string().default(""),
-  DISCORD_CLIENT_SECRET: z.string().default(""),
-  NEXTAUTH_SECRET: z.string().optional(),
+  DISCORD_CLIENT_SECRET: z.string().min(1),
+  NEXTAUTH_SECRET: z.string().min(1),
   NEXTAUTH_URL: z.string().url().optional()
 });
 
@@ -41,25 +43,21 @@ export type RedisEnv = z.infer<typeof redisEnvSchema>;
 export type DashboardAuthEnv = z.infer<typeof dashboardAuthEnvSchema>;
 
 export function parseAppEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
-  loadRootEnv();
   return appEnvSchema.parse(env);
 }
 
 export function parseDatabaseEnv(
   env: NodeJS.ProcessEnv = process.env
 ): DatabaseEnv {
-  loadRootEnv();
   return databaseEnvSchema.parse(env);
 }
 
 export function parseRedisEnv(env: NodeJS.ProcessEnv = process.env): RedisEnv {
-  loadRootEnv();
   return redisEnvSchema.parse(env);
 }
 
 export function parseDashboardAuthEnv(
   env: NodeJS.ProcessEnv = process.env
 ): DashboardAuthEnv {
-  loadRootEnv();
   return dashboardAuthEnvSchema.parse(env);
 }

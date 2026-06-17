@@ -19,12 +19,14 @@ export function installRoleGatewayLogHandlers(client: Client, write: WriteEventF
   });
 
   client.on(Events.GuildRoleUpdate, (oldRole, newRole) => {
+    const before = rolePayload(oldRole);
+    const after = rolePayload(newRole);
     writeWithAuditLog(
       write,
       createGuildEvent("role.update", newRole.guild, {
-        before: rolePayload(oldRole),
-        after: rolePayload(newRole),
-        changes: diffRecord(rolePayload(oldRole), rolePayload(newRole))
+        before,
+        after,
+        changes: diffRecord(before, after)
       }),
       newRole.guild,
       AuditLogEvent.RoleUpdate,

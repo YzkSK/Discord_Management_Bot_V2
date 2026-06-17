@@ -68,7 +68,9 @@ async function reconcileVoiceSessions(client: Client, db: DbClient) {
     cleaned += counts.cleaned;
   }
 
-  console.log("voice reconciliation complete", { ended, cleaned });
+  if (ended > 0 || cleaned > 0) {
+    console.log("voice reconciliation complete", { ended, cleaned });
+  }
 }
 
 async function reconcileSession(

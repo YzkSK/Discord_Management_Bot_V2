@@ -5,7 +5,6 @@ import {
   type Guild,
   ModalBuilder,
   type ModalSubmitInteraction,
-  PermissionFlagsBits,
   SlashCommandBuilder,
   type TextBasedChannel,
   type TextChannel,
@@ -288,8 +287,3 @@ export async function handleRecruitmentModalSubmit(
   return true;
 }
 
-export function canManageRecruitmentSetup(
-  interaction: ChatInputCommandInteraction
-) {
-  return interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild);
-}

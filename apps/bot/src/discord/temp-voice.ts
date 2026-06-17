@@ -12,7 +12,7 @@ import {
 } from "discord.js";
 
 import type { DbClient } from "@discord-bot/db";
-import type { RedisStreamWriter } from "@discord-bot/redis";
+import type { RedisStreamWriter } from "@discord-bot/logger";
 import type { NormalizedEvent } from "@discord-bot/shared";
 import {
   clearTempVoiceChannelDeleteSchedule,
@@ -53,8 +53,6 @@ import {
 const emptyDeleteDelayMs = 5000;
 const ownerTransferDelayMs = 10 * 60 * 1000; // 10分
 
-const pendingOwnerTransferTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
 export interface InstallTempVoiceHandlersOptions {
   db: DbClient;
   redis: RedisStreamWriter;
@@ -64,6 +62,7 @@ export function installTempVoiceHandlers(
   client: Client,
   options: InstallTempVoiceHandlersOptions
 ) {
+  const pendingOwnerTransferTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const logWriter = createDiscordLogWriter(client, options);
 
   installVoiceStateHandlers(client, {
@@ -71,6 +70,7 @@ export function installTempVoiceHandlers(
       return handleTempVoiceTransition(
         options.db,
         logWriter,
+        pendingOwnerTransferTimers,
         transition,
         context
       );
@@ -237,16 +237,18 @@ export async function createTempVoiceDiscordChannel(
 async function handleTempVoiceTransition(
   db: DbClient,
   logWriter: DiscordLogWriter,
+  pendingOwnerTransferTimers: Map<string, ReturnType<typeof setTimeout>>,
   transition: VoiceStateTransition,
   context: VoiceStateTransitionContext
 ) {
-  await handleJoinedChannel(db, logWriter, transition, context);
-  await handleLeftChannel(db, logWriter, transition, context);
+  await handleJoinedChannel(db, logWriter, pendingOwnerTransferTimers, transition, context);
+  await handleLeftChannel(db, logWriter, pendingOwnerTransferTimers, transition, context);
 }
 
 async function handleJoinedChannel(
   db: DbClient,
   logWriter: DiscordLogWriter,
+  pendingOwnerTransferTimers: Map<string, ReturnType<typeof setTimeout>>,
   transition: VoiceStateTransition,
   context: VoiceStateTransitionContext
 ) {
@@ -292,6 +294,7 @@ async function handleJoinedChannel(
 async function handleLeftChannel(
   db: DbClient,
   logWriter: DiscordLogWriter,
+  pendingOwnerTransferTimers: Map<string, ReturnType<typeof setTimeout>>,
   transition: VoiceStateTransition,
   context: VoiceStateTransitionContext
 ) {

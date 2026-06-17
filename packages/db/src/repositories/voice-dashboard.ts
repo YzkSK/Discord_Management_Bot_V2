@@ -18,56 +18,57 @@ export async function listVoiceDashboardState(
   db: DbClient,
   input: ListVoiceDashboardStateInput
 ) {
-  const sessionRows = await db
-    .select({
-      channelId: callSessions.channelId,
-      channelName: discordChannels.name,
-      endedAt: callSessions.endedAt,
-      id: callSessions.id,
-      memberCount: sql<number>`count(${callSessionMembers.id})::int`,
-      startedAt: callSessions.startedAt,
-      status: callSessions.status
-    })
-    .from(callSessions)
-    .leftJoin(
-      callSessionMembers,
-      and(
-        eq(callSessionMembers.callSessionId, callSessions.id),
-        isNull(callSessionMembers.leftAt)
+  const [sessionRows, tempVoiceRows] = await Promise.all([
+    db
+      .select({
+        channelId: callSessions.channelId,
+        channelName: discordChannels.name,
+        endedAt: callSessions.endedAt,
+        id: callSessions.id,
+        memberCount: sql<number>`count(${callSessionMembers.id})::int`,
+        startedAt: callSessions.startedAt,
+        status: callSessions.status
+      })
+      .from(callSessions)
+      .leftJoin(
+        callSessionMembers,
+        and(
+          eq(callSessionMembers.callSessionId, callSessions.id),
+          isNull(callSessionMembers.leftAt)
+        )
       )
-    )
-    .leftJoin(
-      discordChannels,
-      eq(discordChannels.channelId, callSessions.channelId)
-    )
-    .where(eq(callSessions.guildId, input.guildId))
-    .groupBy(
-      callSessions.id,
-      callSessions.channelId,
-      callSessions.endedAt,
-      callSessions.startedAt,
-      callSessions.status,
-      discordChannels.name
-    )
-    .orderBy(desc(callSessions.startedAt))
-    .limit(clampLimit(input.recentLimit, DEFAULT_RECENT_LIMIT, MAX_RECENT_LIMIT));
-
-  const tempVoiceRows = await db
-    .select({
-      channelId: tempVoiceChannels.channelId,
-      channelName: discordChannels.name,
-      controlChannelId: tempVoiceChannels.controlChannelId,
-      creationChannelId: tempVoiceChannels.creationChannelId,
-      deleteScheduledAt: tempVoiceChannels.deleteScheduledAt,
-      ownerId: tempVoiceChannels.ownerId
-    })
-    .from(tempVoiceChannels)
-    .leftJoin(
-      discordChannels,
-      eq(discordChannels.channelId, tempVoiceChannels.channelId)
-    )
-    .where(eq(tempVoiceChannels.guildId, input.guildId))
-    .orderBy(desc(tempVoiceChannels.createdAt));
+      .leftJoin(
+        discordChannels,
+        eq(discordChannels.channelId, callSessions.channelId)
+      )
+      .where(eq(callSessions.guildId, input.guildId))
+      .groupBy(
+        callSessions.id,
+        callSessions.channelId,
+        callSessions.endedAt,
+        callSessions.startedAt,
+        callSessions.status,
+        discordChannels.name
+      )
+      .orderBy(desc(callSessions.startedAt))
+      .limit(clampLimit(input.recentLimit, DEFAULT_RECENT_LIMIT, MAX_RECENT_LIMIT)),
+    db
+      .select({
+        channelId: tempVoiceChannels.channelId,
+        channelName: discordChannels.name,
+        controlChannelId: tempVoiceChannels.controlChannelId,
+        creationChannelId: tempVoiceChannels.creationChannelId,
+        deleteScheduledAt: tempVoiceChannels.deleteScheduledAt,
+        ownerId: tempVoiceChannels.ownerId
+      })
+      .from(tempVoiceChannels)
+      .leftJoin(
+        discordChannels,
+        eq(discordChannels.channelId, tempVoiceChannels.channelId)
+      )
+      .where(eq(tempVoiceChannels.guildId, input.guildId))
+      .orderBy(desc(tempVoiceChannels.createdAt))
+  ]);
 
   return {
     sessions: sessionRows.map((session) => {

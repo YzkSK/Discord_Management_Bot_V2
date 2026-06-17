@@ -107,13 +107,12 @@ export async function upsertCallSessionMember(
   db: DbClient,
   input: { callSessionId: string; joinedAt?: Date; userId: string }
 ) {
-  const joinOrder = await nextJoinOrder(db, input.callSessionId);
   const [member] = await db
     .insert(callSessionMembers)
     .values({
       callSessionId: input.callSessionId,
       joinedAt: input.joinedAt ?? new Date(),
-      joinOrder,
+      joinOrder: sql`(SELECT COALESCE(MAX(join_order), -1) + 1 FROM call_session_members WHERE call_session_id = ${input.callSessionId})`,
       leftAt: null,
       userId: input.userId
     })
@@ -181,13 +180,3 @@ export async function listActiveCallSessionsByGuildId(db: DbClient, guildId: str
     .where(and(eq(callSessions.status, "active"), eq(callSessions.guildId, guildId)));
 }
 
-async function nextJoinOrder(db: DbClient, callSessionId: string) {
-  const [result] = await db
-    .select({
-      value: sql<number>`coalesce(max(${callSessionMembers.joinOrder}), -1) + 1`
-    })
-    .from(callSessionMembers)
-    .where(eq(callSessionMembers.callSessionId, callSessionId));
-
-  return result?.value ?? 0;
-}

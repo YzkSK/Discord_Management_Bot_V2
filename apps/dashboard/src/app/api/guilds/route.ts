@@ -3,7 +3,7 @@ import { parseDashboardAuthEnv } from "@discord-bot/config";
 import { getToken } from "next-auth/jwt";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { authOptions } from "../../../auth";
+import { getAuthOptions } from "../../../auth";
 import {
   getUsableDiscordAccessToken,
   toDashboardDiscordToken
@@ -17,9 +17,9 @@ import { hasDirectManagementPermission } from "./guild-filter";
 
 export const dynamic = "force-dynamic";
 
-const env = parseDashboardAuthEnv();
-
 export async function GET(request: NextRequest) {
+  const env = parseDashboardAuthEnv();
+  const authOptions = getAuthOptions();
   const token = await getToken({
     req: request,
     ...(authOptions.secret ? { secret: authOptions.secret } : {})
@@ -64,18 +64,24 @@ export async function GET(request: NextRequest) {
         remaining.map((g) => g.id)
       );
 
-      for (const guildId of withRoles) {
-        const guild = remaining.find((g) => g.id === guildId)!;
-        const managementRoleIds = await getGuildManagementRoleIds(db.db, guildId);
-        if (managementRoleIds.length === 0) continue;
+      const userId = token.sub;
+      const botToken = env.DISCORD_BOT_TOKEN;
 
-        const userId = token.sub;
-        const botToken = env.DISCORD_BOT_TOKEN;
-        if (!userId || !botToken) continue;
-
-        const userRoleIds = await fetchGuildMemberRoleIds(botToken, guildId, userId);
-        if (userRoleIds.some((r) => managementRoleIds.includes(r))) {
-          passed.push(guild);
+      if (userId && botToken) {
+        const results = await Promise.all(
+          withRoles.map(async (guildId) => {
+            const guild = remaining.find((g) => g.id === guildId)!;
+            const [managementRoleIds, userRoleIds] = await Promise.all([
+              getGuildManagementRoleIds(db.db, guildId),
+              fetchGuildMemberRoleIds(botToken, guildId, userId)
+            ]);
+            const allowed = managementRoleIds.length > 0 &&
+              userRoleIds.some((r) => managementRoleIds.includes(r));
+            return allowed ? guild : null;
+          })
+        );
+        for (const guild of results) {
+          if (guild) passed.push(guild);
         }
       }
     }
