@@ -26,6 +26,7 @@ import { installVoiceActivityHandlers } from "./discord/voice-activity.js";
 import { installChannelNameHandlers } from "./discord/channel-names.js";
 import { installMemberAutoGrantHandlers } from "./discord/member-auto-grant.js";
 import { installVoiceReconciliation } from "./discord/voice-reconciliation.js";
+import { installRecruitmentScheduler } from "./discord/recruitment-scheduler.js";
 import { createVoicevoxClient, getVoicevoxSpeakers } from "./discord/voicevox.js";
 
 export interface BotRuntime {
@@ -129,6 +130,7 @@ function installHandlers(deps: RuntimeDeps) {
   });
   installChannelNameHandlers(discordClient, db.db);
   installMemberAutoGrantHandlers(discordClient, db.db);
+  installRecruitmentScheduler({ db: db.db, discordClient, logWriter });
 }
 
 export function createBotRuntime(options: BotRuntimeOptions = {}): BotRuntime {

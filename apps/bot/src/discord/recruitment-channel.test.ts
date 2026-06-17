@@ -16,7 +16,7 @@ function makeRecruitment(overrides: Partial<{
   id: string; guildId: string; channelId: string; messageId: string | null;
   creatorId: string; genre: string; capacity: number; content: string;
   voiceChannelId: string | null; status: string;
-  closedAt: Date | null; updatedAt: Date; createdAt: Date;
+  closedAt: Date | null; deadlineAt: Date | null; updatedAt: Date; createdAt: Date;
 }> = {}) {
   return {
     id: overrides.id ?? "r1",
@@ -30,6 +30,7 @@ function makeRecruitment(overrides: Partial<{
     voiceChannelId: overrides.voiceChannelId ?? null,
     status: overrides.status ?? "open",
     closedAt: overrides.closedAt ?? null,
+    deadlineAt: overrides.deadlineAt ?? null,
     updatedAt: new Date(),
     createdAt: new Date()
   };
