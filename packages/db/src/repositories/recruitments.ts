@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
 
 import type { DbClient } from "../client.js";
 import { recruitmentParticipants, recruitments } from "../schema/index.js";
@@ -15,6 +15,7 @@ export interface CreateRecruitmentInput {
   capacity: number;
   content: string;
   voiceChannelId?: string | null;
+  deadlineAt: Date;
 }
 
 export async function createRecruitment(
@@ -31,6 +32,7 @@ export async function createRecruitment(
       capacity: input.capacity,
       content: input.content,
       voiceChannelId: input.voiceChannelId ?? null,
+      deadlineAt: input.deadlineAt,
       status: "open"
     })
     .returning();
@@ -103,6 +105,7 @@ export async function listRecruitmentDashboardState(
       capacity: recruitments.capacity,
       channelId: recruitments.channelId,
       closedAt: recruitments.closedAt,
+      deadlineAt: recruitments.deadlineAt,
       content: recruitments.content,
       createdAt: recruitments.createdAt,
       creatorId: recruitments.creatorId,
@@ -285,6 +288,69 @@ export async function closeRecruitment(
     status: "closed",
     closedAt: input.closedAt ?? new Date()
   });
+}
+
+export async function setRecruitmentDeadline(
+  db: DbClient,
+  input: { recruitmentId: string; deadlineAt: Date }
+) {
+  const [recruitment] = await db
+    .update(recruitments)
+    .set({ deadlineAt: input.deadlineAt, updatedAt: sql`now()` })
+    .where(eq(recruitments.id, input.recruitmentId))
+    .returning();
+
+  return recruitment ?? null;
+}
+
+export async function reopenRecruitment(
+  db: DbClient,
+  input: { recruitmentId: string; status: RecruitmentStatus; deadlineAt: Date }
+) {
+  const [recruitment] = await db
+    .update(recruitments)
+    .set({
+      status: input.status,
+      closedAt: null,
+      deadlineAt: input.deadlineAt,
+      updatedAt: sql`now()`
+    })
+    .where(eq(recruitments.id, input.recruitmentId))
+    .returning();
+
+  return recruitment ?? null;
+}
+
+export async function listExpiredOpenRecruitments(db: DbClient) {
+  return db
+    .select()
+    .from(recruitments)
+    .where(
+      and(
+        ne(recruitments.status, "closed"),
+        isNotNull(recruitments.deadlineAt),
+        lte(recruitments.deadlineAt, sql`now()`)
+      )
+    );
+}
+
+export async function listUpcomingDeadlineRecruitments(
+  db: DbClient,
+  thresholdMs: number
+) {
+  return db
+    .select()
+    .from(recruitments)
+    .where(
+      and(
+        ne(recruitments.status, "closed"),
+        isNotNull(recruitments.deadlineAt),
+        lte(
+          recruitments.deadlineAt,
+          sql`now() + (${thresholdMs} * interval '1 millisecond')`
+        )
+      )
+    );
 }
 
 export function resolveRecruitmentStatus(input: {
