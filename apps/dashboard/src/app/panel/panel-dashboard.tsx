@@ -387,6 +387,7 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
   const [genre, setGenre] = useState("");
   const [capacity, setCapacity] = useState("4");
   const [content, setContent] = useState("");
+  const [deadlineDays, setDeadlineDays] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<Feedback>(null);
 
@@ -431,12 +432,21 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
     setSubmitting(true);
     setMsg(null);
     try {
+      const deadlineDaysParsed = deadlineDays.trim() === ""
+        ? undefined
+        : parseInt(deadlineDays.trim(), 10);
+      if (deadlineDaysParsed !== undefined && (isNaN(deadlineDaysParsed) || deadlineDaysParsed < 1 || deadlineDaysParsed > 30)) {
+        setMsg({ type: "err", text: "締め切りは1〜30の整数を入力してください。" });
+        return;
+      }
+
       const body: Record<string, unknown> = {
         guildId,
         genre: genre.trim(),
         capacity: cap,
         content: content.trim()
       };
+      if (deadlineDaysParsed !== undefined) body.deadlineDays = deadlineDaysParsed;
       if (needsChannelPicker) body.channelId = selectedChannelId;
 
       const res = await fetch("/api/panel/recruitment", {
@@ -452,6 +462,7 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
       setGenre("");
       setCapacity("4");
       setContent("");
+      setDeadlineDays("");
       setMsg({ type: "ok", text: "募集を作成しました。" });
     } catch {
       setMsg({ type: "err", text: "通信エラーが発生しました。" });
@@ -522,6 +533,17 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="募集の説明を入力..."
                 className={input}
+              />
+            </Field>
+            <Field labelText="締め切り（日数・省略で7日）">
+              <input
+                type="number"
+                min={1}
+                max={30}
+                value={deadlineDays}
+                onChange={(e) => setDeadlineDays(e.target.value)}
+                placeholder="1〜30"
+                className={`${input} w-24`}
               />
             </Field>
             <FeedbackLine msg={msg} />
