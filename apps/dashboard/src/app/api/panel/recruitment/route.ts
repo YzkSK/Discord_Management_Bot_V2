@@ -4,7 +4,14 @@ import {
   getGuildConfigByGuildId,
   setRecruitmentMessageId
 } from "@discord-bot/db";
-import { getLocale, isGuildLanguage } from "@discord-bot/shared";
+import {
+  getLocale,
+  isGuildLanguage,
+  RECRUITMENT_DEADLINE_DEFAULT_DAYS,
+  RECRUITMENT_DEADLINE_MAX_DAYS,
+  COUNTDOWN_THRESHOLD_24H_MS,
+  COUNTDOWN_THRESHOLD_1H_MS
+} from "@discord-bot/shared";
 import { parseDashboardAuthEnv } from "@discord-bot/config";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -86,6 +93,7 @@ export async function POST(request: NextRequest) {
   const genre = readBodyString(body, "genre");
   const content = readBodyString(body, "content");
   const capacity = body?.capacity;
+  const deadlineDaysRaw = body?.deadlineDays;
 
   if (!genre) {
     return NextResponse.json({ error: "genre is required." }, { status: 400 });
@@ -96,6 +104,18 @@ export async function POST(request: NextRequest) {
   if (!Number.isInteger(capacity) || capacity < 1 || capacity > 99) {
     return NextResponse.json({ error: "capacity must be an integer between 1 and 99." }, { status: 400 });
   }
+
+  const deadlineDays =
+    deadlineDaysRaw === undefined || deadlineDaysRaw === null
+      ? RECRUITMENT_DEADLINE_DEFAULT_DAYS
+      : deadlineDaysRaw;
+  if (!Number.isInteger(deadlineDays) || deadlineDays < 1 || deadlineDays > RECRUITMENT_DEADLINE_MAX_DAYS) {
+    return NextResponse.json(
+      { error: `deadlineDays must be an integer between 1 and ${RECRUITMENT_DEADLINE_MAX_DAYS}.` },
+      { status: 400 }
+    );
+  }
+  const deadlineAt = new Date(Date.now() + deadlineDays * 24 * 60 * 60 * 1000);
 
   const dbConnection = createDbConnection();
   try {
@@ -119,10 +139,11 @@ export async function POST(request: NextRequest) {
       creatorId: authorization.userId,
       genre,
       capacity,
-      content
+      content,
+      deadlineAt
     });
 
-    const messagePayload = buildRecruitmentMessage(recruitment, loc);
+    const messagePayload = buildRecruitmentMessage(recruitment, loc, deadlineAt);
     const messageId = await postDiscordMessage(channelId, messagePayload);
 
     if (messageId) {
@@ -138,6 +159,25 @@ export async function POST(request: NextRequest) {
   }
 }
 
+function formatDeadlineText(deadlineAt: Date, loc: ReturnType<typeof getLocale>): string {
+  const msLeft = deadlineAt.getTime() - Date.now();
+
+  if (msLeft > COUNTDOWN_THRESHOLD_24H_MS) {
+    return loc.recruitmentPostDeadlineAbsolute({
+      timestamp: Math.floor(deadlineAt.getTime() / 1000)
+    });
+  }
+
+  if (msLeft > COUNTDOWN_THRESHOLD_1H_MS) {
+    const hours = Math.floor(msLeft / COUNTDOWN_THRESHOLD_1H_MS);
+    const minutes = Math.floor((msLeft % COUNTDOWN_THRESHOLD_1H_MS) / 60_000);
+    return loc.recruitmentPostDeadlineHours({ hours, minutes });
+  }
+
+  const minutes = Math.max(1, Math.floor(msLeft / 60_000));
+  return loc.recruitmentPostDeadlineMinutes({ minutes });
+}
+
 function buildRecruitmentMessage(
   recruitment: {
     id: string;
@@ -148,11 +188,13 @@ function buildRecruitmentMessage(
     voiceChannelId: string | null;
     status: string;
   },
-  loc: ReturnType<typeof getLocale>
+  loc: ReturnType<typeof getLocale>,
+  deadlineAt: Date
 ) {
   const vcText = recruitment.voiceChannelId
     ? loc.recruitmentPostVc({ id: recruitment.voiceChannelId })
     : loc.recruitmentPostNoVc;
+  const deadlineText = formatDeadlineText(deadlineAt, loc);
 
   return {
     flags: MESSAGE_FLAG_IS_COMPONENTS_V2,
@@ -182,6 +224,10 @@ function buildRecruitmentMessage(
           {
             type: COMPONENT_TYPE_TEXT_DISPLAY,
             content: vcText
+          },
+          {
+            type: COMPONENT_TYPE_TEXT_DISPLAY,
+            content: deadlineText
           },
           {
             type: COMPONENT_TYPE_TEXT_DISPLAY,
