@@ -14,7 +14,9 @@ import {
 import {
   eventColorClasses,
   extractActorName,
+  extractAuditAction,
   extractChannelName,
+  extractTargetId,
   extractVoiceStateChanges,
   formatEventDescription,
   formatRelativeTime,
@@ -70,7 +72,7 @@ function extractGenre(payload: unknown): string | null {
 }
 
 
-export function LogsExplorer() {
+export function LogsExplorer({ role }: { role: "admin" | "owner" }) {
   const [uiLang, setUiLang] = useState<GuildLanguage>("en");
   const loc = getDashboardLocale(uiLang);
   const [filters, setFilters] = useState(initialFilters);
@@ -135,6 +137,8 @@ export function LogsExplorer() {
         actorName: extractActorName(log.payload),
         channelId: log.channelId,
         channelName: log.channelName ?? extractChannelName(log.payload),
+        action: extractAuditAction(log.payload),
+        targetId: extractTargetId(log.payload),
         voiceStateChanges: extractVoiceStateChanges(log.payload),
       }).toLowerCase();
       if (!desc.includes(q) && !log.eventName.includes(q)) return false;
@@ -269,6 +273,8 @@ function LogEntry({
     actorName: extractActorName(log.payload),
     channelId: log.channelId,
     channelName: log.channelName ?? extractChannelName(log.payload),
+    action: extractAuditAction(log.payload),
+    targetId: extractTargetId(log.payload),
     voiceStateChanges: extractVoiceStateChanges(log.payload),
     genre: extractGenre(log.payload),
   }, guildId);

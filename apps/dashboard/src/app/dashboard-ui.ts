@@ -21,7 +21,7 @@ const dashboardNavGroups: DashboardNavGroup[] = [
   {
     label: "Features",
     items: [
-      { href: "/voice", label: "Voice", description: "VC sessions and temporary VC management" },
+      { href: "/voice", label: "Voice", description: "VC sessions and temporary VC management", minRole: "admin" },
       { href: "/recruitment", label: "Recruitment", description: "Recruitment posts and status management" },
       { href: "/tts", label: "TTS", description: "Text-to-speech configuration" },
     ],
@@ -29,7 +29,7 @@ const dashboardNavGroups: DashboardNavGroup[] = [
   {
     label: "System",
     items: [
-      { href: "/settings", label: "Settings", description: "Server settings and access management" },
+      { href: "/settings", label: "Access", description: "Access grants and management roles", minRole: "owner" },
       { href: "/health", label: "Health", description: "Dependency service status", minRole: "admin" },
     ],
   },
@@ -63,7 +63,8 @@ const dashboardNavItems: DashboardNavItem[] = [
   {
     description: "Current calls and temporary voice channels",
     href: "/voice",
-    label: "Voice"
+    label: "Voice",
+    minRole: "admin" as const,
   },
   {
     description: "Recruitment posts, status, and participant counts",
@@ -86,9 +87,10 @@ const dashboardNavItems: DashboardNavItem[] = [
     label: "Logs"
   },
   {
-    description: "Guild settings and access state",
+    description: "Access grants and management roles",
     href: "/settings",
-    label: "Settings"
+    label: "Access",
+    minRole: "owner" as const,
   }
 ];
 

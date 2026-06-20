@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 import { getDashboardSession } from "../../auth";
@@ -21,6 +21,7 @@ export default async function VoicePage() {
   if (!guildId) redirect("/guild");
 
   const role = await getDashboardPageRole(guildId);
+  if (role !== "admin" && role !== "owner") notFound();
 
   return (
     <DashboardShell
@@ -32,7 +33,7 @@ export default async function VoicePage() {
       session={session}
       title="Voice"
     >
-      <VoiceDashboard guildId={guildId} />
+      <VoiceDashboard guildId={guildId} role={role} />
     </DashboardShell>
   );
 }

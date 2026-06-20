@@ -55,7 +55,7 @@ async function fetchVoiceData(guildId: string): Promise<VoiceResponse> {
   return (await r.json()) as VoiceResponse;
 }
 
-export function VoiceDashboard({ guildId }: { guildId: string }) {
+export function VoiceDashboard({ guildId, role }: { guildId: string; role: "admin" | "owner" }) {
   const [uiLang, setUiLang] = useState<GuildLanguage>("en");
   const [now, setNow] = useState(() => new Date());
   const loc = getDashboardLocale(uiLang);

@@ -1,9 +1,8 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 import { getDashboardSession } from "../../auth";
 import { getDashboardPageRole } from "../../dashboard-auth";
-import { Forbidden } from "../../components/forbidden";
 import { DashboardShell } from "../dashboard-shell";
 import { LogsExplorer } from "./logs-explorer";
 
@@ -22,7 +21,7 @@ export default async function LogsPage() {
   if (!guildId) redirect("/guild");
 
   const role = await getDashboardPageRole(guildId);
-  const allowed = role === "admin" || role === "owner";
+  if (role !== "admin" && role !== "owner") notFound();
 
   return (
     <DashboardShell
@@ -34,7 +33,7 @@ export default async function LogsPage() {
       session={session}
       title="Logs"
     >
-      {allowed ? <LogsExplorer /> : <Forbidden />}
+      <LogsExplorer role={role} />
     </DashboardShell>
   );
 }
