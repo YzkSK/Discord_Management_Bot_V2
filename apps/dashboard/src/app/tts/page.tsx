@@ -5,6 +5,7 @@ import { getDashboardSession } from "../../auth";
 import { getDashboardPageRole } from "../../dashboard-auth";
 import { DashboardShell } from "../dashboard-shell";
 import { TtsDashboard } from "./tts-dashboard";
+import { TtsSettingsAction } from "./tts-settings-action";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ export default async function TtsPage() {
 
   return (
     <DashboardShell
+      actions={role === "admin" || role === "owner" ? <TtsSettingsAction guildId={guildId} /> : undefined}
       currentPath="/tts"
       description="TTS setup, dictionary, speaker overrides, and command shortcuts"
       guildId={guildId}
@@ -32,7 +34,7 @@ export default async function TtsPage() {
       session={session}
       title="TTS"
     >
-      <TtsDashboard guildId={guildId} role={role ?? "viewer"} />
+      <TtsDashboard guildId={guildId} />
     </DashboardShell>
   );
 }

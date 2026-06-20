@@ -5,6 +5,7 @@ import { getDashboardSession } from "../../auth";
 import { getDashboardPageRole } from "../../dashboard-auth";
 import { DashboardShell } from "../dashboard-shell";
 import { LogsExplorer } from "./logs-explorer";
+import { LogSettingsAction } from "./log-settings-action";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export default async function LogsPage() {
 
   return (
     <DashboardShell
+      actions={<LogSettingsAction guildId={guildId} />}
       currentPath="/logs"
       description="Event history and real-time notifications"
       guildId={guildId}

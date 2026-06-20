@@ -5,6 +5,7 @@ import { getDashboardSession } from "../../auth";
 import { getDashboardPageRole } from "../../dashboard-auth";
 import { DashboardShell } from "../dashboard-shell";
 import { RecruitmentDashboard } from "./recruitment-dashboard";
+import { RecruitmentSettingsAction } from "./recruitment-settings-action";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ export default async function RecruitmentPage() {
 
   return (
     <DashboardShell
+      actions={role === "admin" || role === "owner" ? <RecruitmentSettingsAction guildId={guildId} /> : undefined}
       currentPath="/recruitment"
       description="Recruitment posts, status, participant counts, and setup shortcuts"
       guildId={guildId}
@@ -32,7 +34,7 @@ export default async function RecruitmentPage() {
       session={session}
       title="Recruitment"
     >
-      <RecruitmentDashboard guildId={guildId} role={role ?? "viewer"} />
+      <RecruitmentDashboard guildId={guildId} />
     </DashboardShell>
   );
 }

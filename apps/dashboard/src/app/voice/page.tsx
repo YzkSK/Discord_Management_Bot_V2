@@ -5,6 +5,7 @@ import { getDashboardSession } from "../../auth";
 import { getDashboardPageRole } from "../../dashboard-auth";
 import { DashboardShell } from "../dashboard-shell";
 import { VoiceDashboard } from "./voice-dashboard";
+import { VoiceSettingsAction } from "./voice-settings-action";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export default async function VoicePage() {
 
   return (
     <DashboardShell
+      actions={<VoiceSettingsAction guildId={guildId} />}
       currentPath="/voice"
       description="Current calls, Temp VC state, and setup shortcuts"
       guildId={guildId}
@@ -33,7 +35,7 @@ export default async function VoicePage() {
       session={session}
       title="Voice"
     >
-      <VoiceDashboard guildId={guildId} role={role} />
+      <VoiceDashboard guildId={guildId} />
     </DashboardShell>
   );
 }

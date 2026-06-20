@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
-import { ChevronDown, ChevronRight, Save } from "lucide-react";
-import { fetchSettings, updateSettings, toSettingsError } from "../../lib/settings-api";
-import { LogsSettingsTab } from "../settings/components/LogsSettingsTab";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { LoadingSpinner } from "../../components/loading-spinner";
 
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
@@ -161,7 +159,6 @@ export function LogsExplorer() {
 
   return (
     <div className="flex max-w-7xl flex-col gap-4">
-      <LogSettingsCard guildId={normalizeGuildId(appliedFilters.guildId)} />
       <LogsChart logs={logs} />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -375,92 +372,5 @@ function LogEntry({
         </div>
       )}
     </li>
-  );
-}
-
-function LogSettingsCard({
-  guildId,
-}: {
-  guildId: string;
-}) {
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [logMode, setLogMode] = useState("full");
-  const [language, setLanguage] = useState("en");
-  const [uiLang, setUiLang] = useState<import("@discord-bot/shared").GuildLanguage>("en");
-
-  const loc = getDashboardLocale(uiLang);
-
-  const logModeOptions = [
-    { label: loc.logModeFull, value: "full" },
-    { label: loc.logModeMetadataOnly, value: "metadata_only" },
-    { label: loc.logModeDisabled, value: "disabled" },
-  ];
-  const languageOptions = [
-    { label: loc.languageEn, value: "en" },
-    { label: loc.languageJa, value: "ja" },
-  ];
-
-  useEffect(() => {
-    if (!guildId) return;
-    setLoading(true);
-    fetchSettings(guildId)
-      .then((s) => {
-        setLogMode(s.logMode);
-        setLanguage(s.language);
-        if (s.language === "ja" || s.language === "en") setUiLang(s.language);
-      })
-      .catch((e: unknown) => setError(toSettingsError(e)))
-      .finally(() => setLoading(false));
-  }, [guildId]);
-
-  if (!guildId || loading) return null;
-
-  async function save() {
-    if (!guildId) return;
-    setSaving(true);
-    setError(null);
-    try {
-      await updateSettings(guildId, logMode, language);
-    } catch (e) {
-      setError(toSettingsError(e));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-medium text-zinc-300">{loc.logsSettings}</p>
-        <button
-          type="button"
-          disabled={saving}
-          onClick={() => void save()}
-          className="flex items-center gap-1.5 rounded-md bg-zinc-800 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 disabled:opacity-40"
-        >
-          <Save className="h-3 w-3" />
-          {saving ? loc.saving : "保存"}
-        </button>
-      </div>
-      {error && (
-        <p className="mb-2 text-xs text-red-400">{error}</p>
-      )}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <LogsSettingsTab
-          logMode={logMode}
-          language={language}
-          logModeOptions={logModeOptions}
-          languageOptions={languageOptions}
-          loc={loc}
-          onLogModeChange={setLogMode}
-          onLanguageChange={setLanguage}
-          onUiLangChange={(val) => {
-            if (val === "ja" || val === "en") setUiLang(val);
-          }}
-        />
-      </div>
-    </div>
   );
 }
