@@ -32,7 +32,7 @@ export default async function TtsPage() {
       session={session}
       title="TTS"
     >
-      <TtsDashboard guildId={guildId} />
+      <TtsDashboard guildId={guildId} role={role ?? "viewer"} />
     </DashboardShell>
   );
 }
