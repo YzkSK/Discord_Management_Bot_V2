@@ -33,7 +33,7 @@ export default async function LogsPage() {
       session={session}
       title="Logs"
     >
-      <LogsExplorer role={role} />
+      <LogsExplorer />
     </DashboardShell>
   );
 }

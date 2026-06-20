@@ -75,7 +75,7 @@ function extractGenre(payload: unknown): string | null {
 }
 
 
-export function LogsExplorer({ role }: { role: "admin" | "owner" }) {
+export function LogsExplorer() {
   const [uiLang, setUiLang] = useState<GuildLanguage>("en");
   const loc = getDashboardLocale(uiLang);
   const [filters, setFilters] = useState(initialFilters);
@@ -161,7 +161,7 @@ export function LogsExplorer({ role }: { role: "admin" | "owner" }) {
 
   return (
     <div className="flex max-w-7xl flex-col gap-4">
-      <LogSettingsCard guildId={normalizeGuildId(appliedFilters.guildId)} role={role} />
+      <LogSettingsCard guildId={normalizeGuildId(appliedFilters.guildId)} />
       <LogsChart logs={logs} />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -380,10 +380,8 @@ function LogEntry({
 
 function LogSettingsCard({
   guildId,
-  role,
 }: {
   guildId: string;
-  role: "admin" | "owner";
 }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
