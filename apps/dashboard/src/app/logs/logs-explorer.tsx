@@ -18,6 +18,7 @@ import {
   extractAuditAction,
   extractChannelName,
   extractTargetId,
+  extractTargetName,
   extractVoiceStateChanges,
   formatEventDescription,
   formatRelativeTime,
@@ -140,6 +141,7 @@ export function LogsExplorer() {
         channelName: log.channelName ?? extractChannelName(log.payload),
         action: extractAuditAction(log.payload),
         targetId: extractTargetId(log.payload),
+        targetName: extractTargetName(log.payload),
         voiceStateChanges: extractVoiceStateChanges(log.payload),
       }).toLowerCase();
       if (!desc.includes(q) && !log.eventName.includes(q)) return false;
@@ -274,6 +276,7 @@ function LogEntry({
     channelName: log.channelName ?? extractChannelName(log.payload),
     action: extractAuditAction(log.payload),
     targetId: extractTargetId(log.payload),
+    targetName: extractTargetName(log.payload),
     voiceStateChanges: extractVoiceStateChanges(log.payload),
     genre: extractGenre(log.payload),
   }, guildId);

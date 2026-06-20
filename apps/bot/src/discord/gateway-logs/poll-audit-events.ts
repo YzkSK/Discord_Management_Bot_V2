@@ -33,11 +33,18 @@ export function installPollAuditGatewayLogHandlers(client: Client, write: WriteE
   });
 
   client.on(Events.GuildAuditLogEntryCreate, (entry, guild) => {
+    const t = entry.target as Record<string, unknown> | null;
+    const targetName =
+      (typeof t?.["globalName"] === "string" ? t["globalName"] : null) ??
+      (typeof t?.["username"] === "string" ? t["username"] : null) ??
+      (typeof t?.["name"] === "string" ? t["name"] : null) ??
+      null;
     write(
       createGuildEvent("audit_log.entry", guild, {
         id: entry.id,
         action: entry.action,
         targetId: entry.targetId,
+        targetName,
         reason: entry.reason,
         changes: entry.changes
       }, entry.executorId)
