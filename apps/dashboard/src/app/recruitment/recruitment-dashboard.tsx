@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { Save } from "lucide-react";
 
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import { formatRelativeTime } from "../../lib/event-display";
@@ -13,6 +14,9 @@ import {
 } from "@discord-bot/shared";
 import { ErrorAlert } from "../../components/error-alert";
 import { useDashboardData } from "../../hooks/use-dashboard-data";
+import { LoadingSpinner } from "../../components/loading-spinner";
+import { fetchSettings, updateRecruitmentSettings, toSettingsError, type SettingsResponse } from "../../lib/settings-api";
+import { RecruitmentSettingsTab } from "../settings/components/RecruitmentSettingsTab";
 
 type RecruitmentStatus = "open" | "full" | "closed";
 
@@ -165,6 +169,65 @@ function CapacityBar({
   );
 }
 
+function RecruitmentSettingsCard({ guildId }: { guildId: string }) {
+  const [settingsData, setSettingsData] = useState<SettingsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [channelId, setChannelId] = useState("");
+
+  const loc = getDashboardLocale(detectBrowserLanguage());
+
+  useEffect(() => {
+    setLoading(true);
+    fetchSettings(guildId)
+      .then((s) => {
+        setSettingsData(s);
+        setChannelId(s.features.recruitment.channelId ?? "");
+      })
+      .catch((e: unknown) => setError(toSettingsError(e)))
+      .finally(() => setLoading(false));
+  }, [guildId]);
+
+  if (loading || !settingsData) return null;
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    try {
+      await updateRecruitmentSettings(guildId, { channelId: channelId || null });
+    } catch (e) {
+      setError(toSettingsError(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-medium text-zinc-300">{loc.recruitmentSettings}</p>
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => void save()}
+          className="flex items-center gap-1.5 rounded-md bg-zinc-800 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 disabled:opacity-40"
+        >
+          <Save className="h-3 w-3" />
+          {saving ? loc.saving : "保存"}
+        </button>
+      </div>
+      {error && <p className="mb-2 text-xs text-red-400">{error}</p>}
+      <RecruitmentSettingsTab
+        recruitmentChannelId={channelId}
+        settings={settingsData}
+        loc={loc}
+        onRecruitmentChannelIdChange={setChannelId}
+      />
+    </div>
+  );
+}
+
 async function fetchRecruitmentData(guildId: string): Promise<RecruitmentResponse> {
   const query = new URLSearchParams({ guildId });
   const r = await fetch(`/api/recruitments?${query.toString()}`, { cache: "no-store" });
@@ -172,7 +235,13 @@ async function fetchRecruitmentData(guildId: string): Promise<RecruitmentRespons
   return (await r.json()) as RecruitmentResponse;
 }
 
-export function RecruitmentDashboard({ guildId }: { guildId: string }) {
+export function RecruitmentDashboard({
+  guildId,
+  role,
+}: {
+  guildId: string;
+  role: "viewer" | "admin" | "owner";
+}) {
   const [uiLang, setUiLang] = useState<GuildLanguage>("en");
   const loc = getDashboardLocale(uiLang);
   const { data, loading, error } = useDashboardData(
@@ -209,13 +278,7 @@ export function RecruitmentDashboard({ guildId }: { guildId: string }) {
       .filter((d) => d.value > 0);
   }, [data, grouped]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-sm text-zinc-600">
-        読み込み中...
-      </div>
-    );
-  }
+  if (loading) return <LoadingSpinner />;
 
   if (!data) {
     return <ErrorAlert message={error ?? loc.recruitmentFailedToLoad} />;
@@ -223,6 +286,9 @@ export function RecruitmentDashboard({ guildId }: { guildId: string }) {
 
   return (
     <div className="flex max-w-6xl flex-col gap-6">
+      {(role === "admin" || role === "owner") && (
+        <RecruitmentSettingsCard guildId={guildId} />
+      )}
       {/* ドーナツチャート + 統計 */}
       {data.totalCount > 0 && (
         <div className="flex flex-col items-center gap-4 rounded-lg border border-zinc-800 bg-zinc-900 p-4 sm:flex-row">
