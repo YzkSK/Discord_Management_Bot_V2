@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
-import { Crown, Mic2, Timer, Users } from "lucide-react";
+import { Crown, Mic2, Save, Timer, Users } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -13,6 +13,9 @@ import {
 } from "recharts";
 
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
+import { LoadingSpinner } from "../../components/loading-spinner";
+import { fetchSettings, updateTempVcSettings, toSettingsError, type SettingsResponse } from "../../lib/settings-api";
+import { VoiceSettingsTab } from "../settings/components/VoiceSettingsTab";
 
 const CLOCK_REFRESH_MS = 1_000;
 const DATA_REFRESH_MS = 5 * 60 * 1_000;
@@ -93,13 +96,7 @@ export function VoiceDashboard({ guildId, role }: { guildId: string; role: "admi
     return bins;
   }, [data]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-sm text-zinc-600">
-        読み込み中...
-      </div>
-    );
-  }
+  if (loading) return <LoadingSpinner />;
 
   if (!data) {
     return <ErrorAlert message={error ?? loc.voiceFailedToLoad} />;
@@ -107,6 +104,7 @@ export function VoiceDashboard({ guildId, role }: { guildId: string; role: "admi
 
   return (
     <div className="flex max-w-6xl flex-col gap-6">
+      <VoiceSettingsCard guildId={guildId} />
       {/* サマリー */}
       <div className="grid grid-cols-3 gap-4">
         {[
@@ -260,6 +258,71 @@ export function VoiceDashboard({ guildId, role }: { guildId: string; role: "admi
           </ResponsiveContainer>
         </div>
       </section>
+    </div>
+  );
+}
+
+function VoiceSettingsCard({ guildId }: { guildId: string }) {
+  const [settingsData, setSettingsData] = useState<SettingsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [createChannelId, setCreateChannelId] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+
+  const loc = getDashboardLocale(detectBrowserLanguage());
+
+  useEffect(() => {
+    setLoading(true);
+    fetchSettings(guildId)
+      .then((s) => {
+        setSettingsData(s);
+        setCreateChannelId(s.features.tempVc.createChannelId ?? "");
+        setCategoryId(s.features.tempVc.categoryId ?? "");
+      })
+      .catch((e: unknown) => setError(toSettingsError(e)))
+      .finally(() => setLoading(false));
+  }, [guildId]);
+
+  if (loading) return null;
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    try {
+      await updateTempVcSettings(guildId, createChannelId, categoryId);
+    } catch (e) {
+      setError(toSettingsError(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!settingsData) return null;
+
+  return (
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-medium text-zinc-300">{loc.tempVcSettings}</p>
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => void save()}
+          className="flex items-center gap-1.5 rounded-md bg-zinc-800 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 disabled:opacity-40"
+        >
+          <Save className="h-3 w-3" />
+          {saving ? loc.saving : "保存"}
+        </button>
+      </div>
+      {error && <p className="mb-2 text-xs text-red-400">{error}</p>}
+      <VoiceSettingsTab
+        tempVcCreateChannelId={createChannelId}
+        tempVcCategoryId={categoryId}
+        settings={settingsData}
+        loc={loc}
+        onTempVcCreateChannelIdChange={setCreateChannelId}
+        onTempVcCategoryIdChange={setCategoryId}
+      />
     </div>
   );
 }
