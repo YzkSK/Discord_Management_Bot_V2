@@ -4,28 +4,45 @@
 :root {
   color-scheme: dark;
 
-  /* Chart color tokens — used in Recharts inline styles */
-  --chart-indigo: #6366f1;
-  --chart-purple: #8b5cf6;
-  --chart-blue: #3b82f6;
-  --chart-teal: #14b8a6;
-  --chart-emerald: #10b981;
-  --chart-red: #ef4444;
-  --chart-amber: #f59e0b;
-  --chart-sky: #0ea5e9;
-  --chart-muted: #64748b;
+  /* Discord color palette */
+  --dc-bg-1:   #313338;
+  --dc-bg-2:   #2b2d31;
+  --dc-bg-3:   #1e1f22;
+  --dc-bg-4:   #383a40;
+  --dc-bg-5:   #404249;
+  --dc-accent: #5865f2;
+  --dc-accent-hover: #4752c4;
+  --dc-accent-muted: rgba(88, 101, 242, 0.15);
+  --dc-text-1: #f2f3f5;
+  --dc-text-2: #dbdee1;
+  --dc-text-3: #80848e;
+  --dc-text-4: #4e5058;
+  --dc-divider: #3f4147;
+  --dc-green:  #23a55a;
+  --dc-red:    #f23f42;
+  --dc-yellow: #f0b132;
 
-  /* Tooltip tokens */
-  --chart-tooltip-bg: #0f172a;
-  --chart-tooltip-border: #334155;
-  --chart-tooltip-label: #94a3b8;
-  --chart-axis-tick: #64748b;
+  /* Chart color tokens */
+  --chart-indigo:  #5865f2;
+  --chart-purple:  #8b5cf6;
+  --chart-blue:    #3b82f6;
+  --chart-teal:    #14b8a6;
+  --chart-emerald: #10b981;
+  --chart-red:     #ef4444;
+  --chart-amber:   #f59e0b;
+  --chart-sky:     #0ea5e9;
+  --chart-muted:   #4e5058;
+
+  --chart-tooltip-bg:     #1e1f22;
+  --chart-tooltip-border: #3f4147;
+  --chart-tooltip-label:  #80848e;
+  --chart-axis-tick:      #4e5058;
 }
 
 body {
   margin: 0;
-  background: #020617;
-  color: #f8fafc;
+  background: var(--dc-bg-1);
+  color: var(--dc-text-2);
   font-family:
     var(--font-inter, Inter),
     system-ui,
