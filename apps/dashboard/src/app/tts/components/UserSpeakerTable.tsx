@@ -6,6 +6,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "../../../components/ui/table";
 import type { getDashboardLocale } from "../../../lib/locale";
+import { UserMention } from "../../../components/user-mention";
 import { usePreviewAudio } from "./usePreviewAudio";
 
 const PAGE_SIZE = 10;
@@ -76,14 +77,14 @@ export function UserSpeakerTable({
               </TableRow>
             ) : visible.map((speaker) => (
               <TableRow key={speaker.userId}>
-                <TableCell className="break-all font-mono text-xs text-slate-400">
-                  {speaker.userId}
+                <TableCell>
+                  <UserMention userId={speaker.userId} actorName={null} />
                 </TableCell>
                 <TableCell>{speaker.speakerId}</TableCell>
                 <TableCell className="text-xs text-slate-500">{speaker.updatedAt}</TableCell>
                 <TableCell>
                   <Button
-                    aria-label={`話老ED ${speaker.speakerId} を試聴`}
+                    aria-label={`話者 ID ${speaker.speakerId} を試聴`}
                     disabled={playingId !== null}
                     onClick={() => void playPreview(speaker.speakerId)}
                     size="sm"
@@ -102,7 +103,7 @@ export function UserSpeakerTable({
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
           <span className="text-xs text-slate-500">
-            {safePage + 1} / {totalPages} ペ�Eジ
+            {safePage + 1} / {totalPages} ページ
           </span>
           <div className="flex gap-1">
             <Button
@@ -112,7 +113,7 @@ export function UserSpeakerTable({
               onClick={() => setPage(safePage - 1)}
               type="button"
             >
-              ‹ 剁E
+              ‹ 前
             </Button>
             <Button
               size="sm"

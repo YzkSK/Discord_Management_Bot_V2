@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
 import { Crown, Mic2, Timer, Users } from "lucide-react";
+import { UserMention } from "../../components/user-mention";
 import {
   BarChart,
   Bar,
@@ -209,7 +210,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
                 </p>
                 <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
                   <Crown className="h-3 w-3 text-yellow-500" />
-                  <span className="font-mono">{vc.ownerId}</span>
+                  <UserMention userId={vc.ownerId} actorName={null} />
                 </div>
                 {vc.deleteScheduledAt && (
                   <p className="mt-1 text-xs text-amber-500/70">

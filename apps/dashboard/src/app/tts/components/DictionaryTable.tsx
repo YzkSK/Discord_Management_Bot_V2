@@ -56,7 +56,7 @@ export function DictionaryTable({
           type="search"
           value={query}
           onChange={(e) => handleQuery(e.target.value)}
-          placeholder="変換前�E変換後で検索..."
+          placeholder="変換前・変換後で検索..."
           className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
         />
         {query && (
@@ -110,7 +110,7 @@ export function DictionaryTable({
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
           <span className="text-xs text-slate-500">
-            {safePage + 1} / {totalPages} ペ�Eジ
+            {safePage + 1} / {totalPages} ページ
           </span>
           <div className="flex gap-1">
             <Button
@@ -120,7 +120,7 @@ export function DictionaryTable({
               onClick={() => setPage(safePage - 1)}
               type="button"
             >
-              ‹ 剁E
+              ‹ 前
             </Button>
             <Button
               size="sm"

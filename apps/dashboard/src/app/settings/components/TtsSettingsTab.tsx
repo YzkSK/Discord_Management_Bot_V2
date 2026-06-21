@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus, Save, Trash2 } from "lucide-react";
+import { UserMention } from "../../../components/user-mention";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
@@ -178,7 +179,11 @@ export function TtsSettingsTab({
                   </TableRow>
                 ) : ttsSettings.userSpeakers.map((speaker) => (
                   <TableRow key={speaker.userId}>
-                    <TableCell className="break-all font-mono text-xs">{speaker.userId}</TableCell>
+                    <TableCell>
+                      {speaker.userId
+                        ? <UserMention userId={speaker.userId} actorName={null} />
+                        : <span className="font-mono text-xs text-slate-500">—</span>}
+                    </TableCell>
                     <TableCell>{speaker.speakerId}</TableCell>
                     <TableCell>
                       <Button
