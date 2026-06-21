@@ -211,33 +211,33 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
             <AreaChart data={sevenDayData}>
               <defs>
                 <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#22C55E" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#22C55E" stopOpacity={0} />
+                  <stop offset="5%" stopColor="var(--chart-green)" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="var(--chart-green)" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 11, fill: "#71717A" }}
+                tick={{ fontSize: 11, fill: "var(--chart-axis-tick)" }}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: "#71717A" }}
+                tick={{ fontSize: 11, fill: "var(--chart-axis-tick)" }}
                 tickLine={false}
                 axisLine={false}
               />
               <Tooltip
                 contentStyle={{
-                  background: "#18181B",
-                  border: "1px solid #3F3F46",
+                  background: "var(--chart-tooltip-bg)",
+                  border: "1px solid var(--chart-tooltip-border)",
                   fontSize: 12,
                 }}
-                labelStyle={{ color: "#A1A1AA" }}
+                labelStyle={{ color: "var(--chart-tooltip-label)" }}
               />
               <Area
                 type="monotone"
                 dataKey="count"
-                stroke="#22C55E"
+                stroke="var(--chart-green)"
                 fill="url(#areaGrad)"
                 strokeWidth={2}
               />

@@ -52,9 +52,9 @@ const STATUS_LABELS: Record<RecruitmentStatus, string> = {
 };
 
 const STATUS_COLORS: Record<RecruitmentStatus, string> = {
-  open: "#22C55E",
-  full: "#F59E0B",
-  closed: "#71717A",
+  open: "var(--chart-green)",
+  full: "var(--chart-amber)",
+  closed: "var(--chart-muted)",
 };
 
 const STATUS_DOT: Record<RecruitmentStatus, string> = {
@@ -236,8 +236,8 @@ export function RecruitmentDashboard({ guildId }: { guildId: string }) {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    background: "#18181B",
-                    border: "1px solid #3F3F46",
+                    background: "var(--chart-tooltip-bg)",
+                    border: "1px solid var(--chart-tooltip-border)",
                     fontSize: 12,
                   }}
                 />

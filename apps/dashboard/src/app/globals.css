@@ -3,6 +3,23 @@
 
 :root {
   color-scheme: dark;
+
+  /* Chart color tokens — used in Recharts inline styles */
+  --chart-green: #22c55e;
+  --chart-purple: #8b5cf6;
+  --chart-blue: #3b82f6;
+  --chart-teal: #14b8a6;
+  --chart-emerald: #10b981;
+  --chart-red: #ef4444;
+  --chart-amber: #f59e0b;
+  --chart-sky: #0ea5e9;
+  --chart-muted: #71717a;
+
+  /* Tooltip tokens */
+  --chart-tooltip-bg: #18181b;
+  --chart-tooltip-border: #3f3f46;
+  --chart-tooltip-label: #a1a1aa;
+  --chart-axis-tick: #71717a;
 }
 
 body {

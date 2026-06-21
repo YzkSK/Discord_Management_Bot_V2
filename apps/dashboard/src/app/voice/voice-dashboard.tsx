@@ -232,25 +232,25 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
             <BarChart data={peakData}>
               <XAxis
                 dataKey="hour"
-                tick={{ fontSize: 10, fill: "#71717A" }}
+                tick={{ fontSize: 10, fill: "var(--chart-axis-tick)" }}
                 tickLine={false}
                 axisLine={false}
                 interval={2}
               />
               <YAxis
-                tick={{ fontSize: 10, fill: "#71717A" }}
+                tick={{ fontSize: 10, fill: "var(--chart-axis-tick)" }}
                 tickLine={false}
                 axisLine={false}
               />
               <Tooltip
                 contentStyle={{
-                  background: "#18181B",
-                  border: "1px solid #3F3F46",
+                  background: "var(--chart-tooltip-bg)",
+                  border: "1px solid var(--chart-tooltip-border)",
                   fontSize: 12,
                 }}
-                labelStyle={{ color: "#A1A1AA" }}
+                labelStyle={{ color: "var(--chart-tooltip-label)" }}
               />
-              <Bar dataKey="count" fill="#8B5CF6" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="count" fill="var(--chart-purple)" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
