@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Save, Settings } from "lucide-react";
 import { fetchSettings, updateRecruitmentSettings, toSettingsError, type SettingsResponse } from "../../lib/settings-api";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
@@ -11,7 +12,6 @@ function RecruitmentSettingsCard({ guildId }: { guildId: string }) {
   const [settingsData, setSettingsData] = useState<SettingsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [channelId, setChannelId] = useState("");
 
   const loc = getDashboardLocale(detectBrowserLanguage());
@@ -23,7 +23,7 @@ function RecruitmentSettingsCard({ guildId }: { guildId: string }) {
         setSettingsData(s);
         setChannelId(s.features.recruitment.channelId ?? "");
       })
-      .catch((e: unknown) => setError(toSettingsError(e)))
+      .catch((e: unknown) => toast.error(toSettingsError(e)))
       .finally(() => setLoading(false));
   }, [guildId]);
 
@@ -31,11 +31,11 @@ function RecruitmentSettingsCard({ guildId }: { guildId: string }) {
 
   async function save() {
     setSaving(true);
-    setError(null);
     try {
       await updateRecruitmentSettings(guildId, { channelId: channelId || null });
+      toast.success("募集設定を保存しました。");
     } catch (e) {
-      setError(toSettingsError(e));
+      toast.error(toSettingsError(e));
     } finally {
       setSaving(false);
     }
@@ -55,7 +55,6 @@ function RecruitmentSettingsCard({ guildId }: { guildId: string }) {
           {saving ? loc.saving : "保存"}
         </button>
       </div>
-      {error && <p className="mb-2 text-xs text-red-400">{error}</p>}
       <RecruitmentSettingsTab
         recruitmentChannelId={channelId}
         settings={settingsData}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Save, Settings } from "lucide-react";
 import { fetchSettings, updateTtsSettings, toSettingsError } from "../../lib/settings-api";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
@@ -9,7 +10,6 @@ import { SettingsModal } from "../../components/settings-modal";
 function TtsChannelSettingsCard({ guildId }: { guildId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [textChannelId, setTextChannelId] = useState("");
 
   const loc = getDashboardLocale(detectBrowserLanguage());
@@ -18,7 +18,7 @@ function TtsChannelSettingsCard({ guildId }: { guildId: string }) {
     setLoading(true);
     fetchSettings(guildId)
       .then((s) => setTextChannelId(s.features.tts.textChannelId ?? ""))
-      .catch((e: unknown) => setError(toSettingsError(e)))
+      .catch((e: unknown) => toast.error(toSettingsError(e)))
       .finally(() => setLoading(false));
   }, [guildId]);
 
@@ -26,11 +26,11 @@ function TtsChannelSettingsCard({ guildId }: { guildId: string }) {
 
   async function save() {
     setSaving(true);
-    setError(null);
     try {
       await updateTtsSettings(guildId, textChannelId);
+      toast.success("TTS設定を保存しました。");
     } catch (e) {
-      setError(toSettingsError(e));
+      toast.error(toSettingsError(e));
     } finally {
       setSaving(false);
     }
@@ -50,7 +50,6 @@ function TtsChannelSettingsCard({ guildId }: { guildId: string }) {
           {saving ? loc.saving : "保存"}
         </button>
       </div>
-      {error && <p className="mb-2 text-xs text-red-400">{error}</p>}
       <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
         {loc.ttsTextChannelId}
         <input

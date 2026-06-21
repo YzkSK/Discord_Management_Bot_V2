@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
+import { toast } from "sonner";
 import { Save, Settings } from "lucide-react";
 import { fetchSettings, updateSettings, toSettingsError } from "../../lib/settings-api";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
@@ -11,7 +12,6 @@ import { SettingsModal } from "../../components/settings-modal";
 function LogSettingsCard({ guildId }: { guildId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [logMode, setLogMode] = useState("full");
   const [language, setLanguage] = useState("en");
   const [uiLang, setUiLang] = useState<GuildLanguage>("en");
@@ -36,7 +36,7 @@ function LogSettingsCard({ guildId }: { guildId: string }) {
         setLanguage(s.language);
         if (s.language === "ja" || s.language === "en") setUiLang(s.language);
       })
-      .catch((e: unknown) => setError(toSettingsError(e)))
+      .catch((e: unknown) => toast.error(toSettingsError(e)))
       .finally(() => setLoading(false));
   }, [guildId]);
 
@@ -45,11 +45,11 @@ function LogSettingsCard({ guildId }: { guildId: string }) {
   async function save() {
     if (!guildId) return;
     setSaving(true);
-    setError(null);
     try {
       await updateSettings(guildId, logMode, language);
+      toast.success("ログ設定を保存しました。");
     } catch (e) {
-      setError(toSettingsError(e));
+      toast.error(toSettingsError(e));
     } finally {
       setSaving(false);
     }
@@ -69,7 +69,6 @@ function LogSettingsCard({ guildId }: { guildId: string }) {
           {saving ? loc.saving : "保存"}
         </button>
       </div>
-      {error && <p className="mb-2 text-xs text-red-400">{error}</p>}
       <div className="grid gap-3 sm:grid-cols-2">
         <LogsSettingsTab
           logMode={logMode}

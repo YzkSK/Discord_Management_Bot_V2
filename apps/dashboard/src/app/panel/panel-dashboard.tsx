@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { toast } from "sonner";
 import { BookOpen, Mic2, Users } from "lucide-react";
 
 import { Button } from "../../components/ui/button";
@@ -25,21 +26,10 @@ interface DiscordChannel {
   name: string;
 }
 
-type Feedback = { type: "ok" | "err"; text: string } | null;
-
 const input =
   "w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-green-500 focus:outline-none";
 
 const label = "text-xs font-medium text-zinc-400";
-
-function FeedbackLine({ msg }: { msg: Feedback }) {
-  if (!msg) return null;
-  return (
-    <p className={`text-xs ${msg.type === "ok" ? "text-green-400" : "text-red-400"}`}>
-      {msg.text}
-    </p>
-  );
-}
 
 function Field({ labelText, children }: { labelText: string; children: React.ReactNode }) {
   return (
@@ -66,7 +56,6 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
   const [selectedId, setSelectedId] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<Feedback>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -89,7 +78,7 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
           if (first) setSelectedId(String(first.id));
         }
       })
-      .catch(() => setMsg({ type: "err", text: "データの読み込みに失敗しました。" }))
+      .catch(() => toast.error("データの読み込みに失敗しました。"))
       .finally(() => setLoading(false));
   }, [guildId]);
 
@@ -104,7 +93,6 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
     const speakerId = parseInt(selectedId, 10);
     if (!Number.isFinite(speakerId) || speakerId < 0) return;
     setSaving(true);
-    setMsg(null);
     try {
       const res = await fetch("/api/panel/speaker", {
         method: "PATCH",
@@ -113,14 +101,14 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
       });
       if (!res.ok) {
         const data = (await res.json()) as { error?: string };
-        setMsg({ type: "err", text: data.error ?? "保存に失敗しました。" });
+        toast.error(data.error ?? "保存に失敗しました。");
         return;
       }
       const data = (await res.json()) as { setting: SpeakerSetting };
       setSetting(data.setting);
-      setMsg({ type: "ok", text: "話者を変更しました。" });
+      toast.success("話者を変更しました。");
     } catch {
-      setMsg({ type: "err", text: "通信エラーが発生しました。" });
+      toast.error("通信エラーが発生しました。");
     } finally {
       setSaving(false);
     }
@@ -128,7 +116,6 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
 
   async function handleClear() {
     setSaving(true);
-    setMsg(null);
     try {
       await fetch("/api/panel/speaker", {
         method: "DELETE",
@@ -138,9 +125,9 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
       setSetting(null);
       const first = speakers[0];
       if (first) setSelectedId(String(first.id));
-      setMsg({ type: "ok", text: "個人設定をリセットしました。サーバーデフォルトが使用されます。" });
+      toast.success("個人設定をリセットしました。サーバーデフォルトが使用されます。");
     } catch {
-      setMsg({ type: "err", text: "通信エラーが発生しました。" });
+      toast.error("通信エラーが発生しました。");
     } finally {
       setSaving(false);
     }
@@ -221,7 +208,6 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
                 </Button>
               )}
             </div>
-            <FeedbackLine msg={msg} />
           </form>
         )}
       </CardContent>
@@ -235,14 +221,13 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
   const [fromText, setFromText] = useState("");
   const [toText, setToText] = useState("");
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<Feedback>(null);
 
   const loadEntries = useCallback(() => {
     setLoading(true);
     fetch(`/api/panel/dictionary?guildId=${guildId}`)
       .then((r) => r.json() as Promise<{ entries: DictionaryEntry[] }>)
       .then((data) => setEntries(data.entries ?? []))
-      .catch(() => setMsg({ type: "err", text: "データの読み込みに失敗しました。" }))
+      .catch(() => toast.error("データの読み込みに失敗しました。"))
       .finally(() => setLoading(false));
   }, [guildId]);
 
@@ -254,7 +239,6 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
     e.preventDefault();
     if (!fromText.trim() || !toText.trim()) return;
     setSaving(true);
-    setMsg(null);
     try {
       const res = await fetch("/api/panel/dictionary", {
         method: "PATCH",
@@ -263,15 +247,15 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
       });
       if (!res.ok) {
         const data = (await res.json()) as { error?: string };
-        setMsg({ type: "err", text: data.error ?? "登録に失敗しました。" });
+        toast.error(data.error ?? "登録に失敗しました。");
         return;
       }
       setFromText("");
       setToText("");
-      setMsg({ type: "ok", text: "登録しました。" });
+      toast.success("登録しました。");
       loadEntries();
     } catch {
-      setMsg({ type: "err", text: "通信エラーが発生しました。" });
+      toast.error("通信エラーが発生しました。");
     } finally {
       setSaving(false);
     }
@@ -286,7 +270,7 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
       });
       loadEntries();
     } catch {
-      setMsg({ type: "err", text: "削除に失敗しました。" });
+      toast.error("削除に失敗しました。");
     }
   }
 
@@ -330,7 +314,6 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
               {saving ? "登録中..." : "追加"}
             </Button>
           </div>
-          <FeedbackLine msg={msg} />
         </form>
 
         {loading ? (
@@ -389,7 +372,6 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
   const [content, setContent] = useState("");
   const [deadlineDays, setDeadlineDays] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [msg, setMsg] = useState<Feedback>(null);
 
   useEffect(() => {
     setConfigLoading(true);
@@ -408,7 +390,7 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
         const firstCh = list[0];
         if (firstCh) setSelectedChannelId(firstCh.id);
       })
-      .catch(() => setMsg({ type: "err", text: "データの読み込みに失敗しました。" }))
+      .catch(() => toast.error("データの読み込みに失敗しました。"))
       .finally(() => setConfigLoading(false));
   }, [guildId]);
 
@@ -422,21 +404,20 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
     e.preventDefault();
     const cap = parseInt(capacity, 10);
     if (!genre.trim() || !content.trim() || !Number.isFinite(cap) || cap < 1 || cap > 99) {
-      setMsg({ type: "err", text: "全項目を正しく入力してください（定員: 1〜99）。" });
+      toast.error("全項目を正しく入力してください（定員: 1〜99）。");
       return;
     }
     if (needsChannelPicker && !selectedChannelId) {
-      setMsg({ type: "err", text: "投稿先チャンネルを選択してください。" });
+      toast.error("投稿先チャンネルを選択してください。");
       return;
     }
     setSubmitting(true);
-    setMsg(null);
     try {
       const deadlineDaysParsed = deadlineDays.trim() === ""
         ? undefined
         : parseInt(deadlineDays.trim(), 10);
       if (deadlineDaysParsed !== undefined && (isNaN(deadlineDaysParsed) || deadlineDaysParsed < 1 || deadlineDaysParsed > 30)) {
-        setMsg({ type: "err", text: "締め切りは1〜30の整数を入力してください。" });
+        toast.error("締め切りは1〜30の整数を入力してください。");
         return;
       }
 
@@ -456,16 +437,16 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
-        setMsg({ type: "err", text: data.error ?? "作成に失敗しました。" });
+        toast.error(data.error ?? "作成に失敗しました。");
         return;
       }
       setGenre("");
       setCapacity("4");
       setContent("");
       setDeadlineDays("");
-      setMsg({ type: "ok", text: "募集を作成しました。" });
+      toast.success("募集を作成しました。");
     } catch {
-      setMsg({ type: "err", text: "通信エラーが発生しました。" });
+      toast.error("通信エラーが発生しました。");
     } finally {
       setSubmitting(false);
     }
@@ -546,7 +527,6 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
                 className={`${input} w-24`}
               />
             </Field>
-            <FeedbackLine msg={msg} />
             <div>
               <Button type="submit" size="sm" disabled={submitting || !canSubmit}>
                 {submitting ? "作成中..." : "募集を作成"}

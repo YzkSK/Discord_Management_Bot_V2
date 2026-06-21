@@ -15,12 +15,11 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   const [settings, setSettings] = useState<SettingsResponse | null>(null);
   const [uiLang, setUiLang] = useState<GuildLanguage>("en");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loc = getDashboardLocale(uiLang);
   const isOwner = settings?.accessRole === "owner";
-  const access = useAccessGrants(settings?.guildId ?? null, isOwner, loc, setError, setMessage);
+  const access = useAccessGrants(settings?.guildId ?? null, isOwner, loc);
 
   useEffect(() => {
     setUiLang(detectBrowserLanguage());
@@ -32,7 +31,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
         setSettings(data);
         access.initManagementRoles(data.dashboardManagementRoleIds);
       })
-      .catch((e: unknown) => setError(toSettingsError(e)))
+      .catch((e: unknown) => setLoadError(toSettingsError(e)))
       .finally(() => setLoading(false));
   }, [guildId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -41,23 +40,13 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
   if (!settings) {
     return (
       <div className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-        {error ?? loc.failedToLoadSettings}
+        {loadError ?? loc.failedToLoadSettings}
       </div>
     );
   }
 
   return (
     <section className="max-w-3xl grid gap-4">
-      {error && (
-        <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
-          {error}
-        </div>
-      )}
-      {message && (
-        <div className="rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-400">
-          {message}
-        </div>
-      )}
       <AccessGrantsTab
         settings={settings}
         accessGrants={access.accessGrants}

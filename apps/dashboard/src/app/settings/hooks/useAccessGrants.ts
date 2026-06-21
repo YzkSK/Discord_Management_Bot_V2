@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   removeAccessGrant,
   toAccessGrantPayload,
@@ -17,9 +18,7 @@ function accessGrantKey(grant: { guildId: string; targetType: string; targetId: 
 export function useAccessGrants(
   guildId: string | null,
   isOwner: boolean,
-  loc: DashboardLoc,
-  setError: (msg: string | null) => void,
-  setMessage: (msg: string | null) => void
+  loc: DashboardLoc
 ) {
   const [accessGrants, setAccessGrants] = useState<DashboardAccessGrant[]>([]);
   const [grantTargetType, setGrantTargetType] = useState<"user" | "role">("user");
@@ -42,7 +41,7 @@ export function useAccessGrants(
     if (!guildId || !isOwner) return;
     fetchAccessGrants(guildId)
       .then(setAccessGrants)
-      .catch((e: unknown) => setError(toErrorMessage(e)));
+      .catch((e: unknown) => toast.error(toErrorMessage(e)));
   }, [guildId, isOwner]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function requestSaveManagementRoles() {
@@ -59,12 +58,12 @@ export function useAccessGrants(
   async function doSaveManagementRoles() {
     if (!guildId) return;
     setConfirmRoleRemoval(false);
-    setSavingRoles(true); setError(null); setMessage(null);
+    setSavingRoles(true);
     try {
       await updateManagementRoles(guildId, managementRoleIds);
       savedManagementRoleIdsRef.current = managementRoleIds;
-      setMessage(loc.accessRolesUpdated);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingRoles(false); }
+      toast.success(loc.accessRolesUpdated);
+    } catch (e) { toast.error(toErrorMessage(e)); } finally { setSavingRoles(false); }
   }
 
   async function saveAccessGrant() {
@@ -77,23 +76,23 @@ export function useAccessGrants(
     });
 
     if (!payload.targetId) {
-      setError(loc.accessGrantTargetRequired);
+      toast.error(loc.accessGrantTargetRequired);
       return;
     }
 
-    setSavingGrant(true); setError(null); setMessage(null);
+    setSavingGrant(true);
     try {
       const grant = await upsertDashboardAccessGrant(payload);
       setAccessGrants((current) => upsertAccessGrant(current, grant));
       setGrantTargetId("");
-      setMessage(loc.accessGrantSaved);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingGrant(false); }
+      toast.success(loc.accessGrantSaved);
+    } catch (e) { toast.error(toErrorMessage(e)); } finally { setSavingGrant(false); }
   }
 
   async function deleteAccessGrant(grant: DashboardAccessGrant) {
     if (!guildId) return;
     const key = accessGrantKey(grant);
-    setDeletingGrantKey(key); setError(null); setMessage(null);
+    setDeletingGrantKey(key);
     try {
       await deleteDashboardAccessGrant({
         guildId,
@@ -101,13 +100,12 @@ export function useAccessGrants(
         targetId: grant.targetId
       });
       setAccessGrants((current) => removeAccessGrant(current, grant));
-      setMessage(loc.accessGrantDeleted);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setDeletingGrantKey(null); }
+      toast.success(loc.accessGrantDeleted);
+    } catch (e) { toast.error(toErrorMessage(e)); } finally { setDeletingGrantKey(null); }
   }
 
   async function updateAccessGrantRole(grant: DashboardAccessGrant, role: GrantableAccessRole) {
     if (!guildId || grant.role === role) return;
-    setError(null); setMessage(null);
     try {
       const updatedGrant = await upsertDashboardAccessGrant({
         guildId,
@@ -116,8 +114,8 @@ export function useAccessGrants(
         role
       });
       setAccessGrants((current) => upsertAccessGrant(current, updatedGrant));
-      setMessage(loc.accessGrantUpdated);
-    } catch (e) { setError(toErrorMessage(e)); }
+      toast.success(loc.accessGrantUpdated);
+    } catch (e) { toast.error(toErrorMessage(e)); }
   }
 
   return {

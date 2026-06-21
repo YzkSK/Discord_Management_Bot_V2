@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Save, Settings } from "lucide-react";
 import { fetchSettings, updateTempVcSettings, toSettingsError, type SettingsResponse } from "../../lib/settings-api";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
@@ -11,7 +12,6 @@ function VoiceSettingsCard({ guildId }: { guildId: string }) {
   const [settingsData, setSettingsData] = useState<SettingsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [createChannelId, setCreateChannelId] = useState("");
   const [categoryId, setCategoryId] = useState("");
 
@@ -25,7 +25,7 @@ function VoiceSettingsCard({ guildId }: { guildId: string }) {
         setCreateChannelId(s.features.tempVc.createChannelId ?? "");
         setCategoryId(s.features.tempVc.categoryId ?? "");
       })
-      .catch((e: unknown) => setError(toSettingsError(e)))
+      .catch((e: unknown) => toast.error(toSettingsError(e)))
       .finally(() => setLoading(false));
   }, [guildId]);
 
@@ -33,11 +33,11 @@ function VoiceSettingsCard({ guildId }: { guildId: string }) {
 
   async function save() {
     setSaving(true);
-    setError(null);
     try {
       await updateTempVcSettings(guildId, createChannelId, categoryId);
+      toast.success("Voice設定を保存しました。");
     } catch (e) {
-      setError(toSettingsError(e));
+      toast.error(toSettingsError(e));
     } finally {
       setSaving(false);
     }
@@ -57,7 +57,6 @@ function VoiceSettingsCard({ guildId }: { guildId: string }) {
           {saving ? loc.saving : "保存"}
         </button>
       </div>
-      {error && <p className="mb-2 text-xs text-red-400">{error}</p>}
       <VoiceSettingsTab
         tempVcCreateChannelId={createChannelId}
         tempVcCategoryId={categoryId}
