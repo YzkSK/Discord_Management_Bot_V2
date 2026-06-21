@@ -16,6 +16,7 @@ import {
   Headphones,
   Mic2,
   ScrollText,
+  Settings,
   Users,
   Volume2,
 } from "lucide-react";
@@ -29,7 +30,6 @@ import {
   getEventColor,
 } from "../lib/event-display";
 import { formatEventDescriptionJSX } from "../lib/format-event-jsx";
-import { PanelDashboard } from "./panel/panel-dashboard";
 import { LoadingSpinner } from "../components/loading-spinner";
 
 interface VoiceSession {
@@ -96,6 +96,7 @@ const quickLinks = [
   { label: "Voice", href: "/voice", icon: Headphones, desc: "通話状況" },
   { label: "Recruitment", href: "/recruitment", icon: ClipboardList, desc: "募集管理" },
   { label: "Logs", href: "/logs", icon: ScrollText, desc: "イベントログ" },
+  { label: "Settings", href: "/settings", icon: Settings, desc: "サーバー設定" },
 ];
 
 export function OverviewClient({ guildId, role }: OverviewClientProps) {
@@ -185,15 +186,12 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
 
   if (isViewer) {
     return (
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
           {[kpiDefs[0], kpiDefs[2]].map((kpi) => {
             const Icon = kpi.icon;
             return (
-              <div
-                key={kpi.label}
-                className="rounded-lg bg-[#383a40] p-4"
-              >
+              <div key={kpi.label} className="rounded-lg bg-[#383a40] p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-medium text-[#80848e]">{kpi.label}</p>
                   <span className={`flex h-7 w-7 items-center justify-center rounded-md ${kpi.bg}`}>
@@ -205,7 +203,24 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
             );
           })}
         </div>
-        <PanelDashboard guildId={guildId} />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {quickLinks.map((link) => {
+            const Icon = link.icon;
+            return (
+              <a
+                key={link.href}
+                href={link.href}
+                className="group flex items-center gap-3 rounded-lg bg-[#383a40] px-4 py-3 hover:bg-[#404249] transition-colors"
+              >
+                <Icon className="h-4 w-4 shrink-0 text-[#5865f2]" />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-[#dbdee1] group-hover:text-[#f2f3f5]">{link.label}</p>
+                  <p className="text-[10px] text-[#80848e]">{link.desc}</p>
+                </div>
+              </a>
+            );
+          })}
+        </div>
       </div>
     );
   }
@@ -310,29 +325,24 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
           )}
 
           {/* Quick links */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {quickLinks.map((link) => {
               const Icon = link.icon;
               return (
                 <a
                   key={link.href}
                   href={link.href}
-                  className="group flex flex-col gap-2 rounded-lg bg-[#383a40] p-4 hover:bg-[#404249] transition-colors"
+                  className="group flex items-center gap-3 rounded-lg bg-[#383a40] px-4 py-3 hover:bg-[#404249] transition-colors"
                 >
-                  <Icon className="h-5 w-5 text-[#5865f2]" />
-                  <div>
-                    <p className="text-xs font-semibold text-[#dbdee1] group-hover:text-[#f2f3f5]">
-                      {link.label}
-                    </p>
+                  <Icon className="h-4 w-4 shrink-0 text-[#5865f2]" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-[#dbdee1] group-hover:text-[#f2f3f5]">{link.label}</p>
                     <p className="text-[10px] text-[#80848e]">{link.desc}</p>
                   </div>
-                  <ArrowRight className="h-3 w-3 text-[#4e5058] group-hover:text-[#5865f2] transition-colors self-end" />
                 </a>
               );
             })}
           </div>
-
-          <PanelDashboard guildId={guildId} />
         </div>
 
         {/* Right column — activity feed */}
