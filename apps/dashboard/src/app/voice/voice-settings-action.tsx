@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Save, Settings } from "lucide-react";
 import { fetchSettings, updateTempVcSettings, toSettingsError, type SettingsResponse } from "../../lib/settings-api";
+import { Skeleton } from "../../components/ui/skeleton";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import { VoiceSettingsTab } from "../settings/components/VoiceSettingsTab";
 import { SettingsModal } from "../../components/settings-modal";
@@ -29,7 +30,15 @@ function VoiceSettingsCard({ guildId }: { guildId: string }) {
       .finally(() => setLoading(false));
   }, [guildId]);
 
-  if (loading || !settingsData) return null;
+  if (loading || !settingsData) {
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-9 w-full" />
+        <Skeleton className="h-9 w-full" />
+      </div>
+    );
+  }
 
   async function save() {
     setSaving(true);

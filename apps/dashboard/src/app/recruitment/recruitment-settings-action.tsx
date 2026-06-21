@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Save, Settings } from "lucide-react";
 import { fetchSettings, updateRecruitmentSettings, toSettingsError, type SettingsResponse } from "../../lib/settings-api";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
+import { Skeleton } from "../../components/ui/skeleton";
 import { RecruitmentSettingsTab } from "../settings/components/RecruitmentSettingsTab";
 import { SettingsModal } from "../../components/settings-modal";
 
@@ -27,7 +28,14 @@ function RecruitmentSettingsCard({ guildId }: { guildId: string }) {
       .finally(() => setLoading(false));
   }, [guildId]);
 
-  if (loading || !settingsData) return null;
+  if (loading || !settingsData) {
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-9 w-full" />
+      </div>
+    );
+  }
 
   async function save() {
     setSaving(true);

@@ -6,6 +6,7 @@ import { Save, Settings } from "lucide-react";
 import { fetchSettings, updateTtsSettings, toSettingsError } from "../../lib/settings-api";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import { SettingsModal } from "../../components/settings-modal";
+import { Skeleton } from "../../components/ui/skeleton";
 
 function TtsChannelSettingsCard({ guildId }: { guildId: string }) {
   const [loading, setLoading] = useState(true);
@@ -22,7 +23,14 @@ function TtsChannelSettingsCard({ guildId }: { guildId: string }) {
       .finally(() => setLoading(false));
   }, [guildId]);
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-9 w-full" />
+      </div>
+    );
+  }
 
   async function save() {
     setSaving(true);

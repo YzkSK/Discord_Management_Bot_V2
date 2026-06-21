@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Save, Settings } from "lucide-react";
 import { fetchSettings, updateSettings, toSettingsError } from "../../lib/settings-api";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
+import { Skeleton } from "../../components/ui/skeleton";
 import { LogsSettingsTab } from "../settings/components/LogsSettingsTab";
 import { SettingsModal } from "../../components/settings-modal";
 
@@ -40,7 +41,15 @@ function LogSettingsCard({ guildId }: { guildId: string }) {
       .finally(() => setLoading(false));
   }, [guildId]);
 
-  if (!guildId || loading) return null;
+  if (!guildId || loading) {
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-9 w-full" />
+        <Skeleton className="h-9 w-full" />
+      </div>
+    );
+  }
 
   async function save() {
     if (!guildId) return;
