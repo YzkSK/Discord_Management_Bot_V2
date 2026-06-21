@@ -65,7 +65,9 @@ export function installGuildGatewayLogHandlers(
       createGuildEvent(eventName, newMember.guild, {
         before,
         after,
-        changes: diffRecord(before, after)
+        changes: diffRecord(before, after),
+        targetId: newMember.id,
+        targetName: newMember.displayName,
       }, newMember.id),
       newMember.guild,
       AuditLogEvent.MemberUpdate,
@@ -78,7 +80,9 @@ export function installGuildGatewayLogHandlers(
       write,
       createGuildEvent("member.ban", ban.guild, {
         user: userPayload(ban.user),
-        reason: ban.reason
+        reason: ban.reason,
+        targetId: ban.user.id,
+        targetName: ban.user.globalName ?? ban.user.username,
       }, ban.user.id),
       ban.guild,
       AuditLogEvent.MemberBanAdd,
@@ -91,7 +95,9 @@ export function installGuildGatewayLogHandlers(
       write,
       createGuildEvent("member.unban", ban.guild, {
         user: userPayload(ban.user),
-        reason: ban.reason
+        reason: ban.reason,
+        targetId: ban.user.id,
+        targetName: ban.user.globalName ?? ban.user.username,
       }, ban.user.id),
       ban.guild,
       AuditLogEvent.MemberBanRemove,
@@ -111,7 +117,9 @@ async function writeMemberRemoveEvent(
   );
   const eventName = auditLog.status === "matched" ? "member.kick" : "member.leave";
   const event = createGuildEvent(eventName, member.guild, {
-    member: memberPayload(member)
+    member: memberPayload(member),
+    targetId: member.id,
+    targetName: (member as GuildMember).displayName ?? null,
   }, auditLog.actorId ?? member.id);
 
   write(applyAuditLog(event, auditLog));

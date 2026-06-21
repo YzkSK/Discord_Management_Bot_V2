@@ -166,11 +166,14 @@ const eventDescriptions: Record<string, (v: EventVars) => string> = {
   // メンバー
   "member.join": (v) => `👋 ${actor(v)} がサーバーに参加`,
   "member.leave": (v) => `👋 ${actor(v)} がサーバーを退出`,
-  "member.update": (v) => `✏️ ${actor(v, "メンバー")} の情報を更新`,
-  "member.kick": (v) => `🦶 ${actor(v)} をキック`,
-  "member.ban": (v) => `🔨 ${actor(v)} をBAN`,
-  "member.unban": (v) => `🔓 ${actor(v)} のBANを解除`,
-  "member.timeout": (v) => `⏱️ ${actor(v)} にタイムアウトを適用`,
+  "member.update": (v) =>
+    v.targetId && v.actorId !== v.targetId
+      ? `✏️ ${actor(v)} が ${target(v)} の情報を更新`
+      : `✏️ ${actor(v, "メンバー")} が情報を更新`,
+  "member.kick": (v) => `🦶 ${actor(v)} が ${target(v)} をキック`,
+  "member.ban": (v) => `🔨 ${actor(v)} が ${target(v)} をBAN`,
+  "member.unban": (v) => `🔓 ${actor(v)} が ${target(v)} のBANを解除`,
+  "member.timeout": (v) => `⏱️ ${actor(v)} が ${target(v)} にタイムアウトを適用`,
   // サーバー構成
   "guild.update": (_v) => `⚙️ サーバー設定を更新`,
   "role.create": (v) => `🏷️ ロール作成${v.name ? `: ${v.name}` : ""}`,
@@ -297,6 +300,15 @@ export function isRecord(v: unknown): v is Record<string, unknown> {
 
 export function extractActorName(payload: unknown): string | null {
   if (!isObj(payload)) return null;
+  // When targetId is explicitly set, payload.member / payload.user / payload.after
+  // represents the TARGET (affected person), not the actor. Skip them to avoid
+  // showing the wrong name for the executor.
+  if (typeof payload["targetId"] === "string") {
+    const author = payload["author"];
+    if (isObj(author) && typeof author["username"] === "string")
+      return (typeof author["globalName"] === "string" ? author["globalName"] : null) ?? author["username"];
+    return null;
+  }
   const member = payload["member"];
   if (isObj(member) && typeof member["displayName"] === "string") return member["displayName"];
   const after = payload["after"];
@@ -357,12 +369,27 @@ export function extractAuditAction(payload: unknown): number | null {
 
 export function extractTargetId(payload: unknown): string | null {
   if (!isObj(payload)) return null;
-  return typeof payload["targetId"] === "string" ? payload["targetId"] : null;
+  if (typeof payload["targetId"] === "string") return payload["targetId"];
+  // Fallback for older events that store the affected person in member/user
+  const member = payload["member"];
+  if (isObj(member) && typeof member["id"] === "string") return member["id"];
+  const user = payload["user"];
+  if (isObj(user) && typeof user["id"] === "string") return user["id"];
+  return null;
 }
 
 export function extractTargetName(payload: unknown): string | null {
   if (!isObj(payload)) return null;
-  return typeof payload["targetName"] === "string" ? payload["targetName"] : null;
+  if (typeof payload["targetName"] === "string") return payload["targetName"];
+  // Fallback for older events that store the affected person in member/user
+  const member = payload["member"];
+  if (isObj(member) && typeof member["displayName"] === "string") return member["displayName"];
+  const user = payload["user"];
+  if (isObj(user)) {
+    if (typeof user["globalName"] === "string") return user["globalName"];
+    if (typeof user["username"] === "string") return user["username"];
+  }
+  return null;
 }
 
 export function splitDescriptionOnActor(
