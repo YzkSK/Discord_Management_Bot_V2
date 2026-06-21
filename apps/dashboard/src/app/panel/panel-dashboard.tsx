@@ -411,9 +411,16 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
   }, [guildId]);
 
   const needsChannelPicker = !configChannelId;
+  const capacityNum = parseInt(capacity, 10);
+  const capacityInvalid = capacity !== "" && (isNaN(capacityNum) || capacityNum < 1 || capacityNum > 99);
+  const deadlineDaysNum = parseInt(deadlineDays, 10);
+  const deadlineDaysInvalid = deadlineDays.trim() !== "" && (isNaN(deadlineDaysNum) || deadlineDaysNum < 1 || deadlineDaysNum > 30);
+
   const canSubmit =
     genre.trim() &&
     content.trim() &&
+    !capacityInvalid &&
+    !deadlineDaysInvalid &&
     (!needsChannelPicker || selectedChannelId);
 
   async function handleSubmit(e: FormEvent) {
@@ -502,7 +509,13 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
                 )}
               </Field>
             )}
-            <Field labelText="タイトル（最大80文字）">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <p className={label}>タイトル</p>
+                <span className={`text-xs tabular-nums ${genre.length >= 80 ? "text-red-400" : "text-zinc-500"}`}>
+                  {genre.length}/80
+                </span>
+              </div>
               <input
                 type="text"
                 maxLength={80}
@@ -511,18 +524,26 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
                 placeholder="例: 原神　螺旋12層"
                 className={input}
               />
-            </Field>
-            <Field labelText="定員（1〜99）">
+            </div>
+            <div className="flex flex-col gap-1">
+              <p className={label}>定員（1〜99）</p>
               <input
                 type="number"
                 min={1}
                 max={99}
                 value={capacity}
                 onChange={(e) => setCapacity(e.target.value)}
-                className={`${input} w-24`}
+                className={`${input} w-24 ${capacityInvalid ? "border-red-500" : ""}`}
               />
-            </Field>
-            <Field labelText="内容（最大1000文字）">
+              {capacityInvalid && <p className="text-xs text-red-400">1〜99の整数を入力してください</p>}
+            </div>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <p className={label}>内容</p>
+                <span className={`text-xs tabular-nums ${content.length >= 1000 ? "text-red-400" : "text-zinc-500"}`}>
+                  {content.length}/1000
+                </span>
+              </div>
               <textarea
                 maxLength={1000}
                 rows={3}
@@ -531,8 +552,9 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
                 placeholder="募集の説明を入力..."
                 className={input}
               />
-            </Field>
-            <Field labelText="締め切り（日数・省略で7日）">
+            </div>
+            <div className="flex flex-col gap-1">
+              <p className={label}>締め切り（日数・省略で7日）</p>
               <input
                 type="number"
                 min={1}
@@ -540,11 +562,17 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
                 value={deadlineDays}
                 onChange={(e) => setDeadlineDays(e.target.value)}
                 placeholder="1〜30"
-                className={`${input} w-24`}
+                className={`${input} w-24 ${deadlineDaysInvalid ? "border-red-500" : ""}`}
               />
-            </Field>
+              {deadlineDaysInvalid && <p className="text-xs text-red-400">1〜30の整数を入力してください</p>}
+            </div>
             <div>
-              <Button type="submit" size="sm" disabled={submitting || !canSubmit}>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={submitting || !canSubmit}
+                title={!canSubmit ? "全項目を正しく入力してください" : undefined}
+              >
                 {submitting ? "作成中..." : "募集を作成"}
               </Button>
             </div>
