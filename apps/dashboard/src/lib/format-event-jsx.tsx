@@ -3,6 +3,7 @@ import {
   formatEventDescription,
   getActorText,
   getChannelText,
+  getTargetText,
   splitDescriptionOnActor,
   type EventVars,
 } from "./event-display";
@@ -16,32 +17,53 @@ export function formatEventDescriptionJSX(
 ): ReactNode {
   const description = formatEventDescription(eventName, vars);
   const actorText = getActorText(vars);
+  const targetText = getTargetText(vars);
   const channelText = getChannelText(vars);
 
   let before: string = "";
   let actorNode: ReactNode = null;
-  let middle: string = description;
+  let afterActor: string = description;
+  let beforeTarget: string = "";
+  let targetNode: ReactNode = null;
+  let afterTarget: string = "";
   let channelNode: ReactNode = null;
-  let after: string = "";
+  let afterChannel: string = "";
 
   if (actorText && vars.actorId) {
-    const actorParts = splitDescriptionOnActor(description, actorText);
-    if (actorParts) {
-      before = actorParts.before;
+    const parts = splitDescriptionOnActor(description, actorText);
+    if (parts) {
+      before = parts.before;
       actorNode = (
         <UserMention
           userId={vars.actorId}
           actorName={vars.actorName ?? null}
         />
       );
-      middle = actorParts.after;
+      afterActor = parts.after;
     }
   }
 
+  if (targetText && vars.targetId) {
+    const parts = splitDescriptionOnActor(afterActor, targetText);
+    if (parts) {
+      beforeTarget = parts.before;
+      targetNode = (
+        <UserMention
+          userId={vars.targetId}
+          actorName={vars.targetName ?? null}
+        />
+      );
+      afterTarget = parts.after;
+    } else {
+      afterTarget = afterActor;
+    }
+  } else {
+    afterTarget = afterActor;
+  }
+
   if (channelText && vars.channelId) {
-    const chParts = splitDescriptionOnActor(middle, channelText);
-    if (chParts) {
-      after = chParts.after;
+    const parts = splitDescriptionOnActor(afterTarget, channelText);
+    if (parts) {
       channelNode = (
         <ChannelMention
           channelId={vars.channelId}
@@ -49,19 +71,34 @@ export function formatEventDescriptionJSX(
           {...(guildId !== undefined ? { guildId } : {})}
         />
       );
-      middle = chParts.before;
+      afterChannel = parts.after;
+      afterTarget = parts.before;
+    } else {
+      afterChannel = afterTarget;
+      afterTarget = "";
     }
+  } else {
+    afterChannel = afterTarget;
+    afterTarget = "";
   }
 
-  if (!actorNode && !channelNode) return description;
+  if (!actorNode && !targetNode && !channelNode) return description;
 
   return (
     <>
       {before}
       {actorNode && <>{" "}{actorNode}{" "}</>}
-      {middle}
-      {channelNode && <>{" "}{channelNode}{" "}</>}
-      {after}
+      {beforeTarget}
+      {targetNode && <>{" "}{targetNode}{" "}</>}
+      {channelNode ? (
+        <>
+          {afterTarget}
+          {" "}{channelNode}{" "}
+          {afterChannel}
+        </>
+      ) : (
+        afterChannel
+      )}
     </>
   );
 }

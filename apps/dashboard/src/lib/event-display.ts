@@ -344,6 +344,12 @@ export function getChannelText(vars: EventVars): string | null {
   return null;
 }
 
+export function getTargetText(vars: EventVars): string | null {
+  if (vars.targetName) return `@${vars.targetName}`;
+  if (vars.targetId) return `@${vars.targetId.slice(0, 8)}…`;
+  return null;
+}
+
 export function extractAuditAction(payload: unknown): number | null {
   if (!isObj(payload)) return null;
   return typeof payload["action"] === "number" ? payload["action"] : null;
