@@ -78,7 +78,7 @@ export function GuildSelector() {
         <div className="flex flex-col gap-1.5">
           {filtered.map((guild) => (
             <button
-              className="flex items-center justify-between rounded-md border border-zinc-700 bg-zinc-900 px-4 py-3 text-left transition-colors hover:border-green-500/40 hover:bg-zinc-800"
+              className="flex min-h-[44px] items-center justify-between rounded-md border border-zinc-700 bg-zinc-900 px-4 py-3 text-left transition-colors hover:border-green-500/40 hover:bg-zinc-800"
               key={guild.id}
               onClick={() => selectGuild(guild)}
               type="button"

@@ -165,7 +165,7 @@ export function DashboardShell({
           <header className="sticky top-0 z-10 flex items-center justify-between border-b border-zinc-800 bg-zinc-950/90 px-4 py-4 backdrop-blur-sm md:px-6">
             <div className="flex items-center gap-3">
               <button
-                className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 lg:hidden"
+                className="rounded-md p-2.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 lg:hidden"
                 onClick={() => setMobileOpen(true)}
                 aria-label="Open menu"
               >
