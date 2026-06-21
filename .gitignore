@@ -37,6 +37,7 @@ yarn-error.log*
 
 # local brainstorming companion output
 .superpowers/
+docs/superpowers/
 
 # OS/editor
 .DS_Store

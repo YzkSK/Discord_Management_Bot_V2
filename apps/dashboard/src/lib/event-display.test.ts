@@ -8,6 +8,8 @@ import {
   getEventColor,
   getEventIcon,
   formatRelativeTime,
+  extractAuditAction,
+  extractTargetId,
 } from "./event-display.js";
 
 describe("formatEventDescription", () => {
@@ -130,6 +132,68 @@ describe("getActorText", () => {
 
   it("actorName が null で actorId がある場合は actorId ベースを返す", () => {
     assert.equal(getActorText({ actorId: "111222333", actorName: null }), "@11122233…");
+  });
+});
+
+describe("audit_log.entry descriptions", () => {
+  it("action 20 (MemberKick) → actor が target をキック", () => {
+    const result = formatEventDescription("audit_log.entry", {
+      actorId: "111",
+      actorName: "Admin",
+      targetId: "222",
+      action: 20,
+    });
+    assert.ok(result.includes("@Admin"), `expected actor, got: ${result}`);
+    assert.ok(result.includes("@222"), `expected target id, got: ${result}`);
+    assert.ok(result.includes("キック"), `expected キック, got: ${result}`);
+  });
+
+  it("action 22 (MemberBanAdd) → actor が target をBAN", () => {
+    const result = formatEventDescription("audit_log.entry", {
+      actorName: "Mod",
+      targetId: "333",
+      action: 22,
+    });
+    assert.ok(result.includes("@Mod"), `expected actor, got: ${result}`);
+    assert.ok(result.includes("BAN"), `expected BAN, got: ${result}`);
+  });
+
+  it("action 1 (GuildUpdate) → actor がサーバー設定を変更", () => {
+    const result = formatEventDescription("audit_log.entry", {
+      actorName: "Owner",
+      action: 1,
+    });
+    assert.ok(result.includes("サーバー設定"), `expected サーバー設定, got: ${result}`);
+  });
+
+  it("action なし → フォールバック説明", () => {
+    const result = formatEventDescription("audit_log.entry", { actorName: "Unknown" });
+    assert.ok(result.includes("監査ログ"), `expected fallback, got: ${result}`);
+  });
+
+  it("audit_log.entry のカラーは orange", () => {
+    assert.equal(getEventColor("audit_log.entry"), "orange");
+  });
+});
+
+describe("extractAuditAction", () => {
+  it("payload に action がある場合は数値を返す", () => {
+    assert.equal(extractAuditAction({ action: 20 }), 20);
+  });
+  it("payload に action がない場合は null", () => {
+    assert.equal(extractAuditAction({}), null);
+  });
+  it("非オブジェクトは null", () => {
+    assert.equal(extractAuditAction(null), null);
+  });
+});
+
+describe("extractTargetId", () => {
+  it("payload に targetId がある場合は返す", () => {
+    assert.equal(extractTargetId({ targetId: "123456" }), "123456");
+  });
+  it("ない場合は null", () => {
+    assert.equal(extractTargetId({}), null);
   });
 });
 
