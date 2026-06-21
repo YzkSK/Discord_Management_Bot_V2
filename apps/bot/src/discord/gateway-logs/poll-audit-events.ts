@@ -1,9 +1,41 @@
 import {
+  AuditLogEvent,
   Events,
   type Client,
   type PollAnswer
 } from "discord.js";
-import { createGuildEvent, userPayload, type WriteEventFn } from "./payloads.js";
+import { createGuildEvent, type WriteEventFn } from "./payloads.js";
+
+// Skip audit_log.entry for actions that already have dedicated gateway event handlers
+// (those handlers call writeWithAuditLog which already enriches the event with actor/reason)
+const GATEWAY_COVERED_ACTIONS = new Set([
+  AuditLogEvent.GuildUpdate,
+  AuditLogEvent.ChannelCreate,
+  AuditLogEvent.ChannelUpdate,
+  AuditLogEvent.ChannelDelete,
+  AuditLogEvent.ChannelOverwriteCreate,
+  AuditLogEvent.ChannelOverwriteUpdate,
+  AuditLogEvent.ChannelOverwriteDelete,
+  AuditLogEvent.MemberKick,
+  AuditLogEvent.MemberBanAdd,
+  AuditLogEvent.MemberBanRemove,
+  AuditLogEvent.MemberUpdate,
+  AuditLogEvent.MemberRoleUpdate,
+  AuditLogEvent.RoleCreate,
+  AuditLogEvent.RoleUpdate,
+  AuditLogEvent.RoleDelete,
+  AuditLogEvent.InviteCreate,
+  AuditLogEvent.InviteDelete,
+  AuditLogEvent.EmojiCreate,
+  AuditLogEvent.EmojiUpdate,
+  AuditLogEvent.EmojiDelete,
+  AuditLogEvent.StickerCreate,
+  AuditLogEvent.StickerUpdate,
+  AuditLogEvent.StickerDelete,
+  AuditLogEvent.ThreadCreate,
+  AuditLogEvent.ThreadUpdate,
+  AuditLogEvent.ThreadDelete,
+]);
 
 export function installPollAuditGatewayLogHandlers(client: Client, write: WriteEventFn) {
   client.on(Events.MessagePollVoteAdd, (answer, userId) => {
@@ -33,11 +65,20 @@ export function installPollAuditGatewayLogHandlers(client: Client, write: WriteE
   });
 
   client.on(Events.GuildAuditLogEntryCreate, (entry, guild) => {
+    if (GATEWAY_COVERED_ACTIONS.has(entry.action)) return;
+
+    const t = entry.target as Record<string, unknown> | null;
+    const targetName =
+      (typeof t?.["globalName"] === "string" ? t["globalName"] : null) ??
+      (typeof t?.["username"] === "string" ? t["username"] : null) ??
+      (typeof t?.["name"] === "string" ? t["name"] : null) ??
+      null;
     write(
       createGuildEvent("audit_log.entry", guild, {
         id: entry.id,
         action: entry.action,
         targetId: entry.targetId,
+        targetName,
         reason: entry.reason,
         changes: entry.changes
       }, entry.executorId)

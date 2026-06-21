@@ -1,11 +1,11 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 import { getDashboardSession } from "../../auth";
 import { getDashboardPageRole } from "../../dashboard-auth";
-import { Forbidden } from "../../components/forbidden";
 import { DashboardShell } from "../dashboard-shell";
 import { LogsExplorer } from "./logs-explorer";
+import { LogSettingsAction } from "./log-settings-action";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +22,11 @@ export default async function LogsPage() {
   if (!guildId) redirect("/guild");
 
   const role = await getDashboardPageRole(guildId);
-  const allowed = role === "admin" || role === "owner";
+  if (role !== "admin" && role !== "owner") notFound();
 
   return (
     <DashboardShell
+      actions={<LogSettingsAction guildId={guildId} />}
       currentPath="/logs"
       description="Event history and real-time notifications"
       guildId={guildId}
@@ -34,7 +35,7 @@ export default async function LogsPage() {
       session={session}
       title="Logs"
     >
-      {allowed ? <LogsExplorer /> : <Forbidden />}
+      <LogsExplorer />
     </DashboardShell>
   );
 }

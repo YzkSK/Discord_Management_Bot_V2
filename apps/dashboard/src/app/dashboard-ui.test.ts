@@ -39,7 +39,7 @@ describe("dashboard ui helpers", () => {
         ["/tts", "TTS"],
         ["/health", "Health"],
         ["/logs", "Logs"],
-        ["/settings", "Settings"]
+        ["/settings", "Access"]
       ]
     );
   });

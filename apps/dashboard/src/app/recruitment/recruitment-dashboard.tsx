@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
-
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import { formatRelativeTime } from "../../lib/event-display";
 import { useDeadlineCountdown } from "../../hooks/use-deadline-countdown";
@@ -13,6 +12,7 @@ import {
 } from "@discord-bot/shared";
 import { ErrorAlert } from "../../components/error-alert";
 import { useDashboardData } from "../../hooks/use-dashboard-data";
+import { LoadingSpinner } from "../../components/loading-spinner";
 
 type RecruitmentStatus = "open" | "full" | "closed";
 
@@ -209,13 +209,7 @@ export function RecruitmentDashboard({ guildId }: { guildId: string }) {
       .filter((d) => d.value > 0);
   }, [data, grouped]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-sm text-zinc-600">
-        読み込み中...
-      </div>
-    );
-  }
+  if (loading) return <LoadingSpinner />;
 
   if (!data) {
     return <ErrorAlert message={error ?? loc.recruitmentFailedToLoad} />;

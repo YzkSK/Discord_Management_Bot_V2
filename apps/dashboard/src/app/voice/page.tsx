@@ -1,10 +1,11 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 import { getDashboardSession } from "../../auth";
 import { getDashboardPageRole } from "../../dashboard-auth";
 import { DashboardShell } from "../dashboard-shell";
 import { VoiceDashboard } from "./voice-dashboard";
+import { VoiceSettingsAction } from "./voice-settings-action";
 
 export const dynamic = "force-dynamic";
 
@@ -21,9 +22,11 @@ export default async function VoicePage() {
   if (!guildId) redirect("/guild");
 
   const role = await getDashboardPageRole(guildId);
+  if (role !== "admin" && role !== "owner") notFound();
 
   return (
     <DashboardShell
+      actions={<VoiceSettingsAction guildId={guildId} />}
       currentPath="/voice"
       description="Current calls, Temp VC state, and setup shortcuts"
       guildId={guildId}

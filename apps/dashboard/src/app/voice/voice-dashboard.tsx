@@ -13,6 +13,7 @@ import {
 } from "recharts";
 
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
+import { LoadingSpinner } from "../../components/loading-spinner";
 
 const CLOCK_REFRESH_MS = 1_000;
 const DATA_REFRESH_MS = 5 * 60 * 1_000;
@@ -93,13 +94,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
     return bins;
   }, [data]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-sm text-zinc-600">
-        読み込み中...
-      </div>
-    );
-  }
+  if (loading) return <LoadingSpinner />;
 
   if (!data) {
     return <ErrorAlert message={error ?? loc.voiceFailedToLoad} />;

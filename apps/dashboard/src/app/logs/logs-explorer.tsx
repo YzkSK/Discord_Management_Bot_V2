@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { LoadingSpinner } from "../../components/loading-spinner";
 
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 
@@ -14,7 +15,10 @@ import {
 import {
   eventColorClasses,
   extractActorName,
+  extractAuditAction,
   extractChannelName,
+  extractTargetId,
+  extractTargetName,
   extractVoiceStateChanges,
   formatEventDescription,
   formatRelativeTime,
@@ -135,6 +139,9 @@ export function LogsExplorer() {
         actorName: extractActorName(log.payload),
         channelId: log.channelId,
         channelName: log.channelName ?? extractChannelName(log.payload),
+        action: extractAuditAction(log.payload),
+        targetId: extractTargetId(log.payload),
+        targetName: extractTargetName(log.payload),
         voiceStateChanges: extractVoiceStateChanges(log.payload),
       }).toLowerCase();
       if (!desc.includes(q) && !log.eventName.includes(q)) return false;
@@ -210,9 +217,7 @@ export function LogsExplorer() {
 
       <div className="rounded-lg border border-zinc-800 bg-zinc-900">
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-sm text-zinc-600">
-            読み込み中...
-          </div>
+          <LoadingSpinner />
         ) : filtered.length === 0 ? (
           <div className="flex items-center justify-center py-16 text-sm text-zinc-600">
             表示するイベントがありません
@@ -269,6 +274,9 @@ function LogEntry({
     actorName: extractActorName(log.payload),
     channelId: log.channelId,
     channelName: log.channelName ?? extractChannelName(log.payload),
+    action: extractAuditAction(log.payload),
+    targetId: extractTargetId(log.payload),
+    targetName: extractTargetName(log.payload),
     voiceStateChanges: extractVoiceStateChanges(log.payload),
     genre: extractGenre(log.payload),
   }, guildId);

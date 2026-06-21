@@ -18,7 +18,80 @@ export type EventVars = {
   count?: number | null;
   name?: string | null;
   genre?: string | null;
+  action?: number | null;
   voiceStateChanges?: Record<string, { before: unknown; after: unknown }> | null;
+};
+
+const auditLogDescriptions: Partial<Record<number, (v: EventVars) => string>> = {
+  // サーバー
+  1:   (_v) => "サーバー設定を変更",
+  // チャンネル
+  10:  (_v) => "チャンネルを作成",
+  11:  (_v) => "チャンネルを更新",
+  12:  (_v) => "チャンネルを削除",
+  13:  (_v) => "チャンネル権限を作成",
+  14:  (_v) => "チャンネル権限を更新",
+  15:  (_v) => "チャンネル権限を削除",
+  // メンバー
+  20:  (v) => `${target(v)} をキック`,
+  21:  (_v) => "非アクティブメンバーを一括削除",
+  22:  (v) => `${target(v)} をBAN`,
+  23:  (v) => `${target(v)} のBANを解除`,
+  24:  (v) => `${target(v)} のメンバー情報を更新`,
+  25:  (v) => `${target(v)} のロールを更新`,
+  26:  (v) => `${target(v)} をVCに移動`,
+  27:  (v) => `${target(v)} をVCから切断`,
+  28:  (v) => `${target(v)} (Bot) を追加`,
+  // ロール
+  30:  (_v) => "ロールを作成",
+  31:  (_v) => "ロールを更新",
+  32:  (_v) => "ロールを削除",
+  // 招待
+  40:  (_v) => "招待リンクを作成",
+  41:  (_v) => "招待リンクを更新",
+  42:  (_v) => "招待リンクを削除",
+  // Webhook
+  50:  (_v) => "Webhookを作成",
+  51:  (_v) => "Webhookを更新",
+  52:  (_v) => "Webhookを削除",
+  // 絵文字
+  60:  (_v) => "絵文字を追加",
+  61:  (_v) => "絵文字を更新",
+  62:  (_v) => "絵文字を削除",
+  // メッセージ
+  72:  (_v) => "メッセージを削除",
+  73:  (_v) => "メッセージを一括削除",
+  74:  (_v) => "メッセージをピン留め",
+  75:  (_v) => "メッセージのピン留めを解除",
+  // 連携
+  80:  (_v) => "連携を追加",
+  81:  (_v) => "連携を更新",
+  82:  (_v) => "連携を削除",
+  // ステージ
+  83:  (_v) => "ステージを作成",
+  84:  (_v) => "ステージを更新",
+  85:  (_v) => "ステージを削除",
+  // スタンプ
+  90:  (_v) => "スタンプを追加",
+  91:  (_v) => "スタンプを更新",
+  92:  (_v) => "スタンプを削除",
+  // スケジュールイベント
+  100: (_v) => "スケジュールイベントを作成",
+  101: (_v) => "スケジュールイベントを更新",
+  102: (_v) => "スケジュールイベントを削除",
+  // スレッド
+  110: (_v) => "スレッドを作成",
+  111: (_v) => "スレッドを更新",
+  112: (_v) => "スレッドを削除",
+  // その他
+  121: (_v) => "コマンド権限を更新",
+  // 自動モデレーション
+  140: (_v) => "自動モデレーションルールを作成",
+  141: (_v) => "自動モデレーションルールを更新",
+  142: (_v) => "自動モデレーションルールを削除",
+  143: (_v) => "自動モデレーション: メッセージをブロック",
+  144: (_v) => "自動モデレーション: チャンネルにフラグ",
+  145: (v) => `${target(v)} のコミュニケーションを無効化`,
 };
 
 const voiceStateChangeLabels: Record<string, [string, string]> = {
@@ -93,11 +166,14 @@ const eventDescriptions: Record<string, (v: EventVars) => string> = {
   // メンバー
   "member.join": (v) => `👋 ${actor(v)} がサーバーに参加`,
   "member.leave": (v) => `👋 ${actor(v)} がサーバーを退出`,
-  "member.update": (v) => `✏️ ${actor(v, "メンバー")} の情報を更新`,
-  "member.kick": (v) => `🦶 ${actor(v)} をキック`,
-  "member.ban": (v) => `🔨 ${actor(v)} をBAN`,
-  "member.unban": (v) => `🔓 ${actor(v)} のBANを解除`,
-  "member.timeout": (v) => `⏱️ ${actor(v)} にタイムアウトを適用`,
+  "member.update": (v) =>
+    v.targetId && v.actorId !== v.targetId
+      ? `✏️ ${actor(v)} が ${target(v)} の情報を更新`
+      : `✏️ ${actor(v, "メンバー")} が情報を更新`,
+  "member.kick": (v) => `🦶 ${actor(v)} が ${target(v)} をキック`,
+  "member.ban": (v) => `🔨 ${actor(v)} が ${target(v)} をBAN`,
+  "member.unban": (v) => `🔓 ${actor(v)} が ${target(v)} のBANを解除`,
+  "member.timeout": (v) => `⏱️ ${actor(v)} が ${target(v)} にタイムアウトを適用`,
   // サーバー構成
   "guild.update": (_v) => `⚙️ サーバー設定を更新`,
   "role.create": (v) => `🏷️ ロール作成${v.name ? `: ${v.name}` : ""}`,
@@ -139,6 +215,13 @@ const eventDescriptions: Record<string, (v: EventVars) => string> = {
   "system.backup.failed": (_v) => `⚠️ バックアップ失敗`,
   "system.backup.completed": (_v) => `✅ バックアップ完了`,
   "system.rate_limit": (_v) => `⚠️ レート制限に到達`,
+  // 監査ログ
+  "audit_log.entry": (v) => {
+    const a = actor(v, "不明");
+    const descFn = v.action != null ? auditLogDescriptions[v.action] : null;
+    const desc = descFn ? descFn(v) : v.action != null ? `監査ログを記録 (${v.action})` : "監査ログエントリを記録";
+    return `📋 ${a} が${desc}`;
+  },
   // ダッシュボード
   "dashboard.login": (v) => `🔑 ${actor(v, "ユーザー")} がログイン`,
   "dashboard.logout": (v) => `🔑 ${actor(v, "ユーザー")} がログアウト`,
@@ -163,6 +246,7 @@ const eventColorPrefixes: Array<[string, EventColorKey]> = [
   ["emoji.", "orange"],
   ["sticker.", "orange"],
   ["webhook.", "orange"],
+  ["audit_log.", "orange"],
   ["dashboard.", "gray"],
   ["config.", "gray"],
 ];
@@ -216,6 +300,15 @@ export function isRecord(v: unknown): v is Record<string, unknown> {
 
 export function extractActorName(payload: unknown): string | null {
   if (!isObj(payload)) return null;
+  // When targetId is explicitly set, payload.member / payload.user / payload.after
+  // represents the TARGET (affected person), not the actor. Skip them to avoid
+  // showing the wrong name for the executor.
+  if (typeof payload["targetId"] === "string") {
+    const author = payload["author"];
+    if (isObj(author) && typeof author["username"] === "string")
+      return (typeof author["globalName"] === "string" ? author["globalName"] : null) ?? author["username"];
+    return null;
+  }
   const member = payload["member"];
   if (isObj(member) && typeof member["displayName"] === "string") return member["displayName"];
   const after = payload["after"];
@@ -260,6 +353,42 @@ export function getActorText(vars: EventVars): string | null {
 export function getChannelText(vars: EventVars): string | null {
   if (vars.channelName) return `#${vars.channelName}`;
   if (vars.channelId) return `#${vars.channelId.slice(0, 8)}…`;
+  return null;
+}
+
+export function getTargetText(vars: EventVars): string | null {
+  if (vars.targetName) return `@${vars.targetName}`;
+  if (vars.targetId) return `@${vars.targetId.slice(0, 8)}…`;
+  return null;
+}
+
+export function extractAuditAction(payload: unknown): number | null {
+  if (!isObj(payload)) return null;
+  return typeof payload["action"] === "number" ? payload["action"] : null;
+}
+
+export function extractTargetId(payload: unknown): string | null {
+  if (!isObj(payload)) return null;
+  if (typeof payload["targetId"] === "string") return payload["targetId"];
+  // Fallback for older events that store the affected person in member/user
+  const member = payload["member"];
+  if (isObj(member) && typeof member["id"] === "string") return member["id"];
+  const user = payload["user"];
+  if (isObj(user) && typeof user["id"] === "string") return user["id"];
+  return null;
+}
+
+export function extractTargetName(payload: unknown): string | null {
+  if (!isObj(payload)) return null;
+  if (typeof payload["targetName"] === "string") return payload["targetName"];
+  // Fallback for older events that store the affected person in member/user
+  const member = payload["member"];
+  if (isObj(member) && typeof member["displayName"] === "string") return member["displayName"];
+  const user = payload["user"];
+  if (isObj(user)) {
+    if (typeof user["globalName"] === "string") return user["globalName"];
+    if (typeof user["username"] === "string") return user["username"];
+  }
   return null;
 }
 

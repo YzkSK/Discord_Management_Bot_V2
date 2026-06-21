@@ -15,6 +15,7 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import { ErrorAlert } from "../../components/error-alert";
+import { LoadingSpinner } from "../../components/loading-spinner";
 import { useDashboardData } from "../../hooks/use-dashboard-data";
 import { DictionaryTable, type TtsDictionaryEntry } from "./components/DictionaryTable";
 import { UserSpeakerTable, type TtsUserSpeaker } from "./components/UserSpeakerTable";
@@ -54,9 +55,7 @@ export function TtsDashboard({ guildId }: { guildId: string }) {
     setUiLang(detectBrowserLanguage());
   }, []);
 
-  if (loading) {
-    return <p className="text-sm text-zinc-500">{loc.loading}...</p>;
-  }
+  if (loading) return <LoadingSpinner />;
 
   if (!data) {
     return <ErrorAlert message={error ?? loc.failedToLoadSettings} />;
