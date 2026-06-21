@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import { ConfirmDialog } from "../../../components/ui/confirm-dialog";
 import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
 import {
@@ -27,6 +29,7 @@ interface AccessGrantsTabProps {
   savingGrant: boolean;
   savingRoles: boolean;
   deletingGrantKey: string | null;
+  confirmRoleRemoval: boolean;
   loc: DashboardLoc;
   onGrantTargetTypeChange: (value: "user" | "role") => void;
   onGrantTargetIdChange: (value: string) => void;
@@ -36,6 +39,8 @@ interface AccessGrantsTabProps {
   onDeleteAccessGrant: (grant: DashboardAccessGrant) => void;
   onUpdateAccessGrantRole: (grant: DashboardAccessGrant, role: GrantableAccessRole) => void;
   onRequestSaveManagementRoles: () => void;
+  onConfirmRoleRemoval: () => void;
+  onCancelRoleRemoval: () => void;
 }
 
 export function AccessGrantsTab({
@@ -48,6 +53,7 @@ export function AccessGrantsTab({
   savingGrant,
   savingRoles,
   deletingGrantKey,
+  confirmRoleRemoval,
   loc,
   onGrantTargetTypeChange,
   onGrantTargetIdChange,
@@ -56,11 +62,15 @@ export function AccessGrantsTab({
   onSaveAccessGrant,
   onDeleteAccessGrant,
   onUpdateAccessGrantRole,
-  onRequestSaveManagementRoles
+  onRequestSaveManagementRoles,
+  onConfirmRoleRemoval,
+  onCancelRoleRemoval
 }: AccessGrantsTabProps) {
   const availableRoles = settings.availableRoles as DiscordRole[] | undefined;
+  const [pendingDeleteGrant, setPendingDeleteGrant] = useState<DashboardAccessGrant | null>(null);
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle>{loc.dashboardAccess}</CardTitle>
@@ -165,8 +175,9 @@ export function AccessGrantsTab({
                   </TableCell>
                   <TableCell>
                     <Button
+                      aria-label="アクセス権限を削除"
                       disabled={deletingGrantKey === accessGrantKey(grant)}
-                      onClick={() => onDeleteAccessGrant(grant)}
+                      onClick={() => setPendingDeleteGrant(grant)}
                       size="icon"
                       type="button"
                       variant="ghost"
@@ -209,5 +220,28 @@ export function AccessGrantsTab({
         )}
       </CardContent>
     </Card>
+
+    {pendingDeleteGrant && (
+      <ConfirmDialog
+        title="アクセス権限を削除しますか？"
+        description={`${formatGrantTarget(pendingDeleteGrant, availableRoles)} の権限を削除します。`}
+        onConfirm={() => {
+          onDeleteAccessGrant(pendingDeleteGrant);
+          setPendingDeleteGrant(null);
+        }}
+        onCancel={() => setPendingDeleteGrant(null)}
+      />
+    )}
+
+    {confirmRoleRemoval && (
+      <ConfirmDialog
+        title="管理ロールを削除しますか？"
+        description="既存の管理ロールを外すと、そのロールを持つユーザーがダッシュボードにアクセスできなくなります。"
+        confirmLabel="保存"
+        onConfirm={onConfirmRoleRemoval}
+        onCancel={onCancelRoleRemoval}
+      />
+    )}
+    </>
   );
 }

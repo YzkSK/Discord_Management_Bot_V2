@@ -6,6 +6,7 @@ import { BookOpen, Mic2, Users } from "lucide-react";
 
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { ConfirmDialog } from "../../components/ui/confirm-dialog";
 
 interface VoicevoxSpeaker {
   id: number;
@@ -221,6 +222,7 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
   const [fromText, setFromText] = useState("");
   const [toText, setToText] = useState("");
   const [saving, setSaving] = useState(false);
+  const [pendingDeleteFrom, setPendingDeleteFrom] = useState<string | null>(null);
 
   const loadEntries = useCallback(() => {
     setLoading(true);
@@ -275,6 +277,7 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
   }
 
   return (
+    <>
     <Card className="border-zinc-800 bg-zinc-900">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
@@ -344,7 +347,7 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
                     </td>
                     <td className="px-3 py-2 text-right">
                       <button
-                        onClick={() => void handleDelete(entry.fromText)}
+                        onClick={() => setPendingDeleteFrom(entry.fromText)}
                         className="text-xs text-zinc-500 hover:text-red-400"
                       >
                         削除
@@ -358,6 +361,19 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
         )}
       </CardContent>
     </Card>
+
+    {pendingDeleteFrom && (
+      <ConfirmDialog
+        title="辞書エントリを削除しますか？"
+        description={`「${pendingDeleteFrom}」の変換ルールを削除します。`}
+        onConfirm={() => {
+          void handleDelete(pendingDeleteFrom);
+          setPendingDeleteFrom(null);
+        }}
+        onCancel={() => setPendingDeleteFrom(null)}
+      />
+    )}
+    </>
   );
 }
 

@@ -57,6 +57,7 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
         savingGrant={access.savingGrant}
         savingRoles={access.savingRoles}
         deletingGrantKey={access.deletingGrantKey}
+        confirmRoleRemoval={access.confirmRoleRemoval}
         loc={loc}
         onGrantTargetTypeChange={access.setGrantTargetType}
         onGrantTargetIdChange={access.setGrantTargetId}
@@ -70,6 +71,8 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
         onDeleteAccessGrant={(grant) => void access.deleteAccessGrant(grant)}
         onUpdateAccessGrantRole={(grant, role) => void access.updateAccessGrantRole(grant, role)}
         onRequestSaveManagementRoles={access.requestSaveManagementRoles}
+        onConfirmRoleRemoval={() => void access.doSaveManagementRoles()}
+        onCancelRoleRemoval={() => access.setConfirmRoleRemoval(false)}
       />
     </section>
   );
