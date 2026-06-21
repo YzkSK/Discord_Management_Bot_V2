@@ -58,7 +58,7 @@ export function TtsDashboard({ guildId }: { guildId: string }) {
   if (loading) return <LoadingSpinner />;
 
   if (!data) {
-    return <ErrorAlert message={error ?? loc.failedToLoadSettings} />;
+    return <ErrorAlert message={error ?? loc.failedToLoadSettings} onRetry={refresh} />;
   }
 
   return (

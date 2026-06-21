@@ -97,7 +97,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
   if (loading) return <LoadingSpinner />;
 
   if (!data) {
-    return <ErrorAlert message={error ?? loc.voiceFailedToLoad} />;
+    return <ErrorAlert message={error ?? loc.voiceFailedToLoad} onRetry={reload} />;
   }
 
   return (

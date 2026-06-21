@@ -175,7 +175,7 @@ async function fetchRecruitmentData(guildId: string): Promise<RecruitmentRespons
 export function RecruitmentDashboard({ guildId }: { guildId: string }) {
   const [uiLang, setUiLang] = useState<GuildLanguage>("en");
   const loc = getDashboardLocale(uiLang);
-  const { data, loading, error } = useDashboardData(
+  const { data, loading, error, reload } = useDashboardData(
     () => fetchRecruitmentData(guildId),
     [guildId],
     "Recruitment request failed"
@@ -212,7 +212,7 @@ export function RecruitmentDashboard({ guildId }: { guildId: string }) {
   if (loading) return <LoadingSpinner />;
 
   if (!data) {
-    return <ErrorAlert message={error ?? loc.recruitmentFailedToLoad} />;
+    return <ErrorAlert message={error ?? loc.recruitmentFailedToLoad} onRetry={reload} />;
   }
 
   return (

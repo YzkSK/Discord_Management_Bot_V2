@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
 import { getDashboardLocale, detectBrowserLanguage } from "../../lib/locale";
 import { fetchSettings, toSettingsError } from "../../lib/settings-api";
 import { AccessGrantsTab } from "./components/AccessGrantsTab";
+import { ErrorAlert } from "../../components/error-alert";
 import { LoadingSpinner } from "../../components/loading-spinner";
 import { useAccessGrants } from "./hooks/useAccessGrants";
 import type { SettingsResponse } from "./components/shared";
@@ -25,7 +26,9 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
     setUiLang(detectBrowserLanguage());
   }, []);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
+    setLoadError(null);
     fetchSettings(guildId)
       .then((data) => {
         setSettings(data);
@@ -35,14 +38,14 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
       .finally(() => setLoading(false));
   }, [guildId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    load();
+  }, [load]);
+
   if (loading) return <LoadingSpinner />;
 
   if (!settings) {
-    return (
-      <div className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-        {loadError ?? loc.failedToLoadSettings}
-      </div>
-    );
+    return <ErrorAlert message={loadError ?? loc.failedToLoadSettings} onRetry={load} />;
   }
 
   return (
