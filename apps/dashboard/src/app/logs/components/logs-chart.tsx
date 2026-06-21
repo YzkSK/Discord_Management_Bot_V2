@@ -58,8 +58,8 @@ export function LogsChart({ logs }: { logs: LogItem[] }) {
   }, [logs]);
 
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-      <p className="mb-3 text-xs font-medium text-zinc-500">
+    <div className="rounded-xl border border-slate-800 bg-slate-900 shadow-sm p-4">
+      <p className="mb-3 text-xs font-medium text-slate-500">
         直近24時間のイベント頻度
       </p>
       <ResponsiveContainer width="100%" height={80}>

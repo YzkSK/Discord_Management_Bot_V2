@@ -123,13 +123,13 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
         ].map((kpi) => (
           <div
             key={kpi.label}
-            className="rounded-lg border border-zinc-800 bg-zinc-900 p-4"
+            className="rounded-lg rounded-xl border border-slate-800 bg-slate-900 shadow-sm p-4"
           >
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-zinc-500">{kpi.label}</p>
-              <span className="text-zinc-500">{kpi.icon}</span>
+              <p className="text-xs font-medium text-slate-500">{kpi.label}</p>
+              <span className="text-slate-500">{kpi.icon}</span>
             </div>
-            <p className="mt-2 text-2xl font-bold text-zinc-100">
+            <p className="mt-2 text-2xl font-bold text-slate-100">
               {kpi.value}
             </p>
           </div>
@@ -139,16 +139,16 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
       {/* アクティブセッション */}
       <section>
         <div className="mb-3 flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-zinc-400">
+          <h2 className="text-sm font-semibold text-slate-400">
             {loc.voiceActiveCalls}
           </h2>
           <span className="relative flex h-2 w-2" title="リアルタイム更新">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-[50%] bg-green-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-[50%] bg-green-500" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-[50%] bg-indigo-400 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-[50%] bg-indigo-500" />
           </span>
         </div>
         {data.activeSessions.length === 0 ? (
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 py-10 text-center text-sm text-zinc-600">
+          <div className="rounded-lg rounded-xl border border-slate-800 bg-slate-900 shadow-sm py-10 text-center text-sm text-slate-600">
             {loc.voiceNoActiveCalls}
           </div>
         ) : (
@@ -161,18 +161,18 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
               return (
                 <div
                   key={s.id}
-                  className="rounded-lg border border-zinc-800 bg-zinc-900 p-4"
+                  className="rounded-lg rounded-xl border border-slate-800 bg-slate-900 shadow-sm p-4"
                 >
                   <div className="flex items-center gap-2">
                     <span className="relative flex h-2 w-2">
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-[50%] bg-purple-400 opacity-75" />
                       <span className="relative inline-flex h-2 w-2 rounded-[50%] bg-purple-500" />
                     </span>
-                    <span className="truncate text-sm font-medium text-zinc-200">
+                    <span className="truncate text-sm font-medium text-slate-200">
                       {s.channelName ?? `#${s.channelId}`}
                     </span>
                   </div>
-                  <div className="mt-2 flex items-center gap-4 text-xs text-zinc-500">
+                  <div className="mt-2 flex items-center gap-4 text-xs text-slate-500">
                     <span className="flex items-center gap-1">
                       <Users className="h-3 w-3" />
                       {s.memberCount}人
@@ -195,19 +195,19 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
       {/* 一時 VC */}
       {data.tempVoiceChannels.length > 0 && (
         <section>
-          <h2 className="mb-3 text-sm font-semibold text-zinc-400">
+          <h2 className="mb-3 text-sm font-semibold text-slate-400">
             {loc.voiceTempVcChannels}
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {data.tempVoiceChannels.map((vc) => (
               <div
                 key={vc.channelId}
-                className="rounded-lg border border-zinc-800 bg-zinc-900 p-4"
+                className="rounded-lg rounded-xl border border-slate-800 bg-slate-900 shadow-sm p-4"
               >
-                <p className="truncate text-sm font-medium text-zinc-200">
+                <p className="truncate text-sm font-medium text-slate-200">
                   {vc.channelName ?? `#${vc.channelId}`}
                 </p>
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-zinc-500">
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
                   <Crown className="h-3 w-3 text-yellow-500" />
                   <span className="font-mono">{vc.ownerId}</span>
                 </div>
@@ -224,10 +224,10 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
 
       {/* ピーク時間チャート */}
       <section>
-        <h2 className="mb-3 text-sm font-semibold text-zinc-400">
+        <h2 className="mb-3 text-sm font-semibold text-slate-400">
           ピーク時間帯
         </h2>
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+        <div className="rounded-lg rounded-xl border border-slate-800 bg-slate-900 shadow-sm p-4">
           <ResponsiveContainer width="100%" height={120}>
             <BarChart data={peakData}>
               <XAxis

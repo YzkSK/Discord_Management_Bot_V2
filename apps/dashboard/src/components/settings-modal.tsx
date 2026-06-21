@@ -26,14 +26,14 @@ export function SettingsModal({
       <div
         role="dialog"
         aria-modal="true"
-        className="mx-4 w-full max-w-lg rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl"
+        className="mx-4 w-full max-w-lg rounded-xl border border-slate-800 bg-slate-900 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-end border-b border-zinc-800 px-4 py-2">
+        <div className="flex items-center justify-end border-b border-slate-800 px-4 py-2">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-zinc-400 hover:text-zinc-200"
+            className="rounded-md p-1 text-slate-400 hover:text-slate-200"
             aria-label="閉じる"
           >
             <X className="h-4 w-4" />

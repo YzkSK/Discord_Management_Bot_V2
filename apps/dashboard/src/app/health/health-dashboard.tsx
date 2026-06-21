@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import type { GuildLanguage, HealthStatus } from "@discord-bot/shared";
@@ -60,7 +60,7 @@ export function HealthDashboard() {
   }, [loadHealth]);
 
   if (loading) {
-    return <p className="text-sm text-zinc-500">{loc.loading}...</p>;
+    return <p className="text-sm text-slate-500">{loc.loading}...</p>;
   }
 
   if (!summary) {
@@ -87,7 +87,7 @@ export function HealthDashboard() {
           >
             {summary.status === "ok" ? loc.healthOk : loc.healthError}
           </Badge>
-          <span className="text-xs text-zinc-500">
+          <span className="text-xs text-slate-500">
             {loc.healthCheckedAt}: {formatDate(summary.lastCheckedAt)}
           </span>
         </div>
@@ -130,7 +130,7 @@ export function HealthDashboard() {
       </div>
 
       <div>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
           {loc.healthDependencies}
         </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -153,12 +153,12 @@ function HealthMetric({
   value: string;
 }) {
   return (
-    <div className="rounded-md border border-zinc-800 bg-zinc-900 p-4">
+    <div className="rounded-md border border-slate-800 bg-slate-900 p-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-medium text-zinc-500">{label}</p>
+        <p className="text-xs font-medium text-slate-500">{label}</p>
         {icon}
       </div>
-      <p className="mt-2 text-2xl font-semibold text-zinc-100">{value}</p>
+      <p className="mt-2 text-2xl font-semibold text-slate-100">{value}</p>
     </div>
   );
 }
@@ -182,37 +182,37 @@ function ServiceTile({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {getServiceIcon(service.name)}
-          <p className="text-sm font-medium text-zinc-200 capitalize">
+          <p className="text-sm font-medium text-slate-200 capitalize">
             {service.name}
           </p>
         </div>
         <div className="flex items-center gap-1.5">
           <span className={`h-2 w-2 rounded-[50%] ${dotClass}`} />
-          <span className="text-xs text-zinc-400">{statusLabel}</span>
+          <span className="text-xs text-slate-400">{statusLabel}</span>
         </div>
       </div>
       {service.latencyMs !== null && (
-        <p className="mt-2 font-mono text-xs text-zinc-500">
+        <p className="mt-2 font-mono text-xs text-slate-500">
           {service.latencyMs}ms
         </p>
       )}
       {service.message && (
-        <p className="mt-1 text-xs text-zinc-600 break-all">{service.message}</p>
+        <p className="mt-1 text-xs text-slate-600 break-all">{service.message}</p>
       )}
     </div>
   );
 }
 
 function getServiceIcon(name: string) {
-  if (name === "database") return <Database className="h-3.5 w-3.5 text-zinc-500" />;
-  if (name === "voicevox") return <Volume2 className="h-3.5 w-3.5 text-zinc-500" />;
-  if (name === "redis") return <Clock3 className="h-3.5 w-3.5 text-zinc-500" />;
-  return <Server className="h-3.5 w-3.5 text-zinc-500" />;
+  if (name === "database") return <Database className="h-3.5 w-3.5 text-slate-500" />;
+  if (name === "voicevox") return <Volume2 className="h-3.5 w-3.5 text-slate-500" />;
+  if (name === "redis") return <Clock3 className="h-3.5 w-3.5 text-slate-500" />;
+  return <Server className="h-3.5 w-3.5 text-slate-500" />;
 }
 
 async function fetchHealthReport(): Promise<HealthReportResponse> {
   const response = await fetch("/api/health", { cache: "no-store" });
-  // 503 はサービス起動中の部分故障を表す — JSON レスポンスは返るので続行
+  // 503 縺ｯ繧ｵ繝ｼ繝薙せ襍ｷ蜍穂ｸｭ縺ｮ驛ｨ蛻・腐髫懊ｒ陦ｨ縺・窶・JSON 繝ｬ繧ｹ繝昴Φ繧ｹ縺ｯ霑斐ｋ縺ｮ縺ｧ邯夊｡・
   if (!response.ok && response.status !== 503) {
     throw new Error(`Failed to load health state (${response.status})`);
   }

@@ -287,7 +287,7 @@ export const eventColorClasses: Record<EventColorKey, { dot: string; badge: stri
   red:    { dot: "bg-red-500",    badge: "bg-red-500/10 text-red-400",       border: "border-red-500/20" },
   orange: { dot: "bg-orange-500", badge: "bg-orange-500/10 text-orange-400", border: "border-orange-500/20" },
   sky:    { dot: "bg-sky-500",    badge: "bg-sky-500/10 text-sky-400",       border: "border-sky-500/20" },
-  gray:   { dot: "bg-zinc-500",   badge: "bg-zinc-500/10 text-zinc-400",     border: "border-zinc-500/20" },
+  gray:   { dot: "bg-slate-500",   badge: "bg-slate-500/10 text-slate-400",     border: "border-slate-500/20" },
 };
 
 export function isObj(v: unknown): v is Record<string, unknown> {

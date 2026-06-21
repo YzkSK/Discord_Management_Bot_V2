@@ -5,7 +5,7 @@
   color-scheme: dark;
 
   /* Chart color tokens — used in Recharts inline styles */
-  --chart-green: #22c55e;
+  --chart-indigo: #6366f1;
   --chart-purple: #8b5cf6;
   --chart-blue: #3b82f6;
   --chart-teal: #14b8a6;
@@ -13,21 +13,21 @@
   --chart-red: #ef4444;
   --chart-amber: #f59e0b;
   --chart-sky: #0ea5e9;
-  --chart-muted: #71717a;
+  --chart-muted: #64748b;
 
   /* Tooltip tokens */
-  --chart-tooltip-bg: #18181b;
-  --chart-tooltip-border: #3f3f46;
-  --chart-tooltip-label: #a1a1aa;
-  --chart-axis-tick: #71717a;
+  --chart-tooltip-bg: #0f172a;
+  --chart-tooltip-border: #334155;
+  --chart-tooltip-label: #94a3b8;
+  --chart-axis-tick: #64748b;
 }
 
 body {
   margin: 0;
-  background: #09090b;
-  color: #f4f4f5;
+  background: #020617;
+  color: #f8fafc;
   font-family:
-    Inter,
+    var(--font-inter, Inter),
     system-ui,
     sans-serif;
 }

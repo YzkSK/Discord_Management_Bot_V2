@@ -56,17 +56,17 @@ export function DictionaryTable({
           type="search"
           value={query}
           onChange={(e) => handleQuery(e.target.value)}
-          placeholder="変換前・変換後で検索..."
-          className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-500 focus:border-green-500 focus:outline-none"
+          placeholder="変換前�E変換後で検索..."
+          className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
         />
         {query && (
-          <span className="shrink-0 text-xs text-zinc-500">
+          <span className="shrink-0 text-xs text-slate-500">
             {filtered.length} / {entries.length} 件
           </span>
         )}
       </div>
 
-      <div className="overflow-hidden rounded-md border border-zinc-800">
+      <div className="overflow-hidden rounded-md border border-slate-800">
         <Table>
           <TableHeader>
             <TableRow>
@@ -80,7 +80,7 @@ export function DictionaryTable({
           <TableBody>
             {visible.length === 0 ? (
               <TableRow>
-                <TableCell className="py-8 text-center text-zinc-600" colSpan={5}>
+                <TableCell className="py-8 text-center text-slate-600" colSpan={5}>
                   {query ? "検索結果がありません" : `${loc.ttsDictionaryEntries}: 0`}
                 </TableCell>
               </TableRow>
@@ -109,8 +109,8 @@ export function DictionaryTable({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
-          <span className="text-xs text-zinc-500">
-            {safePage + 1} / {totalPages} ページ
+          <span className="text-xs text-slate-500">
+            {safePage + 1} / {totalPages} ペ�Eジ
           </span>
           <div className="flex gap-1">
             <Button
@@ -120,7 +120,7 @@ export function DictionaryTable({
               onClick={() => setPage(safePage - 1)}
               type="button"
             >
-              ‹ 前
+              ‹ 剁E
             </Button>
             <Button
               size="sm"

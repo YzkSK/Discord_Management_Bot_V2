@@ -32,14 +32,14 @@ export function VoiceSettingsTab({
           label={loc.tempVcSettings}
           loc={loc}
         />
-        <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+        <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
           {loc.tempVcCreateChannelId}
           <Input
             onChange={(e) => onTempVcCreateChannelIdChange(e.target.value)}
             value={tempVcCreateChannelId}
           />
         </label>
-        <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+        <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
           {loc.tempVcCategoryId}
           <ChannelSelect
             value={tempVcCategoryId}

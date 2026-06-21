@@ -72,12 +72,12 @@ function LogSettingsCard({ guildId }: { guildId: string }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-medium text-zinc-300">{loc.logsSettings}</p>
+        <p className="text-sm font-medium text-slate-300">{loc.logsSettings}</p>
         <button
           type="button"
           disabled={saving}
           onClick={() => void save()}
-          className="flex items-center gap-1.5 rounded-md bg-zinc-800 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 disabled:opacity-40"
+          className="flex items-center gap-1.5 rounded-md bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 disabled:opacity-40"
         >
           <Save className="h-3 w-3" />
           {saving ? loc.saving : "保存"}
@@ -108,7 +108,7 @@ export function LogSettingsAction({ guildId }: { guildId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 rounded-md border border-zinc-700 px-2.5 py-1.5 text-xs text-zinc-400 hover:border-zinc-600 hover:text-zinc-200"
+        className="flex items-center gap-1.5 rounded-md border border-slate-700 px-2.5 py-1.5 text-xs text-slate-400 hover:border-slate-600 hover:text-slate-200"
         aria-label="ログ設定"
       >
         <Settings className="h-3.5 w-3.5" />

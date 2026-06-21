@@ -28,9 +28,9 @@ interface DiscordChannel {
 }
 
 const input =
-  "w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-green-500 focus:outline-none";
+  "w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-600 focus:border-indigo-500 focus:outline-none";
 
-const label = "text-xs font-medium text-zinc-400";
+const label = "text-xs font-medium text-slate-400";
 
 function Field({ labelText, children }: { labelText: string; children: React.ReactNode }) {
   return (
@@ -144,21 +144,21 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
   }
 
   return (
-    <Card className="border-zinc-800 bg-zinc-900">
+    <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
-          <Mic2 className="h-4 w-4 text-green-400" />
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+          <Mic2 className="h-4 w-4 text-indigo-400" />
           TTS 話者設定
         </CardTitle>
       </CardHeader>
       <CardContent>
         {loading ? (
-          <p className="text-sm text-zinc-500">読み込み中...</p>
+          <p className="text-sm text-slate-500">読み込み中...</p>
         ) : (
           <form onSubmit={(e) => void handleSave(e)} className="flex flex-col gap-3">
             <p className={label}>
               現在の設定:{" "}
-              <span className="text-zinc-300">{currentLabel()}</span>
+              <span className="text-slate-300">{currentLabel()}</span>
             </p>
             <Field labelText="話者を選択">
               {speakers.length > 0 ? (
@@ -278,10 +278,10 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
 
   return (
     <>
-    <Card className="border-zinc-800 bg-zinc-900">
+    <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
-          <BookOpen className="h-4 w-4 text-green-400" />
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+          <BookOpen className="h-4 w-4 text-indigo-400" />
           辞書登録（個人）
         </CardTitle>
       </CardHeader>
@@ -297,7 +297,7 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
                 className={input}
               />
             </Field>
-            <span className="pb-1.5 text-zinc-500">→</span>
+            <span className="pb-1.5 text-slate-500">→</span>
             <Field labelText="変換後">
               <input
                 type="text"
@@ -320,16 +320,16 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
         </form>
 
         {loading ? (
-          <p className="text-sm text-zinc-500">読み込み中...</p>
+          <p className="text-sm text-slate-500">読み込み中...</p>
         ) : entries.length === 0 ? (
-          <p className="text-sm text-zinc-500">登録された辞書エントリはありません。</p>
+          <p className="text-sm text-slate-500">登録された辞書エントリはありません。</p>
         ) : (
-          <div className="rounded-md border border-zinc-800">
+          <div className="rounded-md border border-slate-800">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-zinc-800 text-left">
-                  <th className="px-3 py-2 text-xs font-medium text-zinc-500">変換前</th>
-                  <th className="px-3 py-2 text-xs font-medium text-zinc-500">変換後</th>
+                <tr className="border-b border-slate-800 text-left">
+                  <th className="px-3 py-2 text-xs font-medium text-slate-500">変換前</th>
+                  <th className="px-3 py-2 text-xs font-medium text-slate-500">変換後</th>
                   <th className="px-3 py-2" />
                 </tr>
               </thead>
@@ -337,18 +337,18 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
                 {entries.map((entry) => (
                   <tr
                     key={entry.fromText}
-                    className="border-b border-zinc-800/50 last:border-0"
+                    className="border-b border-slate-800/50 last:border-0"
                   >
-                    <td className="px-3 py-2 font-mono text-sm text-zinc-300">
+                    <td className="px-3 py-2 font-mono text-sm text-slate-300">
                       {entry.fromText}
                     </td>
-                    <td className="px-3 py-2 font-mono text-sm text-zinc-300">
+                    <td className="px-3 py-2 font-mono text-sm text-slate-300">
                       {entry.toText}
                     </td>
                     <td className="px-3 py-2 text-right">
                       <button
                         onClick={() => setPendingDeleteFrom(entry.fromText)}
-                        className="text-xs text-zinc-500 hover:text-red-400"
+                        className="text-xs text-slate-500 hover:text-red-400"
                       >
                         削除
                       </button>
@@ -476,16 +476,16 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
   }
 
   return (
-    <Card className="border-zinc-800 bg-zinc-900">
+    <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
-          <Users className="h-4 w-4 text-green-400" />
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+          <Users className="h-4 w-4 text-indigo-400" />
           募集作成
         </CardTitle>
       </CardHeader>
       <CardContent>
         {configLoading ? (
-          <p className="text-sm text-zinc-500">読み込み中...</p>
+          <p className="text-sm text-slate-500">読み込み中...</p>
         ) : (
           <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-3">
             {needsChannelPicker && (
@@ -512,7 +512,7 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
             <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between">
                 <p className={label}>タイトル</p>
-                <span className={`text-xs tabular-nums ${genre.length >= 80 ? "text-red-400" : "text-zinc-500"}`}>
+                <span className={`text-xs tabular-nums ${genre.length >= 80 ? "text-red-400" : "text-slate-500"}`}>
                   {genre.length}/80
                 </span>
               </div>
@@ -540,7 +540,7 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
             <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between">
                 <p className={label}>内容</p>
-                <span className={`text-xs tabular-nums ${content.length >= 1000 ? "text-red-400" : "text-zinc-500"}`}>
+                <span className={`text-xs tabular-nums ${content.length >= 1000 ? "text-red-400" : "text-slate-500"}`}>
                   {content.length}/1000
                 </span>
               </div>

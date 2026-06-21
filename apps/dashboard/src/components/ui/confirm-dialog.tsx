@@ -28,14 +28,14 @@ export function ConfirmDialog({
       onClick={onCancel}
     >
       <div
-        className="mx-4 w-full max-w-sm rounded-lg border border-zinc-700 bg-zinc-900 p-5 shadow-xl"
+        className="mx-4 w-full max-w-sm rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <p id="confirm-dialog-title" className="text-sm font-semibold text-zinc-100">
+        <p id="confirm-dialog-title" className="text-sm font-semibold text-slate-100">
           {title}
         </p>
         {description && (
-          <p className="mt-1.5 text-xs text-zinc-400">{description}</p>
+          <p className="mt-1.5 text-xs text-slate-400">{description}</p>
         )}
         <div className="mt-4 flex justify-end gap-2">
           <Button type="button" variant="ghost" size="sm" onClick={onCancel}>

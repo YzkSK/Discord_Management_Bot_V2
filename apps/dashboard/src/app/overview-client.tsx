@@ -50,6 +50,13 @@ interface OverviewClientProps {
   role?: "viewer" | "admin" | "owner" | null;
 }
 
+const kpiDefs = [
+  { label: "アクティブ VC", key: "activeVcCount", icon: Mic2, color: "text-indigo-400" },
+  { label: "今日のイベント", key: "todayCount", icon: Activity, color: "text-sky-400" },
+  { label: "進行中の募集", key: "openRecruitCount", icon: Users, color: "text-emerald-400" },
+  { label: "TTS セッション", key: "ttsTodayCount", icon: Volume2, color: "text-violet-400" },
+] as const;
+
 export function OverviewClient({ guildId, role }: OverviewClientProps) {
   const [sessions, setSessions] = useState<VoiceSession[]>([]);
   const [recruitments, setRecruitments] = useState<Recruitment[]>([]);
@@ -107,7 +114,6 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
     ).length;
   }, [recentLogs]);
 
-  // 7日間チャートデータ
   const sevenDayData = useMemo(() => {
     const days: Record<string, number> = {};
     for (let i = 6; i >= 0; i--) {
@@ -128,10 +134,10 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-24">
-        <p className="text-sm text-zinc-500">データの取得に失敗しました</p>
+        <p className="text-sm text-slate-500">データの取得に失敗しました</p>
         <button
           onClick={() => void load()}
-          className="rounded-md bg-zinc-800 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-700"
+          className="rounded-md bg-slate-800 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700"
         >
           再試行
         </button>
@@ -139,24 +145,34 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
     );
   }
 
+  const kpiValues: Record<string, number> = {
+    activeVcCount,
+    todayCount,
+    openRecruitCount,
+    ttsTodayCount,
+  };
+
   const isViewer = role === "viewer";
 
   if (isViewer) {
     return (
       <div className="flex flex-col gap-6">
         <div className="grid grid-cols-2 gap-4">
-          {[
-            { label: "アクティブ VC", value: activeVcCount, icon: <Mic2 className="h-4 w-4" /> },
-            { label: "進行中の募集", value: openRecruitCount, icon: <Users className="h-4 w-4" /> },
-          ].map((kpi) => (
-            <div key={kpi.label} className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{kpi.label}</p>
-                <span className="text-zinc-500">{kpi.icon}</span>
+          {[kpiDefs[0], kpiDefs[2]].map((kpi) => {
+            const Icon = kpi.icon;
+            return (
+              <div key={kpi.label} className="rounded-xl border border-slate-800 bg-slate-900 shadow-sm overflow-hidden">
+                <div className="h-0.5 bg-indigo-500/30" />
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{kpi.label}</p>
+                    <Icon className={`h-4 w-4 ${kpi.color}`} />
+                  </div>
+                  <p className="mt-2 text-2xl font-bold text-slate-100">{kpiValues[kpi.key]}</p>
+                </div>
               </div>
-              <p className="mt-2 text-2xl font-bold text-zinc-100">{kpi.value}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <PanelDashboard guildId={guildId} />
       </div>
@@ -169,50 +185,35 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
       <div className="flex flex-col gap-4 lg:col-span-3">
         {/* KPI カード */}
         <div className="grid grid-cols-2 gap-4">
-          {[
-            {
-              label: "アクティブ VC",
-              value: activeVcCount,
-              icon: <Mic2 className="h-4 w-4" />,
-            },
-            {
-              label: "今日のイベント",
-              value: todayCount,
-              icon: <Activity className="h-4 w-4" />,
-            },
-            {
-              label: "進行中の募集",
-              value: openRecruitCount,
-              icon: <Users className="h-4 w-4" />,
-            },
-            {
-              label: "TTS セッション",
-              value: ttsTodayCount,
-              icon: <Volume2 className="h-4 w-4" />,
-            },
-          ].map((kpi) => (
-            <div
-              key={kpi.label}
-              className="rounded-lg border border-zinc-800 bg-zinc-900 p-4"
-            >
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{kpi.label}</p>
-                <span className="text-zinc-500">{kpi.icon}</span>
+          {kpiDefs.map((kpi) => {
+            const Icon = kpi.icon;
+            return (
+              <div
+                key={kpi.label}
+                className="rounded-xl border border-slate-800 bg-slate-900 shadow-sm overflow-hidden"
+              >
+                <div className="h-0.5 bg-indigo-500/30" />
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{kpi.label}</p>
+                    <Icon className={`h-4 w-4 ${kpi.color}`} />
+                  </div>
+                  <p className="mt-2 text-2xl font-bold text-slate-100">{kpiValues[kpi.key]}</p>
+                </div>
               </div>
-              <p className="mt-2 text-2xl font-bold text-zinc-100">{kpi.value}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* 7日間アクティビティチャート */}
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <p className="mb-4 text-sm font-medium text-zinc-300">7日間のイベント数</p>
+        <div className="rounded-xl border border-slate-800 bg-slate-900 shadow-sm p-4">
+          <p className="mb-4 text-sm font-medium text-slate-300">7日間のイベント数</p>
           <ResponsiveContainer width="100%" height={160}>
             <AreaChart data={sevenDayData}>
               <defs>
                 <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--chart-green)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="var(--chart-green)" stopOpacity={0} />
+                  <stop offset="5%" stopColor="var(--chart-indigo)" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="var(--chart-indigo)" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis
@@ -237,7 +238,7 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
               <Area
                 type="monotone"
                 dataKey="count"
-                stroke="var(--chart-green)"
+                stroke="var(--chart-indigo)"
                 fill="url(#areaGrad)"
                 strokeWidth={2}
               />
@@ -248,28 +249,28 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
         <PanelDashboard guildId={guildId} />
       </div>
 
-      {/* 右カラム: Recent Activity（固定高さ・内部スクロール） */}
+      {/* 右カラム: Recent Activity */}
       <div className="lg:col-span-2">
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900 min-h-[400px] lg:h-[calc(100vh-10rem)] flex flex-col">
-          <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3 shrink-0">
-            <p className="text-sm font-medium text-zinc-300">最近のアクティビティ</p>
-            <a href="/logs" className="text-xs text-zinc-500 hover:text-green-400">
+        <div className="rounded-xl border border-slate-800 bg-slate-900 shadow-sm min-h-[400px] lg:h-[calc(100vh-10rem)] flex flex-col">
+          <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3 shrink-0">
+            <p className="text-sm font-medium text-slate-300">最近のアクティビティ</p>
+            <a href="/logs" className="text-xs text-slate-500 hover:text-indigo-400">
               すべて見る →
             </a>
           </div>
           {recentLogs.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center text-sm text-zinc-600">
+            <div className="flex-1 flex items-center justify-center text-sm text-slate-600">
               イベントがありません
             </div>
           ) : (
-            <ul className="divide-y divide-zinc-800/60 overflow-y-auto flex-1">
+            <ul className="divide-y divide-slate-800/60 overflow-y-auto flex-1">
               {recentLogs.slice(0, 20).map((log) => {
                 const color = getEventColor(log.eventName);
                 const cls = eventColorClasses[color];
                 return (
-                  <li key={log.id} className="flex items-center gap-3 px-4 py-2.5">
-                    <span className={`h-2 w-2 shrink-0 rounded-[50%] ${cls.dot}`} />
-                    <p className="flex-1 truncate text-sm text-zinc-300">
+                  <li key={log.id} className="flex items-start gap-3 px-4 py-3">
+                    <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${cls.dot}`} />
+                    <p className="flex-1 text-sm text-slate-300 leading-snug">
                       {formatEventDescriptionJSX(
                         log.eventName,
                         {
@@ -282,7 +283,7 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
                         guildId
                       )}
                     </p>
-                    <span className="shrink-0 text-xs text-zinc-600">
+                    <span className="shrink-0 text-xs text-slate-600 mt-0.5">
                       {formatRelativeTime(new Date(log.receivedAt))}
                     </span>
                   </li>

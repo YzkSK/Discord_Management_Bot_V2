@@ -48,16 +48,16 @@ export function UserSpeakerTable({
           value={query}
           onChange={(e) => handleQuery(e.target.value)}
           placeholder="ユーザーIDで検索..."
-          className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-500 focus:border-green-500 focus:outline-none"
+          className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
         />
         {query && (
-          <span className="shrink-0 text-xs text-zinc-500">
+          <span className="shrink-0 text-xs text-slate-500">
             {filtered.length} / {userSpeakers.length} 件
           </span>
         )}
       </div>
 
-      <div className="overflow-hidden rounded-md border border-zinc-800">
+      <div className="overflow-hidden rounded-md border border-slate-800">
         <Table>
           <TableHeader>
             <TableRow>
@@ -70,20 +70,20 @@ export function UserSpeakerTable({
           <TableBody>
             {visible.length === 0 ? (
               <TableRow>
-                <TableCell className="py-8 text-center text-zinc-600" colSpan={4}>
+                <TableCell className="py-8 text-center text-slate-600" colSpan={4}>
                   {query ? "検索結果がありません" : `${loc.ttsUserSpeakers}: 0`}
                 </TableCell>
               </TableRow>
             ) : visible.map((speaker) => (
               <TableRow key={speaker.userId}>
-                <TableCell className="break-all font-mono text-xs text-zinc-400">
+                <TableCell className="break-all font-mono text-xs text-slate-400">
                   {speaker.userId}
                 </TableCell>
                 <TableCell>{speaker.speakerId}</TableCell>
-                <TableCell className="text-xs text-zinc-500">{speaker.updatedAt}</TableCell>
+                <TableCell className="text-xs text-slate-500">{speaker.updatedAt}</TableCell>
                 <TableCell>
                   <Button
-                    aria-label={`話者ID ${speaker.speakerId} を試聴`}
+                    aria-label={`話老ED ${speaker.speakerId} を試聴`}
                     disabled={playingId !== null}
                     onClick={() => void playPreview(speaker.speakerId)}
                     size="sm"
@@ -101,8 +101,8 @@ export function UserSpeakerTable({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
-          <span className="text-xs text-zinc-500">
-            {safePage + 1} / {totalPages} ページ
+          <span className="text-xs text-slate-500">
+            {safePage + 1} / {totalPages} ペ�Eジ
           </span>
           <div className="flex gap-1">
             <Button
@@ -112,7 +112,7 @@ export function UserSpeakerTable({
               onClick={() => setPage(safePage - 1)}
               type="button"
             >
-              ‹ 前
+              ‹ 剁E
             </Button>
             <Button
               size="sm"
