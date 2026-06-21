@@ -61,10 +61,10 @@ export function UserSpeakerTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{loc.accessGrantUserId}</TableHead>
-              <TableHead>{loc.ttsSpeakerId}</TableHead>
-              <TableHead>{loc.updated}</TableHead>
-              <TableHead></TableHead>
+              <TableHead scope="col">{loc.accessGrantUserId}</TableHead>
+              <TableHead scope="col">{loc.ttsSpeakerId}</TableHead>
+              <TableHead scope="col">{loc.updated}</TableHead>
+              <TableHead scope="col"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

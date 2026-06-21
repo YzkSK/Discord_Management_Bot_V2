@@ -140,10 +140,10 @@ export function AccessGrantsTab({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-24">{loc.accessGrantTarget}</TableHead>
-                <TableHead>{loc.accessGrantId}</TableHead>
-                <TableHead className="w-28">{loc.accessGrantAccess}</TableHead>
-                <TableHead className="w-20">{loc.accessGrantAction}</TableHead>
+                <TableHead scope="col" className="w-24">{loc.accessGrantTarget}</TableHead>
+                <TableHead scope="col">{loc.accessGrantId}</TableHead>
+                <TableHead scope="col" className="w-28">{loc.accessGrantAccess}</TableHead>
+                <TableHead scope="col" className="w-20">{loc.accessGrantAction}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

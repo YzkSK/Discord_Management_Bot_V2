@@ -70,11 +70,11 @@ export function DictionaryTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{loc.ttsScope}</TableHead>
-              <TableHead>{loc.ttsFromText}</TableHead>
-              <TableHead>{loc.ttsToText}</TableHead>
-              <TableHead>{loc.ttsPriority}</TableHead>
-              <TableHead>{loc.ttsEnabled}</TableHead>
+              <TableHead scope="col">{loc.ttsScope}</TableHead>
+              <TableHead scope="col">{loc.ttsFromText}</TableHead>
+              <TableHead scope="col">{loc.ttsToText}</TableHead>
+              <TableHead scope="col">{loc.ttsPriority}</TableHead>
+              <TableHead scope="col">{loc.ttsEnabled}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

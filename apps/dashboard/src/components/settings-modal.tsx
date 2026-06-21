@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { X } from "lucide-react";
 
 export function SettingsModal({
@@ -10,12 +10,22 @@ export function SettingsModal({
   children: ReactNode;
   onClose: () => void;
 }) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 pt-16"
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
         className="mx-4 w-full max-w-lg rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
