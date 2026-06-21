@@ -90,7 +90,7 @@ export function DashboardShell({
           Guild
         </p>
         <div className="mt-0.5 flex items-center justify-between gap-2">
-          <p className="truncate text-sm font-medium text-zinc-200">
+          <p className="truncate text-sm font-medium text-zinc-200" title={guildName ?? guildId}>
             {guildName ?? guildId}
           </p>
           <a
