@@ -13,6 +13,8 @@ import {
   Activity,
   Menu,
   X,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import {
   Tooltip,
@@ -84,14 +86,6 @@ export function DashboardShell({
     });
   }
 
-  function handleMenuClick() {
-    if (window.innerWidth < 1024) {
-      setMobileOpen((prev) => !prev);
-    } else {
-      toggleCollapsed();
-    }
-  }
-
   const allGroups = getDashboardNavGroups();
   const groups = allGroups
     .map((group) => ({
@@ -100,65 +94,68 @@ export function DashboardShell({
     }))
     .filter((group) => group.items.length > 0);
 
-  const sidebarContent = (isCollapsed: boolean, isMobile = false) => (
+  const sidebarInner = (isCollapsed: boolean, isMobile = false) => (
     <TooltipProvider delayDuration={0}>
       <div className="flex h-full flex-col">
-        {/* Logo */}
+        {/* Logo row — collapse toggle lives here on desktop */}
         <div
-          className={`flex items-center border-b border-[#1e1f22] py-3 ${
-            isCollapsed ? "justify-center px-0" : "justify-between px-3"
+          className={`flex h-12 shrink-0 items-center border-b border-[#1e1f22] ${
+            isCollapsed && !isMobile ? "justify-center px-0" : "justify-between px-3"
           }`}
         >
           {isCollapsed && !isMobile ? (
+            /* collapsed: just icon + expand button */
             <Tooltip>
               <TooltipTrigger asChild>
-                <a
-                  href="/"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#5865f2]/10"
+                <button
+                  onClick={toggleCollapsed}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#5865f2]/10 text-[#5865f2] hover:bg-[#5865f2]/20 transition-colors"
+                  aria-label="サイドバーを展開"
                 >
-                  <LayoutDashboard className="h-4 w-4 text-[#5865f2]" />
-                </a>
+                  <PanelLeftOpen className="h-4 w-4" />
+                </button>
               </TooltipTrigger>
-              <TooltipContent side="right">Discord Bot</TooltipContent>
+              <TooltipContent side="right">メニューを展開</TooltipContent>
             </Tooltip>
           ) : (
             <>
               <a className="flex items-center gap-2.5" href="/">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#5865f2]">
-                  <LayoutDashboard className="h-4 w-4 text-white" />
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#5865f2]">
+                  <LayoutDashboard className="h-3.5 w-3.5 text-white" />
                 </div>
                 <span className="text-sm font-semibold text-[#f2f3f5]">Discord Bot</span>
               </a>
-              {isMobile && (
+              {/* desktop: collapse button; mobile: close button */}
+              {isMobile ? (
                 <button
-                  className="rounded-md p-1 text-[#80848e] hover:text-[#dbdee1]"
+                  className="rounded-md p-1.5 text-[#80848e] hover:text-[#dbdee1] transition-colors"
                   onClick={() => setMobileOpen(false)}
-                  aria-label="Close menu"
+                  aria-label="閉じる"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-4 w-4" />
+                </button>
+              ) : (
+                <button
+                  onClick={toggleCollapsed}
+                  className="rounded-md p-1.5 text-[#80848e] hover:bg-[#383a40] hover:text-[#dbdee1] transition-colors"
+                  aria-label="サイドバーを折りたたむ"
+                >
+                  <PanelLeftClose className="h-4 w-4" />
                 </button>
               )}
             </>
           )}
         </div>
 
-        {/* Guild info */}
+        {/* Guild chip */}
         {!isCollapsed || isMobile ? (
-          <div className="mx-3 mt-3 rounded-lg bg-[#1e1f22] px-3 py-2.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#4e5058]">
-              サーバー
-            </p>
-            <div className="mt-1 flex items-center justify-between gap-2">
-              <p
-                className="truncate text-sm font-semibold text-[#dbdee1]"
-                title={guildName ?? guildId}
-              >
+          <div className="mx-3 mt-3 rounded-lg bg-[#1e1f22] px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#4e5058]">サーバー</p>
+            <div className="mt-0.5 flex items-center justify-between gap-2">
+              <p className="truncate text-sm font-semibold text-[#dbdee1]" title={guildName ?? guildId}>
                 {guildName ?? guildId}
               </p>
-              <a
-                className="shrink-0 text-xs text-[#80848e] hover:text-[#5865f2]"
-                href="/guild"
-              >
+              <a className="shrink-0 text-xs text-[#80848e] hover:text-[#5865f2] transition-colors" href="/guild">
                 変更
               </a>
             </div>
@@ -169,8 +166,8 @@ export function DashboardShell({
               <TooltipTrigger asChild>
                 <a
                   href="/guild"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-[#80848e] hover:bg-[#383a40] hover:text-[#dbdee1]"
-                  aria-label="Switch guild"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-[#80848e] hover:bg-[#383a40] hover:text-[#dbdee1] transition-colors"
+                  aria-label="サーバーを変更"
                 >
                   <Settings className="h-3.5 w-3.5" />
                 </a>
@@ -181,20 +178,19 @@ export function DashboardShell({
         )}
 
         {/* Navigation */}
-        <nav className="mt-3 flex-1 overflow-y-auto px-2 pb-2">
+        <nav className="mt-2 flex-1 overflow-y-auto px-2 pb-2">
           {groups.map((group) => (
-            <div key={group.label} className="mb-4">
+            <div key={group.label} className="mb-3">
               {(!isCollapsed || isMobile) && (
-                <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-[#4e5058]">
+                <p className="mb-0.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-[#4e5058]">
                   {group.label}
                 </p>
               )}
               {group.items.map((item) => {
                 const active = item.href === currentPath;
-                const baseClass =
-                  "mb-0.5 flex items-center rounded-md text-sm font-medium transition-colors duration-100";
-                const activeClass = `${baseClass} bg-[#5865f2]/15 text-[#c9cdfb]`;
-                const inactiveClass = `${baseClass} text-[#80848e] hover:bg-[#383a40] hover:text-[#dbdee1]`;
+                const base = "mb-0.5 flex items-center rounded-md text-sm font-medium transition-colors duration-100";
+                const activeClass = `${base} bg-[#5865f2]/15 text-[#c9cdfb]`;
+                const inactiveClass = `${base} text-[#80848e] hover:bg-[#383a40] hover:text-[#dbdee1]`;
 
                 if (isCollapsed && !isMobile) {
                   return (
@@ -231,7 +227,7 @@ export function DashboardShell({
 
         {/* Auth */}
         {(!isCollapsed || isMobile) && (
-          <div className="border-t border-[#1e1f22] px-3 py-3">
+          <div className="shrink-0 border-t border-[#1e1f22] px-3 py-3">
             <AuthStatus session={session} />
           </div>
         )}
@@ -252,47 +248,41 @@ export function DashboardShell({
         />
       )}
 
-      {/* Mobile sidebar */}
+      {/* Mobile sidebar drawer */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#2b2d31] transition-transform duration-200 lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#2b2d31] shadow-xl transition-transform duration-200 lg:hidden ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {sidebarContent(false, true)}
+        {sidebarInner(false, true)}
       </aside>
 
       <div className={`mx-auto grid min-h-screen max-w-[1600px] ${gridCols}`}>
-        {/* Desktop sidebar */}
-        <aside
-          className={`hidden h-screen sticky top-0 bg-[#2b2d31] transition-all duration-200 lg:flex lg:flex-col ${sidebarW}`}
-        >
-          {sidebarContent(collapsed)}
+        {/* Desktop sidebar — sticky, full height, toggle button is inside */}
+        <aside className={`hidden h-screen sticky top-0 bg-[#2b2d31] transition-all duration-200 lg:flex lg:flex-col ${sidebarW}`}>
+          {sidebarInner(collapsed)}
         </aside>
 
-        {/* Main */}
+        {/* Content */}
         <section className="flex min-w-0 flex-col">
-          <header className="sticky top-0 z-10 flex items-center justify-between border-b border-[#1e1f22] bg-[#2b2d31]/95 px-4 py-3 backdrop-blur-sm">
+          <header className="sticky top-0 z-10 flex h-12 items-center justify-between border-b border-[#1e1f22] bg-[#2b2d31]/95 px-4 backdrop-blur-sm">
             <div className="flex items-center gap-3">
-              {/* Single hamburger — controls sidebar on desktop, drawer on mobile */}
+              {/* Hamburger — mobile only */}
               <button
-                className="rounded-md p-1.5 text-[#80848e] hover:bg-[#383a40] hover:text-[#dbdee1] transition-colors"
-                onClick={handleMenuClick}
-                aria-label="Toggle menu"
+                className="rounded-md p-1.5 text-[#80848e] hover:bg-[#383a40] hover:text-[#dbdee1] transition-colors lg:hidden"
+                onClick={() => setMobileOpen(true)}
+                aria-label="メニューを開く"
               >
                 <Menu className="h-5 w-5" />
               </button>
               <div>
                 <h1 className="text-sm font-semibold text-[#f2f3f5]">{title}</h1>
-                {description && (
-                  <p className="text-xs text-[#80848e]">{description}</p>
-                )}
+                {description && <p className="text-xs text-[#80848e]">{description}</p>}
               </div>
             </div>
-            {actions && (
-              <div className="flex items-center gap-2">{actions}</div>
-            )}
+            {actions && <div className="flex items-center gap-2">{actions}</div>}
           </header>
-          <div className="flex-1 px-4 py-6 md:px-6">{children}</div>
+          <div className="flex-1 px-4 py-5 md:px-6">{children}</div>
         </section>
       </div>
     </div>

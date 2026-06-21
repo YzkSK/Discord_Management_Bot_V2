@@ -68,29 +68,29 @@ export function ChannelMention({ channelId, channelName, guildId }: ChannelMenti
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          className="z-50 w-56 rounded-lg border border-slate-700 bg-slate-800 p-3 shadow-xl"
+          className="z-50 w-56 rounded-lg border border-[#3f4147] bg-[#383a40] p-3 shadow-xl"
           sideOffset={6}
           onClick={(e) => e.stopPropagation()}
         >
           {loadingPopover && (
-            <p className="text-xs text-slate-500">読み込み中...</p>
+            <p className="text-xs text-[#80848e]">読み込み中...</p>
           )}
           {error && !loadingPopover && (
-            <p className="text-xs text-slate-500">情報を取得できませんでした</p>
+            <p className="text-xs text-[#80848e]">情報を取得できませんでした</p>
           )}
           {channel && !loadingPopover && (
             <div>
-              <p className="truncate text-sm font-semibold text-slate-100">
+              <p className="truncate text-sm font-semibold text-[#f2f3f5]">
                 #{channel.name}
               </p>
               <div className="mt-1 flex items-center gap-1">
-                <p className="truncate font-mono text-xs text-slate-500">
+                <p className="truncate font-mono text-xs text-[#80848e]">
                   {channel.id}
                 </p>
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="shrink-0 text-slate-500 hover:text-slate-300"
+                  className="shrink-0 text-[#80848e] hover:text-[#dbdee1]"
                   aria-label="IDをコピー"
                 >
                   <Copy className="h-3 w-3" />

@@ -55,24 +55,24 @@ function TtsChannelSettingsCard({ guildId }: { guildId: string }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-medium text-slate-300">{loc.ttsSettings}</p>
+        <p className="text-sm font-medium text-[#dbdee1]">{loc.ttsSettings}</p>
         <button
           type="button"
           disabled={saving}
           onClick={() => void save()}
-          className="flex items-center gap-1.5 rounded-md bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 disabled:opacity-40"
+          className="flex items-center gap-1.5 rounded-md bg-[#383a40] px-3 py-1.5 text-xs text-[#dbdee1] hover:bg-[#404249] disabled:opacity-40"
         >
           <Save className="h-3 w-3" />
           {saving ? loc.saving : "保存"}
         </button>
       </div>
-      <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+      <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">
         {loc.ttsTextChannelId}
         <input
           type="text"
           value={textChannelId}
           onChange={(e) => setTextChannelId(e.target.value)}
-          className="rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200 focus:border-slate-500 focus:outline-none"
+          className="rounded-md border border-[#3f4147] bg-[#383a40] px-3 py-2 text-sm text-[#dbdee1] focus:border-slate-500 focus:outline-none"
         />
       </label>
     </div>
@@ -86,7 +86,7 @@ export function TtsSettingsAction({ guildId }: { guildId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 rounded-md border border-slate-700 px-2.5 py-1.5 text-xs text-slate-400 hover:border-slate-600 hover:text-slate-200"
+        className="flex items-center gap-1.5 rounded-md border border-[#3f4147] px-2.5 py-1.5 text-xs text-[#80848e] hover:border-[#3f4147] hover:text-[#dbdee1]"
         aria-label="TTS設定"
       >
         <Settings className="h-3.5 w-3.5" />

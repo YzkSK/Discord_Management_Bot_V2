@@ -57,16 +57,16 @@ export function DictionaryTable({
           value={query}
           onChange={(e) => handleQuery(e.target.value)}
           placeholder="変換前・変換後で検索..."
-          className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+          className="w-full rounded-md border border-[#3f4147] bg-[#383a40] px-3 py-1.5 text-sm text-[#f2f3f5] placeholder-[#4e5058] focus:border-[#5865f2] focus:outline-none"
         />
         {query && (
-          <span className="shrink-0 text-xs text-slate-500">
+          <span className="shrink-0 text-xs text-[#80848e]">
             {filtered.length} / {entries.length} 件
           </span>
         )}
       </div>
 
-      <div className="overflow-hidden rounded-md border border-slate-800">
+      <div className="overflow-hidden rounded-md border border-[#1e1f22]">
         <Table>
           <TableHeader>
             <TableRow>
@@ -80,7 +80,7 @@ export function DictionaryTable({
           <TableBody>
             {visible.length === 0 ? (
               <TableRow>
-                <TableCell className="py-8 text-center text-slate-600" colSpan={5}>
+                <TableCell className="py-8 text-center text-[#4e5058]" colSpan={5}>
                   {query ? "検索結果がありません" : `${loc.ttsDictionaryEntries}: 0`}
                 </TableCell>
               </TableRow>
@@ -109,7 +109,7 @@ export function DictionaryTable({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-[#80848e]">
             {safePage + 1} / {totalPages} ページ
           </span>
           <div className="flex gap-1">

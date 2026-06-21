@@ -58,9 +58,9 @@ const STATUS_COLORS: Record<RecruitmentStatus, string> = {
 };
 
 const STATUS_DOT: Record<RecruitmentStatus, string> = {
-  open: "bg-indigo-500",
+  open: "bg-[#5865f2]",
   full: "bg-amber-500",
-  closed: "bg-slate-500",
+  closed: "bg-[#80848e]",
 };
 
 const STATUS_BORDER: Record<RecruitmentStatus, string> = {
@@ -101,7 +101,7 @@ function DeadlineText({ deadlineAt }: { deadlineAt: string | null }) {
       hour: "2-digit",
       minute: "2-digit"
     });
-    return <span className="text-xs text-slate-500">締め切り：{date}</span>;
+    return <span className="text-xs text-[#80848e]">締め切り：{date}</span>;
   }
 
   if (msLeft > COUNTDOWN_THRESHOLD_1H_MS) {
@@ -123,15 +123,15 @@ function DeadlineText({ deadlineAt }: { deadlineAt: string | null }) {
 function RecruitmentCard({ r }: { r: RecruitmentItem }) {
   const borderClass = STATUS_BORDER[r.status];
   return (
-    <div className={`rounded-xl border border-slate-800 border-l-2 ${borderClass} bg-slate-900 shadow-sm p-3`}>
+    <div className={`rounded-xl border border-[#1e1f22] border-l-2 ${borderClass} bg-[#2b2d31] shadow-sm p-3`}>
       <div className="flex items-start gap-2">
         <span className="mt-0.5 text-lg leading-none">{genreEmoji(r.genre)}</span>
         <div className="flex-1 min-w-0">
-          <p className="truncate text-sm font-medium text-slate-200">{r.genre}</p>
+          <p className="truncate text-sm font-medium text-[#dbdee1]">{r.genre}</p>
           {r.content && (
-            <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">{r.content}</p>
+            <p className="mt-0.5 line-clamp-2 text-xs text-[#80848e]">{r.content}</p>
           )}
-          <p className="mt-0.5 text-xs text-slate-600">
+          <p className="mt-0.5 text-xs text-[#4e5058]">
             {formatRelativeTime(new Date(r.createdAt))} 作成
           </p>
           {r.status !== "closed" && (
@@ -156,15 +156,15 @@ function CapacityBar({
   const pct = max > 0 ? Math.min(100, Math.round((current / max) * 100)) : 0;
   return (
     <div className="mt-2">
-      <div className="mb-1 flex justify-between text-xs text-slate-500">
+      <div className="mb-1 flex justify-between text-xs text-[#80848e]">
         <span>定員</span>
         <span>
           {current}/{max}人
         </span>
       </div>
-      <div className="h-1.5 w-full rounded-md bg-slate-800">
+      <div className="h-1.5 w-full rounded-md bg-[#383a40]">
         <div
-          className="h-full rounded-md bg-indigo-500 transition-all"
+          className="h-full rounded-md bg-[#5865f2] transition-all"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -226,7 +226,7 @@ export function RecruitmentDashboard({ guildId }: { guildId: string }) {
     <div className="flex max-w-6xl flex-col gap-6">
       {/* ドーナツチャート + 統計 */}
       {data.totalCount > 0 && (
-        <div className="flex flex-col items-center gap-4 rounded-xl border border-slate-800 bg-slate-900 shadow-sm p-4 sm:flex-row">
+        <div className="flex flex-col items-center gap-4 rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4 sm:flex-row">
           <div style={{ width: 160, height: 120 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -254,8 +254,8 @@ export function RecruitmentDashboard({ guildId }: { guildId: string }) {
           <div className="flex gap-6 text-center">
             {pieData.map((d) => (
               <div key={d.name}>
-                <p className="text-xl font-bold text-slate-100">{d.value}</p>
-                <p className="text-xs text-slate-500">{d.name}</p>
+                <p className="text-xl font-bold text-[#f2f3f5]">{d.value}</p>
+                <p className="text-xs text-[#80848e]">{d.name}</p>
               </div>
             ))}
           </div>
@@ -268,17 +268,17 @@ export function RecruitmentDashboard({ guildId }: { guildId: string }) {
           <div key={status}>
             <div className="mb-2 flex items-center gap-2">
               <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} />
-              <h3 className="text-sm font-medium text-slate-400">
+              <h3 className="text-sm font-medium text-[#80848e]">
                 {STATUS_LABELS[status]}
               </h3>
-              <span className="ml-auto rounded-md bg-slate-800 px-2 py-0.5 text-xs text-slate-500">
+              <span className="ml-auto rounded-md bg-[#383a40] px-2 py-0.5 text-xs text-[#80848e]">
                 {grouped[status].length}
               </span>
             </div>
 
             <div className="flex flex-col gap-2">
               {grouped[status].length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-800/60 py-6 text-center text-xs text-slate-700">
+                <div className="rounded-xl border border-dashed border-[#1e1f22]/60 py-6 text-center text-xs text-slate-700">
                   なし
                 </div>
               ) : (

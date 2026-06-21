@@ -171,8 +171,8 @@ export function LogsExplorer() {
               type="button"
               className={
                 appliedFilters.eventName === tab.eventName
-                  ? "rounded-md border border-indigo-500/40 bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-400"
-                  : "rounded-md border border-slate-700 px-3 py-1 text-xs font-medium text-slate-400 hover:border-slate-600 hover:text-slate-200"
+                  ? "rounded-md border border-[#5865f2]/40 bg-[#5865f2]/10 px-3 py-1 text-xs font-medium text-[#c9cdfb]"
+                  : "rounded-md border border-[#3f4147] px-3 py-1 text-xs font-medium text-[#80848e] hover:border-[#3f4147] hover:text-[#dbdee1]"
               }
             >
               {tab.label}
@@ -190,7 +190,7 @@ export function LogsExplorer() {
               setFilters((f) => ({ ...f, search: v }));
               setAppliedFilters((f) => ({ ...f, search: v }));
             }}
-            className="w-48 rounded-md border border-slate-700 bg-slate-800/50 px-3 py-1.5 text-sm text-slate-200 placeholder:text-slate-600 focus:border-slate-500 focus:outline-none"
+            className="w-48 rounded-md border border-[#3f4147] bg-[#383a40]/50 px-3 py-1.5 text-sm text-[#dbdee1] placeholder:text-[#4e5058] focus:border-slate-500 focus:outline-none"
           />
 
           <div className="flex items-center gap-1.5">
@@ -198,14 +198,14 @@ export function LogsExplorer() {
               <>
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-[50%] bg-indigo-400 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-[50%] bg-indigo-500" />
+                  <span className="relative inline-flex h-2 w-2 rounded-[50%] bg-[#5865f2]" />
                 </span>
-                <span className="text-xs text-indigo-400">ライブ</span>
+                <span className="text-xs text-[#c9cdfb]">ライブ</span>
               </>
             ) : (
               <>
-                <span className="h-2 w-2 rounded-[50%] bg-slate-600" />
-                <span className="text-xs text-slate-500">{realtimeMeta.label}</span>
+                <span className="h-2 w-2 rounded-[50%] bg-[#4e5058]" />
+                <span className="text-xs text-[#80848e]">{realtimeMeta.label}</span>
               </>
             )}
           </div>
@@ -214,15 +214,15 @@ export function LogsExplorer() {
 
       {error && <ErrorAlert message={error} />}
 
-      <div className="rounded-xl border border-slate-800 bg-slate-900 shadow-sm">
+      <div className="rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm">
         {loading ? (
           <LoadingSpinner />
         ) : filtered.length === 0 ? (
-          <div className="flex items-center justify-center py-16 text-sm text-slate-600">
+          <div className="flex items-center justify-center py-16 text-sm text-[#4e5058]">
             表示するイベントがありません
           </div>
         ) : (
-          <ul className="divide-y divide-slate-800/60">
+          <ul className="divide-y divide-[#1e1f22]/60">
             {filtered.map((log) => (
               <LogEntry
                 key={log.id}
@@ -240,7 +240,7 @@ export function LogsExplorer() {
       {nextCursor && (
         <div className="flex justify-center">
           <button
-            className="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-400 hover:border-slate-600 hover:text-slate-200 disabled:opacity-40"
+            className="rounded-md border border-[#3f4147] px-4 py-2 text-sm text-[#80848e] hover:border-[#3f4147] hover:text-[#dbdee1] disabled:opacity-40"
             disabled={loadingMore}
             onClick={() => void loadMore(appliedFilters, nextCursor)}
             type="button"
@@ -284,33 +284,33 @@ function LogEntry({
   return (
     <li>
       <button
-        className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-slate-800/40"
+        className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-[#383a40]/40"
         onClick={onToggle}
         type="button"
       >
         <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-[50%] ${cls.dot}`} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-slate-200">{description}</p>
-          <p className="mt-0.5 text-xs text-slate-600">{log.eventName}</p>
+          <p className="text-sm text-[#dbdee1]">{description}</p>
+          <p className="mt-0.5 text-xs text-[#4e5058]">{log.eventName}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span className="text-xs text-slate-600">
+          <span className="text-xs text-[#4e5058]">
             {formatRelativeTime(new Date(log.receivedAt))}
           </span>
           {isExpanded ? (
-            <ChevronDown className="h-3 w-3 text-slate-600" />
+            <ChevronDown className="h-3 w-3 text-[#4e5058]" />
           ) : (
-            <ChevronRight className="h-3 w-3 text-slate-600" />
+            <ChevronRight className="h-3 w-3 text-[#4e5058]" />
           )}
         </div>
       </button>
 
       {isExpanded && (
-        <div className="border-t border-slate-800/60 bg-slate-950/50 px-4 py-3">
+        <div className="border-t border-[#1e1f22]/60 bg-[#1e1f22]/50 px-4 py-3">
           <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs sm:grid-cols-3">
             <div>
-              <dt className="text-slate-600">イベント時刻</dt>
-              <dd className="text-slate-300">
+              <dt className="text-[#4e5058]">イベント時刻</dt>
+              <dd className="text-[#dbdee1]">
                 {new Date(log.eventTimestamp).toLocaleString("ja-JP")}
               </dd>
             </div>
@@ -318,12 +318,12 @@ function LogEntry({
               const name = extractActorName(log.payload);
               return (
                 <div>
-                  <dt className="text-slate-600">アクター</dt>
-                  <dd className="text-slate-300">
+                  <dt className="text-[#4e5058]">アクター</dt>
+                  <dd className="text-[#dbdee1]">
                     {name ? (
                       <>
                         <span>{name}</span>
-                        <span className="ml-1 font-mono text-xs text-slate-500">({log.actorId})</span>
+                        <span className="ml-1 font-mono text-xs text-[#80848e]">({log.actorId})</span>
                       </>
                     ) : (
                       <span className="font-mono">{log.actorId}</span>
@@ -336,12 +336,12 @@ function LogEntry({
               const name = log.channelName ?? extractChannelName(log.payload);
               return (
                 <div>
-                  <dt className="text-slate-600">チャンネル</dt>
-                  <dd className="text-slate-300">
+                  <dt className="text-[#4e5058]">チャンネル</dt>
+                  <dd className="text-[#dbdee1]">
                     {name ? (
                       <>
                         <span>#{name}</span>
-                        <span className="ml-1 font-mono text-xs text-slate-500">({log.channelId})</span>
+                        <span className="ml-1 font-mono text-xs text-[#80848e]">({log.channelId})</span>
                       </>
                     ) : (
                       <span className="font-mono">{log.channelId}</span>
@@ -355,18 +355,18 @@ function LogEntry({
               .slice(0, MAX_PAYLOAD_FIELDS_DISPLAYED)
               .map(([k, v]) => (
                 <div key={k}>
-                  <dt className="text-slate-600">{payloadFieldLabel(k)}</dt>
-                  <dd className="truncate text-slate-300">{formatPayloadFieldValue(k, v)}</dd>
+                  <dt className="text-[#4e5058]">{payloadFieldLabel(k)}</dt>
+                  <dd className="truncate text-[#dbdee1]">{formatPayloadFieldValue(k, v)}</dd>
                 </div>
               ))}
           </dl>
 
           {canViewRaw && (
             <details className="mt-3">
-              <summary className="cursor-pointer text-xs text-slate-600 hover:text-slate-400">
+              <summary className="cursor-pointer text-xs text-[#4e5058] hover:text-[#80848e]">
                 RAW JSON
               </summary>
-              <pre className="mt-1 max-h-64 overflow-auto rounded bg-slate-900 p-2 text-xs text-slate-400">
+              <pre className="mt-1 max-h-64 overflow-auto rounded bg-[#2b2d31] p-2 text-xs text-[#80848e]">
                 {JSON.stringify(log.payload, null, 2)}
               </pre>
             </details>

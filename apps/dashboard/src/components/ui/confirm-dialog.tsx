@@ -24,18 +24,18 @@ export function ConfirmDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-dialog-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
       onClick={onCancel}
     >
       <div
-        className="mx-4 w-full max-w-sm rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-xl"
+        className="mx-4 w-full max-w-sm rounded-lg bg-[#2b2d31] p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <p id="confirm-dialog-title" className="text-sm font-semibold text-slate-100">
+        <p id="confirm-dialog-title" className="text-sm font-semibold text-[#f2f3f5]">
           {title}
         </p>
         {description && (
-          <p className="mt-1.5 text-xs text-slate-400">{description}</p>
+          <p className="mt-1.5 text-xs text-[#80848e]">{description}</p>
         )}
         <div className="mt-4 flex justify-end gap-2">
           <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
@@ -44,7 +44,7 @@ export function ConfirmDialog({
           <Button
             type="button"
             size="sm"
-            className="bg-red-600 text-white hover:bg-red-500"
+            variant="destructive"
             onClick={onConfirm}
           >
             {confirmLabel}

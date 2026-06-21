@@ -20,20 +20,20 @@ export function SettingsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 pt-16"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 pt-16"
       onClick={onClose}
     >
       <div
         role="dialog"
         aria-modal="true"
-        className="mx-4 w-full max-w-lg rounded-xl border border-slate-800 bg-slate-900 shadow-xl"
+        className="mx-4 w-full max-w-lg rounded-lg bg-[#2b2d31] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-end border-b border-slate-800 px-4 py-2">
+        <div className="flex items-center justify-end border-b border-[#1e1f22] px-4 py-2.5">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-slate-400 hover:text-slate-200"
+            className="rounded-md p-1 text-[#80848e] hover:text-[#dbdee1] transition-colors"
             aria-label="閉じる"
           >
             <X className="h-4 w-4" />

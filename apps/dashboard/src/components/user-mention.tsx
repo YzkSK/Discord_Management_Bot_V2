@@ -55,22 +55,22 @@ export function UserMention({ userId, actorName }: UserMentionProps) {
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className="inline-flex cursor-pointer items-center rounded bg-indigo-500/20 px-1 text-indigo-300 hover:bg-indigo-500/30"
+          className="inline-flex cursor-pointer items-center rounded bg-[#5865f2]/20 px-1 text-[#c9cdfb] hover:bg-[#5865f2]/30"
         >
           @{label}
         </button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          className="z-50 w-64 rounded-lg border border-slate-700 bg-slate-800 p-3 shadow-xl"
+          className="z-50 w-64 rounded-lg border border-[#3f4147] bg-[#383a40] p-3 shadow-xl"
           sideOffset={6}
           onClick={(e) => e.stopPropagation()}
         >
           {loadingPopover && (
-            <p className="text-xs text-slate-500">読み込み中...</p>
+            <p className="text-xs text-[#80848e]">読み込み中...</p>
           )}
           {error && !loadingPopover && (
-            <p className="text-xs text-slate-500">情報を取得できませんでした</p>
+            <p className="text-xs text-[#80848e]">情報を取得できませんでした</p>
           )}
           {user && !loadingPopover && (
             <div className="flex gap-3">
@@ -82,18 +82,18 @@ export function UserMention({ userId, actorName }: UserMentionProps) {
                 height={40}
               />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-slate-100">
+                <p className="truncate text-sm font-semibold text-[#f2f3f5]">
                   {user.globalName ?? user.username}
                 </p>
-                <p className="text-xs text-slate-400">@{user.username}</p>
+                <p className="text-xs text-[#80848e]">@{user.username}</p>
                 <div className="mt-1 flex items-center gap-1">
-                  <p className="truncate font-mono text-xs text-slate-500">
+                  <p className="truncate font-mono text-xs text-[#80848e]">
                     {user.id}
                   </p>
                   <button
                     type="button"
                     onClick={handleCopy}
-                    className="shrink-0 text-slate-500 hover:text-slate-300"
+                    className="shrink-0 text-[#80848e] hover:text-[#dbdee1]"
                     aria-label="IDをコピー"
                   >
                     <Copy className="h-3 w-3" />

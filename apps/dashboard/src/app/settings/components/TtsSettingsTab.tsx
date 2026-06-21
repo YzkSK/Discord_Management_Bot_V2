@@ -97,7 +97,7 @@ export function TtsSettingsTab({
           label={loc.ttsSettings}
           loc={loc}
         />
-        <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+        <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">
           {loc.ttsTextChannelId}
           <ChannelSelect
             value={ttsTextChannelId}
@@ -107,8 +107,8 @@ export function TtsSettingsTab({
           />
         </label>
 
-        <div className="grid gap-3 border-t border-slate-800 pt-3">
-          <p className="text-xs font-semibold text-slate-300">{loc.ttsSpeakerDefault}</p>
+        <div className="grid gap-3 border-t border-[#1e1f22] pt-3">
+          <p className="text-xs font-semibold text-[#dbdee1]">{loc.ttsSpeakerDefault}</p>
           <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
             <Input
               disabled={!canEditTts}
@@ -136,8 +136,8 @@ export function TtsSettingsTab({
           </div>
         </div>
 
-        <div className="grid gap-3 border-t border-slate-800 pt-3">
-          <p className="text-xs font-semibold text-slate-300">{loc.ttsUserSpeakers}</p>
+        <div className="grid gap-3 border-t border-[#1e1f22] pt-3">
+          <p className="text-xs font-semibold text-[#dbdee1]">{loc.ttsUserSpeakers}</p>
           <div className="grid gap-2 sm:grid-cols-[1fr_120px_auto]">
             <Input
               disabled={!canEditTts}
@@ -161,7 +161,7 @@ export function TtsSettingsTab({
               {loc.saveChanges}
             </Button>
           </div>
-          <div className="overflow-hidden rounded-md border border-slate-800">
+          <div className="overflow-hidden rounded-md border border-[#1e1f22]">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -173,7 +173,7 @@ export function TtsSettingsTab({
               <TableBody>
                 {!ttsSettings?.userSpeakers.length ? (
                   <TableRow>
-                    <TableCell className="py-5 text-center text-slate-600" colSpan={3}>
+                    <TableCell className="py-5 text-center text-[#4e5058]" colSpan={3}>
                       {loc.notConfigured}
                     </TableCell>
                   </TableRow>
@@ -182,7 +182,7 @@ export function TtsSettingsTab({
                     <TableCell>
                       {speaker.userId
                         ? <UserMention userId={speaker.userId} actorName={null} />
-                        : <span className="font-mono text-xs text-slate-500">—</span>}
+                        : <span className="font-mono text-xs text-[#80848e]">—</span>}
                     </TableCell>
                     <TableCell>{speaker.speakerId}</TableCell>
                     <TableCell>
@@ -207,8 +207,8 @@ export function TtsSettingsTab({
           </div>
         </div>
 
-        <div className="grid gap-3 border-t border-slate-800 pt-3">
-          <p className="text-xs font-semibold text-slate-300">{loc.ttsDictionary}</p>
+        <div className="grid gap-3 border-t border-[#1e1f22] pt-3">
+          <p className="text-xs font-semibold text-[#dbdee1]">{loc.ttsDictionary}</p>
           <div className="grid gap-2 sm:grid-cols-[110px_1fr_1fr]">
             <Select
               disabled={!canEditTts}
@@ -244,7 +244,7 @@ export function TtsSettingsTab({
               placeholder={loc.ttsToText}
               value={ttsDictionaryToText}
             />
-            <label className="flex items-center gap-2 text-xs text-slate-400">
+            <label className="flex items-center gap-2 text-xs text-[#80848e]">
               <input
                 checked={ttsDictionaryEnabled}
                 disabled={!canEditTts}
@@ -265,7 +265,7 @@ export function TtsSettingsTab({
               {loc.saveChanges}
             </Button>
           </div>
-          <div className="overflow-hidden rounded-md border border-slate-800">
+          <div className="overflow-hidden rounded-md border border-[#1e1f22]">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -279,7 +279,7 @@ export function TtsSettingsTab({
               <TableBody>
                 {!ttsSettings?.dictionaryEntries.length ? (
                   <TableRow>
-                    <TableCell className="py-5 text-center text-slate-600" colSpan={5}>
+                    <TableCell className="py-5 text-center text-[#4e5058]" colSpan={5}>
                       {loc.notConfigured}
                     </TableCell>
                   </TableRow>

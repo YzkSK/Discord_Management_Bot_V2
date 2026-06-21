@@ -32,7 +32,7 @@ export function LogsSettingsTab({
         <CardTitle>{loc.logsSettings}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3">
-        <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+        <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">
           {loc.logMode}
           <Select onChange={(e) => onLogModeChange(e.target.value)} value={logMode}>
             {logModeOptions.map((opt) => (
@@ -41,7 +41,7 @@ export function LogsSettingsTab({
           </Select>
         </label>
 
-        <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+        <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">
           {loc.language}
           <Select
             onChange={(e) => {

@@ -65,7 +65,7 @@ export function TtsDashboard({ guildId }: { guildId: string }) {
     <section className="grid max-w-6xl gap-4">
       <div className="grid gap-3 md:grid-cols-4">
         <TtsMetric
-          icon={<Radio className="h-4 w-4 text-indigo-400" />}
+          icon={<Radio className="h-4 w-4 text-[#c9cdfb]" />}
           label={loc.ttsStatus}
           value={
             data.isConfigured
@@ -74,17 +74,17 @@ export function TtsDashboard({ guildId }: { guildId: string }) {
           }
         />
         <TtsMetric
-          icon={<Mic2 className="h-4 w-4 text-indigo-400" />}
+          icon={<Mic2 className="h-4 w-4 text-[#c9cdfb]" />}
           label={loc.ttsSpeakerDefault}
           value={data.guildDefaultSpeaker?.speakerId.toString() ?? "-"}
         />
         <TtsMetric
-          icon={<Volume2 className="h-4 w-4 text-indigo-400" />}
+          icon={<Volume2 className="h-4 w-4 text-[#c9cdfb]" />}
           label={loc.ttsUserSpeakers}
           value={data.userSpeakerCount.toString()}
         />
         <TtsMetric
-          icon={<BookOpen className="h-4 w-4 text-indigo-400" />}
+          icon={<BookOpen className="h-4 w-4 text-[#c9cdfb]" />}
           label={loc.ttsDictionaryEntries}
           value={data.dictionaryStats.totalCount.toString()}
         />
@@ -94,7 +94,7 @@ export function TtsDashboard({ guildId }: { guildId: string }) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Radio className="h-4 w-4 text-indigo-400" />
+              <Radio className="h-4 w-4 text-[#c9cdfb]" />
               {loc.ttsSettings}
             </CardTitle>
           </CardHeader>
@@ -124,15 +124,15 @@ export function TtsDashboard({ guildId }: { guildId: string }) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-indigo-400" />
+              <BookOpen className="h-4 w-4 text-[#c9cdfb]" />
               {loc.ttsDictionaryEntries}
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
             <DictionaryTable entries={data.dictionaryEntries} loc={loc} />
             {data.accessRole === "admin" && (
-              <div className="border-t border-slate-800 pt-4">
-                <p className="mb-2 text-xs font-medium text-slate-400">新しい単語を登録（サーバー辞書）</p>
+              <div className="border-t border-[#1e1f22] pt-4">
+                <p className="mb-2 text-xs font-medium text-[#80848e]">新しい単語を登録（サーバー辞書）</p>
                 <DictionaryAddForm guildId={guildId} onSuccess={refresh} />
               </div>
             )}
@@ -143,7 +143,7 @@ export function TtsDashboard({ guildId }: { guildId: string }) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Volume2 className="h-4 w-4 text-indigo-400" />
+            <Volume2 className="h-4 w-4 text-[#c9cdfb]" />
             {loc.ttsUserSpeakers}
           </CardTitle>
         </CardHeader>
@@ -188,21 +188,21 @@ function TtsMetric({
   value: string;
 }) {
   return (
-    <div className="rounded-md border border-slate-800 bg-slate-900 p-4">
+    <div className="rounded-md border border-[#1e1f22] bg-[#2b2d31] p-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-medium text-slate-500">{label}</p>
+        <p className="text-xs font-medium text-[#80848e]">{label}</p>
         {icon}
       </div>
-      <p className="mt-2 text-2xl font-semibold text-slate-100">{value}</p>
+      <p className="mt-2 text-2xl font-semibold text-[#f2f3f5]">{value}</p>
     </div>
   );
 }
 
 function KeyValue({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-slate-800 pb-2 last:border-b-0 last:pb-0">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="break-all text-right font-mono text-xs text-slate-200">
+    <div className="flex items-center justify-between gap-4 border-b border-[#1e1f22] pb-2 last:border-b-0 last:pb-0">
+      <p className="text-sm text-[#80848e]">{label}</p>
+      <p className="break-all text-right font-mono text-xs text-[#dbdee1]">
         {value}
       </p>
     </div>
@@ -288,11 +288,11 @@ function DictionaryAddForm({
     <form className="grid gap-3" onSubmit={(e) => void handleSubmit(e)}>
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="grid gap-1">
-          <label className="text-xs text-slate-400" htmlFor="fromText">
+          <label className="text-xs text-[#80848e]" htmlFor="fromText">
             変換前
           </label>
           <input
-            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="rounded-md border border-[#3f4147] bg-[#2b2d31] px-3 py-1.5 text-sm text-[#f2f3f5] placeholder:text-[#4e5058] focus:outline-none focus:ring-1 focus:ring-[#3f4147]"
             id="fromText"
             onChange={(e) => setFromText(e.target.value)}
             placeholder="例: Discord"
@@ -302,11 +302,11 @@ function DictionaryAddForm({
           />
         </div>
         <div className="grid gap-1">
-          <label className="text-xs text-slate-400" htmlFor="toText">
+          <label className="text-xs text-[#80848e]" htmlFor="toText">
             変換後
           </label>
           <input
-            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="rounded-md border border-[#3f4147] bg-[#2b2d31] px-3 py-1.5 text-sm text-[#f2f3f5] placeholder:text-[#4e5058] focus:outline-none focus:ring-1 focus:ring-[#3f4147]"
             id="toText"
             onChange={(e) => setToText(e.target.value)}
             placeholder="例: ディスコード"
@@ -318,11 +318,11 @@ function DictionaryAddForm({
       </div>
       <div className="flex items-center gap-3">
         <div className="grid gap-1">
-          <label className="text-xs text-slate-400" htmlFor="priority">
+          <label className="text-xs text-[#80848e]" htmlFor="priority">
             優先度
           </label>
           <input
-            className="w-20 rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-20 rounded-md border border-[#3f4147] bg-[#2b2d31] px-3 py-1.5 text-sm text-[#f2f3f5] focus:outline-none focus:ring-1 focus:ring-[#3f4147]"
             id="priority"
             min={0}
             onChange={(e) => setPriority(Number(e.target.value))}
@@ -358,12 +358,12 @@ function TtsShortcut({
 }) {
   return (
     <a
-      className="flex items-start justify-between gap-3 rounded-md border border-slate-800 bg-slate-950 p-3 transition-colors hover:border-slate-600 hover:bg-slate-900"
+      className="flex items-start justify-between gap-3 rounded-md border border-[#1e1f22] bg-[#1e1f22] p-3 transition-colors hover:border-[#3f4147] hover:bg-[#2b2d31]"
       href={href}
     >
       <div>
-        <p className="text-sm font-medium text-slate-200">{label}</p>
-        <p className="mt-1 break-all font-mono text-xs text-slate-500">{body}</p>
+        <p className="text-sm font-medium text-[#dbdee1]">{label}</p>
+        <p className="mt-1 break-all font-mono text-xs text-[#80848e]">{body}</p>
       </div>
       <Button aria-label={label} size="icon" type="button" variant="ghost">
         <Settings className="h-3.5 w-3.5" />

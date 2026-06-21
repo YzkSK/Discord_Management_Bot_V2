@@ -76,11 +76,11 @@ export function AccessGrantsTab({
         <CardTitle>{loc.dashboardAccess}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
-        <p className="text-xs text-slate-500">{loc.dashboardAccessNote}</p>
+        <p className="text-xs text-[#80848e]">{loc.dashboardAccessNote}</p>
 
-        <div className="grid gap-3 rounded-md border border-slate-800 bg-slate-950 p-3">
+        <div className="grid gap-3 rounded-md border border-[#1e1f22] bg-[#1e1f22] p-3">
           <div className="grid gap-2 sm:grid-cols-[110px_1fr_120px]">
-            <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+            <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">
               {loc.accessGrantTarget}
               <Select
                 onChange={(e) => {
@@ -95,7 +95,7 @@ export function AccessGrantsTab({
               </Select>
             </label>
 
-            <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+            <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">
               {grantTargetType === "role" ? loc.accessGrantRole : loc.accessGrantUserId}
               {grantTargetType === "role" && availableRoles?.length ? (
                 <Select
@@ -116,7 +116,7 @@ export function AccessGrantsTab({
               )}
             </label>
 
-            <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+            <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">
               {loc.accessGrantRole}
               <Select
                 onChange={(e) => onGrantRoleChange(e.target.value === "admin" ? "admin" : "viewer")}
@@ -136,7 +136,7 @@ export function AccessGrantsTab({
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-md border border-slate-800">
+        <div className="overflow-x-auto rounded-md border border-[#1e1f22]">
           <Table>
             <TableHeader>
               <TableRow>
@@ -149,15 +149,15 @@ export function AccessGrantsTab({
             <TableBody>
               {accessGrants.length === 0 ? (
                 <TableRow>
-                  <TableCell className="py-8 text-center text-slate-600" colSpan={4}>
+                  <TableCell className="py-8 text-center text-[#4e5058]" colSpan={4}>
                     {loc.noAccessGrants}
                   </TableCell>
                 </TableRow>
               ) : accessGrants.map((grant) => (
                 <TableRow key={accessGrantKey(grant)}>
-                  <TableCell className="capitalize text-slate-400">{grant.targetType}</TableCell>
+                  <TableCell className="capitalize text-[#80848e]">{grant.targetType}</TableCell>
                   <TableCell>
-                    <span className="break-all font-mono text-xs text-slate-300">
+                    <span className="break-all font-mono text-xs text-[#dbdee1]">
                       {formatGrantTarget(grant, availableRoles)}
                     </span>
                   </TableCell>
@@ -192,12 +192,12 @@ export function AccessGrantsTab({
         </div>
 
         {availableRoles !== undefined && (
-          <div className="grid gap-3 border-t border-slate-800 pt-4">
-            <p className="text-xs text-slate-500">{loc.managementRoleShortcutNote}</p>
+          <div className="grid gap-3 border-t border-[#1e1f22] pt-4">
+            <p className="text-xs text-[#80848e]">{loc.managementRoleShortcutNote}</p>
             <div className="flex flex-col gap-1.5">
               {availableRoles.map((role) => (
                 <label
-                  className="flex cursor-pointer items-center gap-3 rounded-md border border-slate-800 px-3 py-2 hover:border-slate-700"
+                  className="flex cursor-pointer items-center gap-3 rounded-md border border-[#1e1f22] px-3 py-2 hover:border-[#3f4147]"
                   key={role.id}
                 >
                   <input
@@ -206,7 +206,7 @@ export function AccessGrantsTab({
                     onChange={(e) => onManagementRoleChange(role.id, e.target.checked)}
                     type="checkbox"
                   />
-                  <span className="text-sm text-slate-300">{role.name}</span>
+                  <span className="text-sm text-[#dbdee1]">{role.name}</span>
                 </label>
               ))}
             </div>
