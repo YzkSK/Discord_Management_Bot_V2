@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Save, Settings } from "lucide-react";
 import { fetchSettings, updateTempVcSettings, toSettingsError, type SettingsResponse } from "../../lib/settings-api";
 import { Skeleton } from "../../components/ui/skeleton";
+import { useBeforeUnload } from "../../hooks/use-before-unload";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import { VoiceSettingsTab } from "../settings/components/VoiceSettingsTab";
 import { SettingsModal } from "../../components/settings-modal";
@@ -15,16 +16,23 @@ function VoiceSettingsCard({ guildId }: { guildId: string }) {
   const [saving, setSaving] = useState(false);
   const [createChannelId, setCreateChannelId] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [saved, setSaved] = useState({ createChannelId: "", categoryId: "" });
 
   const loc = getDashboardLocale(detectBrowserLanguage());
+  useBeforeUnload(
+    !loading && (createChannelId !== saved.createChannelId || categoryId !== saved.categoryId)
+  );
 
   useEffect(() => {
     setLoading(true);
     fetchSettings(guildId)
       .then((s) => {
         setSettingsData(s);
-        setCreateChannelId(s.features.tempVc.createChannelId ?? "");
-        setCategoryId(s.features.tempVc.categoryId ?? "");
+        const cc = s.features.tempVc.createChannelId ?? "";
+        const ca = s.features.tempVc.categoryId ?? "";
+        setCreateChannelId(cc);
+        setCategoryId(ca);
+        setSaved({ createChannelId: cc, categoryId: ca });
       })
       .catch((e: unknown) => toast.error(toSettingsError(e)))
       .finally(() => setLoading(false));
@@ -44,6 +52,7 @@ function VoiceSettingsCard({ guildId }: { guildId: string }) {
     setSaving(true);
     try {
       await updateTempVcSettings(guildId, createChannelId, categoryId);
+      setSaved({ createChannelId, categoryId });
       toast.success("Voice設定を保存しました。");
     } catch (e) {
       toast.error(toSettingsError(e));

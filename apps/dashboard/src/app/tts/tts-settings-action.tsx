@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Save, Settings } from "lucide-react";
 import { fetchSettings, updateTtsSettings, toSettingsError } from "../../lib/settings-api";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
+import { useBeforeUnload } from "../../hooks/use-before-unload";
 import { SettingsModal } from "../../components/settings-modal";
 import { Skeleton } from "../../components/ui/skeleton";
 
@@ -12,13 +13,19 @@ function TtsChannelSettingsCard({ guildId }: { guildId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [textChannelId, setTextChannelId] = useState("");
+  const [savedChannelId, setSavedChannelId] = useState("");
 
   const loc = getDashboardLocale(detectBrowserLanguage());
+  useBeforeUnload(textChannelId !== savedChannelId && !loading);
 
   useEffect(() => {
     setLoading(true);
     fetchSettings(guildId)
-      .then((s) => setTextChannelId(s.features.tts.textChannelId ?? ""))
+      .then((s) => {
+        const id = s.features.tts.textChannelId ?? "";
+        setTextChannelId(id);
+        setSavedChannelId(id);
+      })
       .catch((e: unknown) => toast.error(toSettingsError(e)))
       .finally(() => setLoading(false));
   }, [guildId]);
@@ -36,6 +43,7 @@ function TtsChannelSettingsCard({ guildId }: { guildId: string }) {
     setSaving(true);
     try {
       await updateTtsSettings(guildId, textChannelId);
+      setSavedChannelId(textChannelId);
       toast.success("TTS設定を保存しました。");
     } catch (e) {
       toast.error(toSettingsError(e));

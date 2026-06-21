@@ -6,6 +6,7 @@ import { Save, Settings } from "lucide-react";
 import { fetchSettings, updateRecruitmentSettings, toSettingsError, type SettingsResponse } from "../../lib/settings-api";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import { Skeleton } from "../../components/ui/skeleton";
+import { useBeforeUnload } from "../../hooks/use-before-unload";
 import { RecruitmentSettingsTab } from "../settings/components/RecruitmentSettingsTab";
 import { SettingsModal } from "../../components/settings-modal";
 
@@ -14,15 +15,19 @@ function RecruitmentSettingsCard({ guildId }: { guildId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [channelId, setChannelId] = useState("");
+  const [savedChannelId, setSavedChannelId] = useState("");
 
   const loc = getDashboardLocale(detectBrowserLanguage());
+  useBeforeUnload(!loading && channelId !== savedChannelId);
 
   useEffect(() => {
     setLoading(true);
     fetchSettings(guildId)
       .then((s) => {
         setSettingsData(s);
-        setChannelId(s.features.recruitment.channelId ?? "");
+        const id = s.features.recruitment.channelId ?? "";
+        setChannelId(id);
+        setSavedChannelId(id);
       })
       .catch((e: unknown) => toast.error(toSettingsError(e)))
       .finally(() => setLoading(false));
@@ -41,6 +46,7 @@ function RecruitmentSettingsCard({ guildId }: { guildId: string }) {
     setSaving(true);
     try {
       await updateRecruitmentSettings(guildId, { channelId: channelId || null });
+      setSavedChannelId(channelId);
       toast.success("募集設定を保存しました。");
     } catch (e) {
       toast.error(toSettingsError(e));

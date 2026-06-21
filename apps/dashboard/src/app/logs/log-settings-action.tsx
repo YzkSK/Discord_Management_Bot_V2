@@ -7,6 +7,7 @@ import { Save, Settings } from "lucide-react";
 import { fetchSettings, updateSettings, toSettingsError } from "../../lib/settings-api";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import { Skeleton } from "../../components/ui/skeleton";
+import { useBeforeUnload } from "../../hooks/use-before-unload";
 import { LogsSettingsTab } from "../settings/components/LogsSettingsTab";
 import { SettingsModal } from "../../components/settings-modal";
 
@@ -16,8 +17,10 @@ function LogSettingsCard({ guildId }: { guildId: string }) {
   const [logMode, setLogMode] = useState("full");
   const [language, setLanguage] = useState("en");
   const [uiLang, setUiLang] = useState<GuildLanguage>("en");
+  const [saved, setSaved] = useState({ logMode: "full", language: "en" });
 
   const loc = getDashboardLocale(uiLang);
+  useBeforeUnload(!loading && (logMode !== saved.logMode || language !== saved.language));
   const logModeOptions = [
     { label: loc.logModeFull, value: "full" },
     { label: loc.logModeMetadataOnly, value: "metadata_only" },
@@ -35,6 +38,7 @@ function LogSettingsCard({ guildId }: { guildId: string }) {
       .then((s) => {
         setLogMode(s.logMode);
         setLanguage(s.language);
+        setSaved({ logMode: s.logMode, language: s.language });
         if (s.language === "ja" || s.language === "en") setUiLang(s.language);
       })
       .catch((e: unknown) => toast.error(toSettingsError(e)))
@@ -56,6 +60,7 @@ function LogSettingsCard({ guildId }: { guildId: string }) {
     setSaving(true);
     try {
       await updateSettings(guildId, logMode, language);
+      setSaved({ logMode, language });
       toast.success("ログ設定を保存しました。");
     } catch (e) {
       toast.error(toSettingsError(e));
