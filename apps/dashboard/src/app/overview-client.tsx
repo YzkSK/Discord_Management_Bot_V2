@@ -151,7 +151,7 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
           ].map((kpi) => (
             <div key={kpi.label} className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-zinc-500">{kpi.label}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{kpi.label}</p>
                 <span className="text-zinc-500">{kpi.icon}</span>
               </div>
               <p className="mt-2 text-2xl font-bold text-zinc-100">{kpi.value}</p>
@@ -196,7 +196,7 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
               className="rounded-lg border border-zinc-800 bg-zinc-900 p-4"
             >
               <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-zinc-500">{kpi.label}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{kpi.label}</p>
                 <span className="text-zinc-500">{kpi.icon}</span>
               </div>
               <p className="mt-2 text-2xl font-bold text-zinc-100">{kpi.value}</p>
@@ -250,7 +250,7 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
 
       {/* 右カラム: Recent Activity（固定高さ・内部スクロール） */}
       <div className="lg:col-span-2">
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900 h-full lg:h-[calc(100vh-10rem)] flex flex-col">
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900 min-h-[400px] lg:h-[calc(100vh-10rem)] flex flex-col">
           <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3 shrink-0">
             <p className="text-sm font-medium text-zinc-300">最近のアクティビティ</p>
             <a href="/logs" className="text-xs text-zinc-500 hover:text-green-400">
