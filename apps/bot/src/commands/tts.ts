@@ -10,7 +10,6 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  MessageFlags,
   PermissionFlagsBits,
   SlashCommandBuilder,
   type AutocompleteInteraction,
@@ -164,38 +163,20 @@ export function toForceJoinCancelCustomId(input: ForceJoinCustomIdInput) {
   ].join(":");
 }
 
-export function parseForceJoinCustomId(customId: string) {
-  const [prefix, guildId, userId, textChannelId, voiceChannelId] =
-    customId.split(":");
-
-  if (
-    prefix !== forceJoinCustomIdPrefix ||
-    !guildId ||
-    !userId ||
-    !textChannelId ||
-    !voiceChannelId
-  ) {
+function parseForceJoinCustomIdBase(customId: string, prefix: string) {
+  const [p, guildId, userId, textChannelId, voiceChannelId] = customId.split(":");
+  if (p !== prefix || !guildId || !userId || !textChannelId || !voiceChannelId) {
     return null;
   }
-
   return { guildId, textChannelId, userId, voiceChannelId };
 }
 
+export function parseForceJoinCustomId(customId: string) {
+  return parseForceJoinCustomIdBase(customId, forceJoinCustomIdPrefix);
+}
+
 export function parseForceJoinCancelCustomId(customId: string) {
-  const [prefix, guildId, userId, textChannelId, voiceChannelId] =
-    customId.split(":");
-
-  if (
-    prefix !== forceJoinCancelCustomIdPrefix ||
-    !guildId ||
-    !userId ||
-    !textChannelId ||
-    !voiceChannelId
-  ) {
-    return null;
-  }
-
-  return { guildId, textChannelId, userId, voiceChannelId };
+  return parseForceJoinCustomIdBase(customId, forceJoinCancelCustomIdPrefix);
 }
 
 export async function handleJoinCommand(
