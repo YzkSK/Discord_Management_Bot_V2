@@ -137,6 +137,31 @@ export async function fetchGuildRoles(
   return roles.filter((r) => r.name !== "@everyone");
 }
 
+export interface DiscordGuildMemberSearchResult {
+  user: { id: string; username: string; global_name: string | null; avatar: string | null };
+  nick: string | null;
+}
+
+export async function fetchGuildMembersSearch(
+  botToken: string,
+  guildId: string,
+  query: string,
+  limit = 25
+): Promise<DiscordGuildMemberSearchResult[]> {
+  const params = new URLSearchParams({ query, limit: String(limit) });
+  const response = await fetch(
+    `${discordApiBaseUrl}/guilds/${guildId}/members/search?${params}`,
+    { headers: { Authorization: `Bot ${botToken}` }, cache: "no-store" }
+  );
+  if (!response.ok) {
+    throw new DiscordApiError(
+      `Failed to search guild members (${response.status}).`,
+      response.status
+    );
+  }
+  return (await response.json()) as DiscordGuildMemberSearchResult[];
+}
+
 export async function fetchGuildChannels(
   botToken: string,
   guildId: string
