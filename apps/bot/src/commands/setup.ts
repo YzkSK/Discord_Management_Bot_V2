@@ -234,12 +234,28 @@ async function handleLogsSetup(
     return;
   }
 
+  const textChannel = channel as TextChannel;
+  const botMember = interaction.guild?.members.me;
+  const botPerms = botMember ? textChannel.permissionsFor(botMember) : null;
+
+  if (!botPerms?.has(PermissionFlagsBits.ManageChannels)) {
+    await interaction.reply({
+      ...createComponentsV2TextMessage({
+        title: loc.logsSetupFailed,
+        lines: [loc.logsChannelMissingPermission],
+        accentColor: EVENT_COLORS.red,
+        privateResponse: true
+      })
+    });
+    return;
+  }
+
   await ensureGuildSetup(context.db, {
     guildId,
     name: interaction.guild?.name ?? null
   });
 
-  await markLogChannel(channel as TextChannel);
+  await markLogChannel(textChannel);
 
   await interaction.reply({
     ...createComponentsV2TextMessage({
