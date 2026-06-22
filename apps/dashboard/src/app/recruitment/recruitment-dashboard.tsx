@@ -1,7 +1,8 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
+import { Plus } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import { formatRelativeTime } from "../../lib/event-display";
@@ -13,6 +14,9 @@ import {
 import { ErrorAlert } from "../../components/error-alert";
 import { useDashboardData } from "../../hooks/use-dashboard-data";
 import { LoadingSpinner } from "../../components/loading-spinner";
+import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
+import { SettingsModal } from "../../components/settings-modal";
 
 type RecruitmentStatus = "open" | "full" | "closed";
 
@@ -69,7 +73,7 @@ const STATUS_BORDER: Record<RecruitmentStatus, string> = {
   closed: "border-l-slate-600",
 };
 
-const GENRE_EMOJI: Record<string, string> = {
+const TITLE_EMOJI: Record<string, string> = {
   FPS: "🎯",
   RPG: "⚔️",
   MOBA: "🏆",
@@ -79,8 +83,15 @@ const GENRE_EMOJI: Record<string, string> = {
   レーシング: "🏎️",
 };
 
-function genreEmoji(genre: string): string {
-  return GENRE_EMOJI[genre] ?? "🎮";
+
+const STATUS_BADGE: Record<RecruitmentStatus, "info" | "outline" | "success"> = {
+  open: "info",
+  full: "outline",
+  closed: "outline",
+};
+
+function titleEmoji(title: string): string {
+  return TITLE_EMOJI[title] ?? "🎮";
 }
 
 function DeadlineText({ deadlineAt }: { deadlineAt: string | null }) {
@@ -101,7 +112,7 @@ function DeadlineText({ deadlineAt }: { deadlineAt: string | null }) {
       hour: "2-digit",
       minute: "2-digit"
     });
-    return <span className="text-xs text-[#80848e]">締め切り：{date}</span>;
+    return <span className="text-xs text-[#b5bac1]">締め切り：{date}</span>;
   }
 
   if (msLeft > COUNTDOWN_THRESHOLD_1H_MS) {
@@ -120,18 +131,27 @@ function DeadlineText({ deadlineAt }: { deadlineAt: string | null }) {
   );
 }
 
-function RecruitmentCard({ r }: { r: RecruitmentItem }) {
+function RecruitmentCard({
+  r,
+  closingId,
+  onAction,
+}: {
+  r: RecruitmentItem;
+  closingId: string | null;
+  onAction: (id: string, action: "close" | "reopen") => void;
+}) {
   const borderClass = STATUS_BORDER[r.status];
+  const isClosing = closingId === r.id;
   return (
     <div className={`rounded-xl border border-[#1e1f22] border-l-2 ${borderClass} bg-[#2b2d31] shadow-sm p-3`}>
       <div className="flex items-start gap-2">
-        <span className="mt-0.5 text-lg leading-none">{genreEmoji(r.genre)}</span>
+        <span className="mt-0.5 text-lg leading-none">{titleEmoji(r.genre)}</span>
         <div className="flex-1 min-w-0">
           <p className="truncate text-sm font-medium text-[#dbdee1]">{r.genre}</p>
           {r.content && (
-            <p className="mt-0.5 line-clamp-2 text-xs text-[#80848e]">{r.content}</p>
+            <p className="mt-0.5 line-clamp-2 text-xs text-[#b5bac1]">{r.content}</p>
           )}
-          <p className="mt-0.5 text-xs text-[#4e5058]">
+          <p className="mt-0.5 text-xs text-[#80848e]">
             {formatRelativeTime(new Date(r.createdAt))} 作成
           </p>
           {r.status !== "closed" && (
@@ -142,6 +162,80 @@ function RecruitmentCard({ r }: { r: RecruitmentItem }) {
         </div>
       </div>
       <CapacityBar current={r.activeParticipantCount} max={r.capacity} />
+      <div className="mt-2 flex justify-end">
+        {r.status === "closed" ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={isClosing}
+            onClick={() => onAction(r.id, "reopen")}
+          >
+            {isClosing ? "処理中..." : "再オープン"}
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={isClosing}
+            className="text-red-400 hover:text-red-300"
+            onClick={() => onAction(r.id, "close")}
+          >
+            {isClosing ? "処理中..." : "締め切る"}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MyRecruitmentRow({
+  r,
+  closingId,
+  onAction,
+}: {
+  r: RecruitmentItem;
+  closingId: string | null;
+  onAction: (id: string, action: "close" | "reopen") => void;
+}) {
+  const isClosing = closingId === r.id;
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-[#1e1f22] bg-[#2b2d31] px-4 py-3">
+      <span className="text-base leading-none">{titleEmoji(r.genre)}</span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium text-[#dbdee1]">{r.genre}</p>
+          <Badge variant={STATUS_BADGE[r.status]}>{STATUS_LABELS[r.status]}</Badge>
+        </div>
+        {r.content && (
+          <p className="mt-0.5 truncate text-xs text-[#b5bac1]">{r.content}</p>
+        )}
+      </div>
+      <div className="shrink-0 text-right">
+        <p className="text-xs text-[#dbdee1]">
+          {r.activeParticipantCount}/{r.capacity}人
+        </p>
+        {r.status !== "closed" && <DeadlineText deadlineAt={r.deadlineAt} />}
+      </div>
+      {r.status === "closed" ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={isClosing}
+          onClick={() => onAction(r.id, "reopen")}
+        >
+          {isClosing ? "処理中..." : "再オープン"}
+        </Button>
+      ) : (
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={isClosing}
+          className="text-red-400 hover:text-red-300"
+          onClick={() => onAction(r.id, "close")}
+        >
+          {isClosing ? "処理中..." : "締め切る"}
+        </Button>
+      )}
     </div>
   );
 }
@@ -156,7 +250,7 @@ function CapacityBar({
   const pct = max > 0 ? Math.min(100, Math.round((current / max) * 100)) : 0;
   return (
     <div className="mt-2">
-      <div className="mb-1 flex justify-between text-xs text-[#80848e]">
+      <div className="mb-1 flex justify-between text-xs text-[#b5bac1]">
         <span>定員</span>
         <span>
           {current}/{max}人
@@ -172,6 +266,128 @@ function CapacityBar({
   );
 }
 
+function CreateRecruitmentForm({
+  guildId,
+  onSuccess,
+}: {
+  guildId: string;
+  onSuccess: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [capacity, setCapacity] = useState(4);
+  const [deadlineDays, setDeadlineDays] = useState(3);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      const res = await fetch("/api/panel/recruitment", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ guildId, genre: title, content, capacity, deadlineDays }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({} as { error?: string })) as { error?: string };
+        setFormError(body.error ?? "作成に失敗しました");
+        return;
+      }
+      setOpen(false);
+      setTitle("");
+      setContent("");
+      setCapacity(4);
+      setDeadlineDays(3);
+      onSuccess();
+    } catch {
+      setFormError("作成に失敗しました");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <>
+      <Button size="sm" type="button" onClick={() => setOpen(true)}>
+        <Plus className="h-3.5 w-3.5" />
+        募集を作成
+      </Button>
+
+      {open && (
+        <SettingsModal onClose={() => setOpen(false)}>
+          <p className="mb-4 text-sm font-semibold text-[#f2f3f5]">新しい募集</p>
+          <form className="grid gap-3" onSubmit={(e) => void handleSubmit(e)}>
+            <label className="grid gap-1">
+              <span className="text-xs text-[#b5bac1]">タイトル</span>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                maxLength={50}
+                placeholder="例：APEX ランク一緒に"
+                className="rounded-md border border-[#3f4147] bg-[#1e1f22] px-3 py-1.5 text-sm text-[#dbdee1] placeholder:text-[#80848e] focus:outline-none focus:ring-1 focus:ring-[#5865f2]/50"
+              />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-1">
+                <span className="text-xs text-[#b5bac1]">定員</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={99}
+                  value={capacity}
+                  onChange={(e) => setCapacity(Number(e.target.value))}
+                  className="rounded-md border border-[#3f4147] bg-[#1e1f22] px-3 py-1.5 text-sm text-[#dbdee1] focus:outline-none focus:ring-1 focus:ring-[#5865f2]/50"
+                />
+              </label>
+              <label className="grid gap-1">
+                <span className="text-xs text-[#b5bac1]">締め切り</span>
+                <select
+                  value={deadlineDays}
+                  onChange={(e) => setDeadlineDays(Number(e.target.value))}
+                  className="rounded-md border border-[#3f4147] bg-[#1e1f22] px-3 py-1.5 text-sm text-[#dbdee1] focus:outline-none focus:ring-1 focus:ring-[#5865f2]/50"
+                >
+                  <option value={1}>1日後</option>
+                  <option value={3}>3日後</option>
+                  <option value={7}>7日後</option>
+                </select>
+              </label>
+            </div>
+            <label className="grid gap-1">
+              <span className="text-xs text-[#b5bac1]">募集内容</span>
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                required
+                maxLength={200}
+                rows={3}
+                placeholder="募集の詳細を入力してください"
+                className="rounded-md border border-[#3f4147] bg-[#1e1f22] px-3 py-2 text-sm text-[#dbdee1] placeholder:text-[#80848e] focus:outline-none focus:ring-1 focus:ring-[#5865f2]/50 resize-none"
+              />
+              <span className="text-right text-xs text-[#80848e]">{content.length}/200</span>
+            </label>
+            {formError && (
+              <p className="text-xs text-[#f23f42]">{formError}</p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button size="sm" type="button" variant="ghost" onClick={() => setOpen(false)}>
+                キャンセル
+              </Button>
+              <Button size="sm" type="submit" disabled={submitting || !title.trim() || !content.trim()}>
+                {submitting ? "作成中..." : "作成"}
+              </Button>
+            </div>
+          </form>
+        </SettingsModal>
+      )}
+    </>
+  );
+}
+
 async function fetchRecruitmentData(guildId: string): Promise<RecruitmentResponse> {
   const query = new URLSearchParams({ guildId });
   const r = await fetch(`/api/recruitments?${query.toString()}`, { cache: "no-store" });
@@ -179,7 +395,15 @@ async function fetchRecruitmentData(guildId: string): Promise<RecruitmentRespons
   return (await r.json()) as RecruitmentResponse;
 }
 
-export function RecruitmentDashboard({ guildId }: { guildId: string }) {
+export function RecruitmentDashboard({
+  guildId,
+  userId,
+  role,
+}: {
+  guildId: string;
+  userId: string;
+  role?: "viewer" | "admin" | "owner" | null;
+}) {
   const [uiLang, setUiLang] = useState<GuildLanguage>("en");
   const loc = getDashboardLocale(uiLang);
   const { data, loading, error, reload } = useDashboardData(
@@ -191,6 +415,38 @@ export function RecruitmentDashboard({ guildId }: { guildId: string }) {
   useEffect(() => {
     setUiLang(detectBrowserLanguage());
   }, []);
+
+  const isViewer = role === "viewer";
+
+  const [closingId, setClosingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function handleAction(id: string, action: "close" | "reopen") {
+    setClosingId(id);
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/recruitments/${id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action, guildId }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({} as { error?: string })) as { error?: string };
+        setActionError(body.error ?? "操作に失敗しました");
+        return;
+      }
+      reload();
+    } catch {
+      setActionError("操作に失敗しました");
+    } finally {
+      setClosingId(null);
+    }
+  }
+
+  const myRecruitments = useMemo(
+    () => data?.recruitments.filter((r) => r.creatorId === userId) ?? [],
+    [data, userId]
+  );
 
   const grouped = useMemo(() => {
     const empty: Record<RecruitmentStatus, RecruitmentItem[]> = {
@@ -222,9 +478,47 @@ export function RecruitmentDashboard({ guildId }: { guildId: string }) {
     return <ErrorAlert message={error ?? loc.recruitmentFailedToLoad} onRetry={reload} />;
   }
 
+  if (isViewer) {
+    return (
+      <div className="flex max-w-3xl flex-col gap-4">
+        {actionError && (
+          <ErrorAlert message={actionError} onRetry={() => setActionError(null)} />
+        )}
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-[#dbdee1]">自分の募集</p>
+          <CreateRecruitmentForm guildId={guildId} onSuccess={reload} />
+        </div>
+        {myRecruitments.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-[#3f4147] py-12 text-center">
+            <p className="text-sm text-[#80848e]">募集がありません</p>
+            <p className="mt-1 text-xs text-[#80848e]">「募集を作成」から新しい募集を投稿できます</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {myRecruitments.map((r) => (
+              <MyRecruitmentRow
+                key={r.id}
+                r={r}
+                closingId={closingId}
+                onAction={(id, action) => void handleAction(id, action)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex max-w-6xl flex-col gap-6">
-      {/* ドーナツチャート + 統計 */}
+      {actionError && (
+        <ErrorAlert message={actionError} onRetry={() => setActionError(null)} />
+      )}
+      <div className="flex items-center justify-between">
+        <span />
+        <CreateRecruitmentForm guildId={guildId} onSuccess={reload} />
+      </div>
+
       {data.totalCount > 0 && (
         <div className="flex flex-col items-center gap-4 rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4 sm:flex-row">
           <div style={{ width: 160, height: 120 }}>
@@ -255,23 +549,22 @@ export function RecruitmentDashboard({ guildId }: { guildId: string }) {
             {pieData.map((d) => (
               <div key={d.name}>
                 <p className="text-xl font-bold text-[#f2f3f5]">{d.value}</p>
-                <p className="text-xs text-[#80848e]">{d.name}</p>
+                <p className="text-xs text-[#b5bac1]">{d.name}</p>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Kanban カラム */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {(["open", "full", "closed"] as const).map((status) => (
           <div key={status}>
             <div className="mb-2 flex items-center gap-2">
               <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} />
-              <h3 className="text-sm font-medium text-[#80848e]">
+              <h3 className="text-sm font-medium text-[#b5bac1]">
                 {STATUS_LABELS[status]}
               </h3>
-              <span className="ml-auto rounded-md bg-[#383a40] px-2 py-0.5 text-xs text-[#80848e]">
+              <span className="ml-auto rounded-md bg-[#383a40] px-2 py-0.5 text-xs text-[#b5bac1]">
                 {grouped[status].length}
               </span>
             </div>
@@ -283,7 +576,12 @@ export function RecruitmentDashboard({ guildId }: { guildId: string }) {
                 </div>
               ) : (
                 grouped[status].map((r) => (
-                  <RecruitmentCard key={r.id} r={r} />
+                  <RecruitmentCard
+                    key={r.id}
+                    r={r}
+                    closingId={closingId}
+                    onAction={(id, action) => void handleAction(id, action)}
+                  />
                 ))
               )}
             </div>
