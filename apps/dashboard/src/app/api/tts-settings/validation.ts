@@ -1,5 +1,15 @@
 import { ttsDictionaryScopes, type TtsDictionaryScope } from "@discord-bot/db";
-import { isObject, readRequiredString } from "../settings/validation.js";
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readRequiredString(value: unknown, field: string) {
+  if (typeof value !== "string" || !value.trim()) {
+    return { ok: false as const, error: `${field} is required.` };
+  }
+  return { ok: true as const, value: value.trim() };
+}
 
 type ParseResult<T> =
   | { ok: true; value: T }
