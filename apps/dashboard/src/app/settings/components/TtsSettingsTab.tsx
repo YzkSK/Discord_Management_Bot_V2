@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Plus, Save, Trash2 } from "lucide-react";
 import { UserMention } from "../../../components/user-mention";
@@ -97,7 +97,7 @@ export function TtsSettingsTab({
           label={loc.ttsSettings}
           loc={loc}
         />
-        <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">
+        <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#b5bac1]">
           {loc.ttsTextChannelId}
           <ChannelSelect
             value={ttsTextChannelId}
@@ -173,7 +173,7 @@ export function TtsSettingsTab({
               <TableBody>
                 {!ttsSettings?.userSpeakers.length ? (
                   <TableRow>
-                    <TableCell className="py-5 text-center text-[#4e5058]" colSpan={3}>
+                    <TableCell className="py-5 text-center text-[#80848e]" colSpan={3}>
                       {loc.notConfigured}
                     </TableCell>
                   </TableRow>
@@ -182,7 +182,7 @@ export function TtsSettingsTab({
                     <TableCell>
                       {speaker.userId
                         ? <UserMention userId={speaker.userId} actorName={null} />
-                        : <span className="font-mono text-xs text-[#80848e]">—</span>}
+                        : <span className="font-mono text-xs text-[#b5bac1]">—</span>}
                     </TableCell>
                     <TableCell>{speaker.speakerId}</TableCell>
                     <TableCell>
@@ -244,7 +244,7 @@ export function TtsSettingsTab({
               placeholder={loc.ttsToText}
               value={ttsDictionaryToText}
             />
-            <label className="flex items-center gap-2 text-xs text-[#80848e]">
+            <label className="flex items-center gap-2 text-xs text-[#b5bac1]">
               <input
                 checked={ttsDictionaryEnabled}
                 disabled={!canEditTts}
@@ -279,7 +279,7 @@ export function TtsSettingsTab({
               <TableBody>
                 {!ttsSettings?.dictionaryEntries.length ? (
                   <TableRow>
-                    <TableCell className="py-5 text-center text-[#4e5058]" colSpan={5}>
+                    <TableCell className="py-5 text-center text-[#80848e]" colSpan={5}>
                       {loc.notConfigured}
                     </TableCell>
                   </TableRow>

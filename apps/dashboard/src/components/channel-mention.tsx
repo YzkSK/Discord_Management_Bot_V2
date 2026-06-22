@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as Popover from "@radix-ui/react-popover";
 import { Copy } from "lucide-react";
@@ -73,10 +73,10 @@ export function ChannelMention({ channelId, channelName, guildId }: ChannelMenti
           onClick={(e) => e.stopPropagation()}
         >
           {loadingPopover && (
-            <p className="text-xs text-[#80848e]">読み込み中...</p>
+            <p className="text-xs text-[#b5bac1]">読み込み中...</p>
           )}
           {error && !loadingPopover && (
-            <p className="text-xs text-[#80848e]">情報を取得できませんでした</p>
+            <p className="text-xs text-[#b5bac1]">情報を取得できませんでした</p>
           )}
           {channel && !loadingPopover && (
             <div>
@@ -84,13 +84,13 @@ export function ChannelMention({ channelId, channelName, guildId }: ChannelMenti
                 #{channel.name}
               </p>
               <div className="mt-1 flex items-center gap-1">
-                <p className="truncate font-mono text-xs text-[#80848e]">
+                <p className="truncate font-mono text-xs text-[#b5bac1]">
                   {channel.id}
                 </p>
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="shrink-0 text-[#80848e] hover:text-[#dbdee1]"
+                  className="shrink-0 text-[#b5bac1] hover:text-[#dbdee1]"
                   aria-label="IDをコピー"
                 >
                   <Copy className="h-3 w-3" />

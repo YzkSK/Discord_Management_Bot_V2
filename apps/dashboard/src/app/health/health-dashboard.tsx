@@ -60,7 +60,7 @@ export function HealthDashboard() {
   }, [loadHealth]);
 
   if (loading) {
-    return <p className="text-sm text-[#80848e]">{loc.loading}...</p>;
+    return <p className="text-sm text-[#b5bac1]">{loc.loading}...</p>;
   }
 
   if (!summary) {
@@ -87,7 +87,7 @@ export function HealthDashboard() {
           >
             {summary.status === "ok" ? loc.healthOk : loc.healthError}
           </Badge>
-          <span className="text-xs text-[#80848e]">
+          <span className="text-xs text-[#b5bac1]">
             {loc.healthCheckedAt}: {formatDate(summary.lastCheckedAt)}
           </span>
         </div>
@@ -130,7 +130,7 @@ export function HealthDashboard() {
       </div>
 
       <div>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#80848e]">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#b5bac1]">
           {loc.healthDependencies}
         </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -155,7 +155,7 @@ function HealthMetric({
   return (
     <div className="rounded-md border border-[#1e1f22] bg-[#2b2d31] p-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-medium text-[#80848e]">{label}</p>
+        <p className="text-xs font-medium text-[#b5bac1]">{label}</p>
         {icon}
       </div>
       <p className="mt-2 text-2xl font-semibold text-[#f2f3f5]">{value}</p>
@@ -188,26 +188,26 @@ function ServiceTile({
         </div>
         <div className="flex items-center gap-1.5">
           <span className={`h-2 w-2 rounded-[50%] ${dotClass}`} />
-          <span className="text-xs text-[#80848e]">{statusLabel}</span>
+          <span className="text-xs text-[#b5bac1]">{statusLabel}</span>
         </div>
       </div>
       {service.latencyMs !== null && (
-        <p className="mt-2 font-mono text-xs text-[#80848e]">
+        <p className="mt-2 font-mono text-xs text-[#b5bac1]">
           {service.latencyMs}ms
         </p>
       )}
       {service.message && (
-        <p className="mt-1 text-xs text-[#4e5058] break-all">{service.message}</p>
+        <p className="mt-1 text-xs text-[#80848e] break-all">{service.message}</p>
       )}
     </div>
   );
 }
 
 function getServiceIcon(name: string) {
-  if (name === "database") return <Database className="h-3.5 w-3.5 text-[#80848e]" />;
-  if (name === "voicevox") return <Volume2 className="h-3.5 w-3.5 text-[#80848e]" />;
-  if (name === "redis") return <Clock3 className="h-3.5 w-3.5 text-[#80848e]" />;
-  return <Server className="h-3.5 w-3.5 text-[#80848e]" />;
+  if (name === "database") return <Database className="h-3.5 w-3.5 text-[#b5bac1]" />;
+  if (name === "voicevox") return <Volume2 className="h-3.5 w-3.5 text-[#b5bac1]" />;
+  if (name === "redis") return <Clock3 className="h-3.5 w-3.5 text-[#b5bac1]" />;
+  return <Server className="h-3.5 w-3.5 text-[#b5bac1]" />;
 }
 
 async function fetchHealthReport(): Promise<HealthReportResponse> {

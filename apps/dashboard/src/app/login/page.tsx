@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import { LayoutDashboard } from "lucide-react";
 
 import { getDashboardSession } from "../../auth";
@@ -20,7 +20,7 @@ export default async function LoginPage() {
           </div>
           <div className="text-center">
             <h1 className="text-lg font-semibold text-[#f2f3f5]">Discord Bot Dashboard</h1>
-            <p className="mt-1 text-sm text-[#80848e]">Sign in with your Discord account to continue</p>
+            <p className="mt-1 text-sm text-[#b5bac1]">Sign in with your Discord account to continue</p>
           </div>
         </div>
         <Card>

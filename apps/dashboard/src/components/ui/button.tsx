@@ -1,4 +1,4 @@
-import * as React from "react";
+﻿import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../../lib/utils";
 
@@ -15,7 +15,7 @@ const buttonVariants = cva(
       variant: {
         default: "bg-[#5865f2] text-white hover:bg-[#4752c4]",
         destructive: "bg-[#f23f42]/15 text-[#f23f42] border border-[#f23f42]/30 hover:bg-[#f23f42]/25",
-        ghost: "text-[#80848e] hover:bg-[#383a40] hover:text-[#dbdee1]",
+        ghost: "text-[#b5bac1] hover:bg-[#383a40] hover:text-[#dbdee1]",
         outline: "border border-[#3f4147] bg-transparent text-[#dbdee1] hover:bg-[#383a40]",
         secondary: "bg-[#383a40] text-[#dbdee1] hover:bg-[#404249]",
       },

@@ -55,7 +55,6 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
         accessGrants={access.accessGrants}
         grantTargetType={access.grantTargetType}
         grantTargetId={access.grantTargetId}
-        grantRole={access.grantRole}
         managementRoleIds={access.managementRoleIds}
         savingGrant={access.savingGrant}
         savingRoles={access.savingRoles}
@@ -64,7 +63,6 @@ export function SettingsPanel({ guildId }: { guildId: string }) {
         loc={loc}
         onGrantTargetTypeChange={access.setGrantTargetType}
         onGrantTargetIdChange={access.setGrantTargetId}
-        onGrantRoleChange={access.setGrantRole}
         onManagementRoleChange={(id, checked) => {
           access.setManagementRoleIds((prev) =>
             checked ? [...prev, id] : prev.filter((x) => x !== id)

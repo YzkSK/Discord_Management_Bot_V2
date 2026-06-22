@@ -1,4 +1,4 @@
-import * as React from "react";
+﻿import * as React from "react";
 import { cn } from "../../lib/utils";
 
 export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTableElement>) {
@@ -26,7 +26,7 @@ export function TableHead({ className, ...props }: React.ThHTMLAttributes<HTMLTa
   return (
     <th
       className={cn(
-        "h-9 px-4 text-left align-middle text-[10px] font-semibold uppercase tracking-wider text-[#4e5058]",
+        "h-9 px-4 text-left align-middle text-[10px] font-semibold uppercase tracking-wider text-[#80848e]",
         className
       )}
       {...props}

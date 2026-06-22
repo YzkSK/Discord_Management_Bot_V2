@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
@@ -108,7 +108,7 @@ export function LogSettingsAction({ guildId }: { guildId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 rounded-md border border-[#3f4147] px-2.5 py-1.5 text-xs text-[#80848e] hover:border-[#3f4147] hover:text-[#dbdee1]"
+        className="flex items-center gap-1.5 rounded-md border border-[#3f4147] px-2.5 py-1.5 text-xs text-[#b5bac1] hover:border-[#3f4147] hover:text-[#dbdee1]"
         aria-label="ログ設定"
       >
         <Settings className="h-3.5 w-3.5" />

@@ -22,7 +22,7 @@ export function AuthStatus({ session }: { session: Session | null }) {
         <p className="truncate text-xs font-medium text-[#dbdee1]">
           {session.user.name ?? "Signed in"}
         </p>
-        <p className="truncate text-[10px] text-[#4e5058]">
+        <p className="truncate text-[10px] text-[#80848e]">
           {session.user.id}
         </p>
       </div>

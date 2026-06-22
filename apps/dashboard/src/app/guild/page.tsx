@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import { Server } from "lucide-react";
 
 import { getDashboardSession } from "../../auth";
@@ -19,7 +19,7 @@ export default async function GuildPage() {
           </div>
           <div>
             <h1 className="text-lg font-semibold text-[#f2f3f5]">Select a Guild</h1>
-            <p className="mt-1 text-sm text-[#80848e]">
+            <p className="mt-1 text-sm text-[#b5bac1]">
               Only servers where you have management permissions and this bot is installed are shown.
             </p>
           </div>

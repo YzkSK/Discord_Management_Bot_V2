@@ -35,8 +35,11 @@ export function useVoiceRealtime(guildId: string, onUpdate: () => void) {
       console.warn("voice-realtime: realtime error received", err);
     });
 
+    const interval = setInterval(onUpdate, 60_000);
+
     return () => {
       socket.disconnect();
+      clearInterval(interval);
     };
     // onUpdate must be stable (useCallback from parent); guildId reconnects on change
     // eslint-disable-next-line react-hooks/exhaustive-deps

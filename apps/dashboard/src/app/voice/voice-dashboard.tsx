@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
@@ -127,8 +127,8 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
             className="rounded-lg rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4"
           >
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-[#80848e]">{kpi.label}</p>
-              <span className="text-[#80848e]">{kpi.icon}</span>
+              <p className="text-xs font-medium text-[#b5bac1]">{kpi.label}</p>
+              <span className="text-[#b5bac1]">{kpi.icon}</span>
             </div>
             <p className="mt-2 text-2xl font-bold text-[#f2f3f5]">
               {kpi.value}
@@ -140,7 +140,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
       {/* アクティブセッション */}
       <section>
         <div className="mb-3 flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-[#80848e]">
+          <h2 className="text-sm font-semibold text-[#b5bac1]">
             {loc.voiceActiveCalls}
           </h2>
           <span className="relative flex h-2 w-2" title="リアルタイム更新">
@@ -149,7 +149,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
           </span>
         </div>
         {data.activeSessions.length === 0 ? (
-          <div className="rounded-lg rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm py-10 text-center text-sm text-[#4e5058]">
+          <div className="rounded-lg rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm py-10 text-center text-sm text-[#80848e]">
             {loc.voiceNoActiveCalls}
           </div>
         ) : (
@@ -173,7 +173,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
                       {s.channelName ?? `#${s.channelId}`}
                     </span>
                   </div>
-                  <div className="mt-2 flex items-center gap-4 text-xs text-[#80848e]">
+                  <div className="mt-2 flex items-center gap-4 text-xs text-[#b5bac1]">
                     <span className="flex items-center gap-1">
                       <Users className="h-3 w-3" />
                       {s.memberCount}人
@@ -196,7 +196,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
       {/* 一時 VC */}
       {data.tempVoiceChannels.length > 0 && (
         <section>
-          <h2 className="mb-3 text-sm font-semibold text-[#80848e]">
+          <h2 className="mb-3 text-sm font-semibold text-[#b5bac1]">
             {loc.voiceTempVcChannels}
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -208,7 +208,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
                 <p className="truncate text-sm font-medium text-[#dbdee1]">
                   {vc.channelName ?? `#${vc.channelId}`}
                 </p>
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-[#80848e]">
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-[#b5bac1]">
                   <Crown className="h-3 w-3 text-yellow-500" />
                   <UserMention userId={vc.ownerId} actorName={null} />
                 </div>
@@ -225,7 +225,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
 
       {/* ピーク時間チャート */}
       <section>
-        <h2 className="mb-3 text-sm font-semibold text-[#80848e]">
+        <h2 className="mb-3 text-sm font-semibold text-[#b5bac1]">
           ピーク時間帯
         </h2>
         <div className="rounded-lg rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4">

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Button } from "./button";
 
@@ -35,7 +35,7 @@ export function ConfirmDialog({
           {title}
         </p>
         {description && (
-          <p className="mt-1.5 text-xs text-[#80848e]">{description}</p>
+          <p className="mt-1.5 text-xs text-[#b5bac1]">{description}</p>
         )}
         <div className="mt-4 flex justify-end gap-2">
           <Button type="button" variant="ghost" size="sm" onClick={onCancel}>

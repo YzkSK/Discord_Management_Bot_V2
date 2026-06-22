@@ -148,7 +148,10 @@ const eventDescriptions: Record<string, (v: EventVars) => string> = {
   // 音声
   "voice.session.join": (v) => `🎤 ${actor(v)} が${ch(v) ? `${ch(v)}` : "VCチャンネル"} に参加`,
   "voice.session.leave": (v) => `🎤 ${actor(v)} が${ch(v) ? `${ch(v)}` : "VCチャンネル"} から退出`,
-  "voice.session.move": (v) => `🎤 ${actor(v)} が${ch(v) ? `${ch(v)}` : "VCチャンネル"} に移動`,
+  "voice.session.move": (v) =>
+    v.targetId && v.actorId !== v.targetId
+      ? `🎤 ${actor(v)} が ${target(v)} を${ch(v) ? `${ch(v)}` : "VCチャンネル"} に移動`
+      : `🎤 ${actor(v)} が${ch(v) ? `${ch(v)}` : "VCチャンネル"} に移動`,
   "voice.state.update": (v) => {
     const detail = formatVoiceStateChanges(v.voiceStateChanges);
     return detail
@@ -304,6 +307,12 @@ export function extractActorName(payload: unknown): string | null {
   // represents the TARGET (affected person), not the actor. Skip them to avoid
   // showing the wrong name for the executor.
   if (typeof payload["targetId"] === "string") {
+    const auditLog = payload["auditLog"];
+    if (isObj(auditLog)) {
+      const executor = auditLog["executor"];
+      if (isObj(executor) && typeof executor["username"] === "string")
+        return (typeof executor["globalName"] === "string" ? executor["globalName"] : null) ?? executor["username"];
+    }
     const author = payload["author"];
     if (isObj(author) && typeof author["username"] === "string")
       return (typeof author["globalName"] === "string" ? author["globalName"] : null) ?? author["username"];

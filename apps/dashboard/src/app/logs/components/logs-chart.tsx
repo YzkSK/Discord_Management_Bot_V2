@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo } from "react";
 import {
@@ -59,7 +59,7 @@ export function LogsChart({ logs }: { logs: LogItem[] }) {
 
   return (
     <div className="rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4">
-      <p className="mb-3 text-xs font-medium text-[#80848e]">
+      <p className="mb-3 text-xs font-medium text-[#b5bac1]">
         直近24時間のイベント頻度
       </p>
       <ResponsiveContainer width="100%" height={80}>
