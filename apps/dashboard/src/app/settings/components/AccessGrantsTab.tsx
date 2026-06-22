@@ -1,11 +1,12 @@
-"use client";
+﻿"use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Save, Trash2 } from "lucide-react";
+import { MemberPicker } from "../../../components/member-picker";
+import { UserMention } from "../../../components/user-mention";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { ConfirmDialog } from "../../../components/ui/confirm-dialog";
-import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
@@ -24,7 +25,6 @@ interface AccessGrantsTabProps {
   accessGrants: DashboardAccessGrant[];
   grantTargetType: "user" | "role";
   grantTargetId: string;
-  grantRole: GrantableAccessRole;
   managementRoleIds: string[];
   savingGrant: boolean;
   savingRoles: boolean;
@@ -33,7 +33,6 @@ interface AccessGrantsTabProps {
   loc: DashboardLoc;
   onGrantTargetTypeChange: (value: "user" | "role") => void;
   onGrantTargetIdChange: (value: string) => void;
-  onGrantRoleChange: (value: GrantableAccessRole) => void;
   onManagementRoleChange: (id: string, checked: boolean) => void;
   onSaveAccessGrant: () => void;
   onDeleteAccessGrant: (grant: DashboardAccessGrant) => void;
@@ -48,7 +47,6 @@ export function AccessGrantsTab({
   accessGrants,
   grantTargetType,
   grantTargetId,
-  grantRole,
   managementRoleIds,
   savingGrant,
   savingRoles,
@@ -57,7 +55,6 @@ export function AccessGrantsTab({
   loc,
   onGrantTargetTypeChange,
   onGrantTargetIdChange,
-  onGrantRoleChange,
   onManagementRoleChange,
   onSaveAccessGrant,
   onDeleteAccessGrant,
@@ -67,7 +64,31 @@ export function AccessGrantsTab({
   onCancelRoleRemoval
 }: AccessGrantsTabProps) {
   const availableRoles = settings.availableRoles as DiscordRole[] | undefined;
+  const adminGrants = accessGrants.filter((g) => g.role === "admin");
   const [pendingDeleteGrant, setPendingDeleteGrant] = useState<DashboardAccessGrant | null>(null);
+  const [userNames, setUserNames] = useState<Record<string, string> | null>(null);
+
+  useEffect(() => {
+    const userIds = adminGrants
+      .filter((g) => g.targetType === "user")
+      .map((g) => g.targetId);
+    if (userIds.length === 0) {
+      setUserNames({});
+      return;
+    }
+
+    setUserNames(null);
+    fetch(`/api/discord/users?ids=${userIds.join(",")}`)
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((data: Record<string, { globalName: string | null; username: string }>) => {
+        const names: Record<string, string> = {};
+        for (const [id, user] of Object.entries(data)) {
+          names[id] = user.globalName ?? user.username;
+        }
+        setUserNames(names);
+      })
+      .catch(() => setUserNames({}));
+  }, [accessGrants]);
 
   return (
     <>
@@ -76,11 +97,11 @@ export function AccessGrantsTab({
         <CardTitle>{loc.dashboardAccess}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
-        <p className="text-xs text-[#80848e]">{loc.dashboardAccessNote}</p>
+        <p className="text-xs text-[#b5bac1]">{loc.dashboardAccessNote}</p>
 
         <div className="grid gap-3 rounded-md border border-[#1e1f22] bg-[#1e1f22] p-3">
-          <div className="grid gap-2 sm:grid-cols-[110px_1fr_120px]">
-            <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">
+          <div className="grid gap-2 sm:grid-cols-[110px_1fr]">
+            <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#b5bac1]">
               {loc.accessGrantTarget}
               <Select
                 onChange={(e) => {
@@ -95,37 +116,29 @@ export function AccessGrantsTab({
               </Select>
             </label>
 
-            <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">
+            <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#b5bac1]">
               {grantTargetType === "role" ? loc.accessGrantRole : loc.accessGrantUserId}
-              {grantTargetType === "role" && availableRoles?.length ? (
-                <Select
-                  onChange={(e) => onGrantTargetIdChange(e.target.value)}
-                  value={grantTargetId}
-                >
-                  <option value="">{loc.accessGrantSelectRole}</option>
-                  {availableRoles.map((role) => (
-                    <option key={role.id} value={role.id}>{role.name}</option>
-                  ))}
-                </Select>
+              {grantTargetType === "role" ? (
+                availableRoles?.length ? (
+                  <Select
+                    onChange={(e) => onGrantTargetIdChange(e.target.value)}
+                    value={grantTargetId}
+                  >
+                    <option value="">{loc.accessGrantSelectRole}</option>
+                    {availableRoles.map((role) => (
+                      <option key={role.id} value={role.id}>{role.name}</option>
+                    ))}
+                  </Select>
+                ) : null
               ) : (
-                <Input
-                  onChange={(e) => onGrantTargetIdChange(e.target.value)}
-                  placeholder={grantTargetType === "role" ? loc.accessGrantRoleId : loc.accessGrantUserId}
+                <MemberPicker
+                  guildId={settings.guildId}
                   value={grantTargetId}
+                  onChange={onGrantTargetIdChange}
                 />
               )}
             </label>
 
-            <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">
-              {loc.accessGrantRole}
-              <Select
-                onChange={(e) => onGrantRoleChange(e.target.value === "admin" ? "admin" : "viewer")}
-                value={grantRole}
-              >
-                <option value="viewer">{loc.accessGrantViewer}</option>
-                <option value="admin">{loc.accessGrantAdmin}</option>
-              </Select>
-            </label>
           </div>
 
           <div className="flex justify-end">
@@ -137,41 +150,41 @@ export function AccessGrantsTab({
         </div>
 
         <div className="overflow-x-auto rounded-md border border-[#1e1f22]">
+          {userNames === null ? (
+            <div className="flex items-center justify-center gap-2 py-10 text-sm text-[#80848e]">
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+              ユーザー情報を読み込み中...
+            </div>
+          ) : (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead scope="col" className="w-24">{loc.accessGrantTarget}</TableHead>
                 <TableHead scope="col">{loc.accessGrantId}</TableHead>
-                <TableHead scope="col" className="w-28">{loc.accessGrantAccess}</TableHead>
                 <TableHead scope="col" className="w-20">{loc.accessGrantAction}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {accessGrants.length === 0 ? (
+              {adminGrants.length === 0 ? (
                 <TableRow>
-                  <TableCell className="py-8 text-center text-[#4e5058]" colSpan={4}>
+                  <TableCell className="py-8 text-center text-[#80848e]" colSpan={3}>
                     {loc.noAccessGrants}
                   </TableCell>
                 </TableRow>
-              ) : accessGrants.map((grant) => (
+              ) : adminGrants.map((grant) => (
                 <TableRow key={accessGrantKey(grant)}>
-                  <TableCell className="capitalize text-[#80848e]">{grant.targetType}</TableCell>
+                  <TableCell className="capitalize text-[#b5bac1]">{grant.targetType}</TableCell>
                   <TableCell>
-                    <span className="break-all font-mono text-xs text-[#dbdee1]">
-                      {formatGrantTarget(grant, availableRoles)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      onChange={(e) => {
-                        const role = e.target.value === "admin" ? "admin" : "viewer";
-                        onUpdateAccessGrantRole(grant, role);
-                      }}
-                      value={grant.role}
-                    >
-                      <option value="viewer">{loc.accessGrantViewer}</option>
-                      <option value="admin">{loc.accessGrantAdmin}</option>
-                    </Select>
+                    {grant.targetType === "user" ? (
+                      <UserMention userId={grant.targetId} actorName={userNames[grant.targetId] ?? null} />
+                    ) : (
+                      <span className="break-all text-sm text-[#dbdee1]">
+                        {formatGrantTarget(grant, availableRoles)}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Button
@@ -189,11 +202,12 @@ export function AccessGrantsTab({
               ))}
             </TableBody>
           </Table>
+          )}
         </div>
 
         {availableRoles !== undefined && (
           <div className="grid gap-3 border-t border-[#1e1f22] pt-4">
-            <p className="text-xs text-[#80848e]">{loc.managementRoleShortcutNote}</p>
+            <p className="text-xs text-[#b5bac1]">{loc.managementRoleShortcutNote}</p>
             <div className="flex flex-col gap-1.5">
               {availableRoles.map((role) => (
                 <label

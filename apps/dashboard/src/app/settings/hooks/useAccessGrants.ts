@@ -23,7 +23,7 @@ export function useAccessGrants(
   const [accessGrants, setAccessGrants] = useState<DashboardAccessGrant[]>([]);
   const [grantTargetType, setGrantTargetType] = useState<"user" | "role">("user");
   const [grantTargetId, setGrantTargetId] = useState("");
-  const [grantRole, setGrantRole] = useState<GrantableAccessRole>("viewer");
+  const [grantRole, setGrantRole] = useState<GrantableAccessRole>("admin");
   const [managementRoleIds, setManagementRoleIds] = useState<string[]>([]);
   const [savingGrant, setSavingGrant] = useState(false);
   const [savingRoles, setSavingRoles] = useState(false);

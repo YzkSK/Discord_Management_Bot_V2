@@ -25,6 +25,7 @@ export const en: Locale = {
   tempVcCategorySame: "same category as the creation channel",
   logsSetupFailed: "❌ Logs setup failed",
   logsChannelMustBeText: "Log channel must be a text channel.",
+  logsChannelMissingPermission: "The bot is missing the **Manage Channel** permission for that channel. Grant it and try again.",
   logsSetupComplete: "✅ Logs setup complete",
   logsChannel: ({ id }) => `Log channel: <#${id}>`,
   logsMarker: ({ marker }) => `Marker: ${marker}`,

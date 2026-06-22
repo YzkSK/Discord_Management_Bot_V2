@@ -27,6 +27,7 @@ export const ja: Locale = {
   tempVcCategorySame: "作成チャンネルと同じカテゴリ",
   logsSetupFailed: "❌ ログセットアップ失敗",
   logsChannelMustBeText: "ログチャンネルはテキストチャンネルにしてください。",
+  logsChannelMissingPermission: "そのチャンネルに対するボットの **チャンネルの管理** 権限がありません。権限を付与してから再試行してください。",
   logsSetupComplete: "✅ ログセットアップ完了",
   logsChannel: ({ id }) => `ログチャンネル: <#${id}>`,
   logsMarker: ({ marker }) => `マーカー: ${marker}`,
