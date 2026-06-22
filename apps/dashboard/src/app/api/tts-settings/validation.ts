@@ -1,5 +1,5 @@
 import { ttsDictionaryScopes, type TtsDictionaryScope } from "@discord-bot/db";
-import { isObject, readRequiredString } from "../settings/validation";
+import { isObject, readRequiredString } from "../settings/validation.js";
 
 type ParseResult<T> =
   | { ok: true; value: T }
