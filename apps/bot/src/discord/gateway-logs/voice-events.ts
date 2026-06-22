@@ -3,7 +3,8 @@ import {
   getActiveTempVoiceChannelByChannelId,
   getGuildConfigByGuildId
 } from "@discord-bot/db";
-import { Events, type Client, type VoiceState } from "discord.js";
+import { AuditLogEvent, Events, type Client, type VoiceState } from "discord.js";
+import { lookupAuditLog } from "../audit-log.js";
 import { createVoiceEvent, type WriteEventFn } from "./payloads.js";
 
 const GUILD_CONFIG_CACHE_TTL_MS = 60_000;
@@ -81,7 +82,28 @@ async function writeVoiceStateEvent(
     return;
   }
 
-  write(createVoiceEvent(eventName, oldState, newState));
+  const event = createVoiceEvent(eventName, oldState, newState);
+
+  if (eventName === "voice.session.move") {
+    const movedUserId = newState.member?.id ?? newState.id;
+    await new Promise<void>((resolve) => setTimeout(resolve, 500));
+    const auditLog = await lookupAuditLog(newState.guild, AuditLogEvent.MemberMove, null);
+    if (auditLog.status === "matched" && auditLog.actorId && auditLog.actorId !== movedUserId) {
+      write({
+        ...event,
+        actorId: auditLog.actorId,
+        payload: {
+          ...event.payload,
+          targetId: movedUserId,
+          targetName: newState.member?.displayName ?? null,
+          auditLog: auditLog.payload
+        }
+      });
+      return;
+    }
+  }
+
+  write(event);
 }
 
 async function shouldSuppressTempVoiceStateEvent(
