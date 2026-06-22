@@ -4,7 +4,7 @@ import {
   type Client,
   type PollAnswer
 } from "discord.js";
-import { createGuildEvent, type WriteEventFn } from "./payloads.js";
+import { createEvent, createGuildEvent, type WriteEventFn } from "./payloads.js";
 
 // Skip audit_log.entry for actions that already have dedicated gateway event handlers
 // (those handlers call writeWithAuditLog which already enriches the event with actor/reason)
@@ -16,6 +16,7 @@ const GATEWAY_COVERED_ACTIONS = new Set([
   AuditLogEvent.ChannelOverwriteCreate,
   AuditLogEvent.ChannelOverwriteUpdate,
   AuditLogEvent.ChannelOverwriteDelete,
+  AuditLogEvent.WebhookUpdate,
   AuditLogEvent.MemberKick,
   AuditLogEvent.MemberBanAdd,
   AuditLogEvent.MemberBanRemove,
@@ -35,6 +36,7 @@ const GATEWAY_COVERED_ACTIONS = new Set([
   AuditLogEvent.ThreadCreate,
   AuditLogEvent.ThreadUpdate,
   AuditLogEvent.ThreadDelete,
+  AuditLogEvent.MemberMove,
 ]);
 
 export function installPollAuditGatewayLogHandlers(client: Client, write: WriteEventFn) {
@@ -66,6 +68,46 @@ export function installPollAuditGatewayLogHandlers(client: Client, write: WriteE
 
   client.on(Events.GuildAuditLogEntryCreate, (entry, guild) => {
     if (GATEWAY_COVERED_ACTIONS.has(entry.action)) return;
+
+    if (entry.action === AuditLogEvent.MessageDelete) {
+      const extra = entry.extra as { channel: { id: string }; count: number } | null;
+      write(
+        createEvent("message.delete", {
+          guildId: guild.id,
+          actorId: entry.executorId,
+          channelId: extra?.channel.id ?? null,
+          messageId: null,
+          payload: {
+            content: null,
+            attachments: [],
+            createdTimestamp: null,
+            partial: true,
+            targetUserId: entry.targetId,
+            count: extra?.count ?? null,
+            reason: entry.reason
+          }
+        })
+      );
+      return;
+    }
+
+    if (entry.action === AuditLogEvent.MessageBulkDelete) {
+      const extra = entry.extra as { count: number } | null;
+      write(
+        createEvent("message.bulk_delete", {
+          guildId: guild.id,
+          actorId: entry.executorId,
+          channelId: entry.targetId,
+          messageId: null,
+          payload: {
+            messageIds: [],
+            count: extra?.count ?? null,
+            reason: entry.reason
+          }
+        })
+      );
+      return;
+    }
 
     const t = entry.target as Record<string, unknown> | null;
     const targetName =
