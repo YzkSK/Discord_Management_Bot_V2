@@ -22,7 +22,7 @@ export function UserMention({ userId, actorName }: UserMentionProps) {
     setLoadingName(true);
     fetchCachedDiscordUser(userId)
       .then((data) => setUser(data))
-      .catch(() => {})
+      .catch((e: unknown) => { console.warn("user-mention: name fetch failed", e); })
       .finally(() => setLoadingName(false));
   }, [userId, actorName]);
 

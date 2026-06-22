@@ -324,12 +324,12 @@ async function handleLeftChannel(
     const tempVoiceChannelName = context.oldState.channel?.name ?? null;
     const guild = context.oldState.guild;
 
-    const timer = setTimeout(async () => {
+    const timer = setTimeout(() => {
       pendingOwnerTransferTimers.delete(channelId);
-      await transferOwnerIfNeeded(db, logWriter, guild, {
+      transferOwnerIfNeeded(db, logWriter, guild, {
         channelId,
         tempVoiceChannelName
-      });
+      }).catch((err: unknown) => console.error("temp-vc: owner transfer failed", { channelId, err }));
     }, ownerTransferDelayMs);
 
     pendingOwnerTransferTimers.set(channelId, timer);

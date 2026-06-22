@@ -79,7 +79,7 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
           if (first) setSelectedId(String(first.id));
         }
       })
-      .catch(() => toast.error("データの読み込みに失敗しました。"))
+      .catch((e: unknown) => { console.error("panel-dashboard: load failed", e); toast.error("データの読み込みに失敗しました。"); })
       .finally(() => setLoading(false));
   }, [guildId]);
 
@@ -229,7 +229,7 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
     fetch(`/api/panel/dictionary?guildId=${guildId}`)
       .then((r) => r.json() as Promise<{ entries: DictionaryEntry[] }>)
       .then((data) => setEntries(data.entries ?? []))
-      .catch(() => toast.error("データの読み込みに失敗しました。"))
+      .catch((e: unknown) => { console.error("panel-dashboard: load failed", e); toast.error("データの読み込みに失敗しました。"); })
       .finally(() => setLoading(false));
   }, [guildId]);
 
@@ -406,7 +406,7 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
         const firstCh = list[0];
         if (firstCh) setSelectedChannelId(firstCh.id);
       })
-      .catch(() => toast.error("データの読み込みに失敗しました。"))
+      .catch((e: unknown) => { console.error("panel-dashboard: load failed", e); toast.error("データの読み込みに失敗しました。"); })
       .finally(() => setConfigLoading(false));
   }, [guildId]);
 

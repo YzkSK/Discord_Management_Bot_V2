@@ -122,7 +122,8 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
       setSessions(data.sessions ?? []);
       setRecruitments(data.recruitments ?? []);
       setRecentLogs(data.logItems ?? []);
-    } catch {
+    } catch (e: unknown) {
+      console.error("overview: load failed", e);
       setError(true);
     } finally {
       setLoading(false);

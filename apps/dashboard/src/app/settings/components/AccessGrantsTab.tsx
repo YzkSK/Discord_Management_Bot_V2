@@ -87,7 +87,7 @@ export function AccessGrantsTab({
         }
         setUserNames(names);
       })
-      .catch(() => setUserNames({}));
+      .catch((e: unknown) => { console.error("AccessGrantsTab: user name fetch failed", e); setUserNames({}); });
   }, [accessGrants]);
 
   return (

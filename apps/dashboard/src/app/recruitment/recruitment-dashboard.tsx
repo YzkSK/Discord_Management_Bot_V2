@@ -302,7 +302,8 @@ function CreateRecruitmentForm({
       setCapacity(4);
       setDeadlineDays(3);
       onSuccess();
-    } catch {
+    } catch (e: unknown) {
+      console.error("recruitment-dashboard: create failed", e);
       setFormError("作成に失敗しました");
     } finally {
       setSubmitting(false);
@@ -436,7 +437,8 @@ export function RecruitmentDashboard({
         return;
       }
       reload();
-    } catch {
+    } catch (e: unknown) {
+      console.error("recruitment-dashboard: action failed", e);
       setActionError("操作に失敗しました");
     } finally {
       setClosingId(null);
