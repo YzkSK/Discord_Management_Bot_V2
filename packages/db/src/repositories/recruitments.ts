@@ -3,6 +3,8 @@ import { and, asc, count, desc, eq, isNotNull, isNull, lte, ne, sql } from "driz
 import type { DbClient } from "../client.js";
 import { recruitmentParticipants, recruitments } from "../schema/index.js";
 
+const DEFAULT_RECRUITMENTS_LIMIT = 50;
+
 export const recruitmentStatuses = ["open", "full", "closed"] as const;
 
 export type RecruitmentStatus = (typeof recruitmentStatuses)[number];
@@ -120,7 +122,7 @@ export async function listRecruitmentDashboardState(
     .leftJoin(activeCounts, eq(recruitments.id, activeCounts.recruitmentId))
     .where(eq(recruitments.guildId, input.guildId))
     .orderBy(desc(recruitments.createdAt))
-    .limit(input.limit ?? 50);
+    .limit(input.limit ?? DEFAULT_RECRUITMENTS_LIMIT);
 }
 
 export async function listActiveRecruitmentParticipants(

@@ -204,7 +204,7 @@ export function getTempVoiceState(channel: GuildBasedChannel) {
   }
   const overwrites = (channel as { permissionOverwrites: { cache: Map<string, { type: number; deny: { has: (flag: bigint) => boolean } }> } }).permissionOverwrites.cache;
   const everyoneOverwrite = [...overwrites.values()].find(
-    (o) => o.type === 0 // OverwriteType.Role = 0
+    (o) => o.type === OverwriteType.Role
   );
   return {
     isLocked: everyoneOverwrite?.deny.has(PermissionFlagsBits.Connect) ?? false,

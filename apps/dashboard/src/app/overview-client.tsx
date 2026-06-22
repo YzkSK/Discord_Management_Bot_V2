@@ -193,11 +193,13 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
 
   const isViewer = role === "viewer";
 
+  const VIEWER_KPI_KEYS = new Set(["activeVcCount", "openRecruitCount"]);
+
   if (isViewer) {
     return (
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
-          {[kpiDefs[0], kpiDefs[2]].map((kpi) => {
+          {kpiDefs.filter((kpi) => VIEWER_KPI_KEYS.has(kpi.key)).map((kpi) => {
             const Icon = kpi.icon;
             return (
               <div key={kpi.label} className="rounded-lg bg-[#383a40] p-4">

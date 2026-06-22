@@ -33,6 +33,8 @@ import { resolveGuildLocale } from "../discord/resolve-locale.js";
 
 type Loc = ReturnType<typeof getLocale>;
 
+const RECRUITMENT_CREATE_MODAL_ID = "recruitment-create-modal";
+
 export const recruitmentCommand = new SlashCommandBuilder()
   .setName("recruitment")
   .setDescription("Create and manage recruitment posts.")
@@ -147,7 +149,7 @@ async function handleRecruitmentCreate(
   const DEADLINE_MAX_LENGTH = 2;
 
   const modal = new ModalBuilder()
-    .setCustomId("recruitment-create-modal")
+    .setCustomId(RECRUITMENT_CREATE_MODAL_ID)
     .setTitle(loc.recruitmentModalTitle);
 
   const titleInput = new TextInputBuilder()
@@ -193,7 +195,7 @@ export async function handleRecruitmentModalSubmit(
   interaction: ModalSubmitInteraction,
   context: RecruitmentCommandContext
 ): Promise<boolean> {
-  if (interaction.customId !== "recruitment-create-modal") return false;
+  if (interaction.customId !== RECRUITMENT_CREATE_MODAL_ID) return false;
 
   if (!interaction.guildId || !interaction.guild) {
     const loc = getLocale("en");

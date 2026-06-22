@@ -23,6 +23,8 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const DISCORD_CHANNEL_TYPES = { TEXT: 0, VOICE: 2, CATEGORY: 4 } as const;
+
 let _env: ReturnType<typeof parseDashboardAuthEnv> | undefined;
 function getEnv() { return (_env ??= parseDashboardAuthEnv()); }
 
@@ -71,17 +73,17 @@ export async function GET(request: NextRequest) {
       : [];
 
     const availableTextChannels = channelsData
-      .filter((ch) => ch.type === 0)
+      .filter((ch) => ch.type === DISCORD_CHANNEL_TYPES.TEXT)
       .sort((a, b) => a.name.localeCompare(b.name))
       .map(({ id, name }) => ({ id, name }));
 
     const availableVoiceChannels = channelsData
-      .filter((ch) => ch.type === 2)
+      .filter((ch) => ch.type === DISCORD_CHANNEL_TYPES.VOICE)
       .sort((a, b) => a.name.localeCompare(b.name))
       .map(({ id, name }) => ({ id, name }));
 
     const availableCategories = channelsData
-      .filter((ch) => ch.type === 4)
+      .filter((ch) => ch.type === DISCORD_CHANNEL_TYPES.CATEGORY)
       .sort((a, b) => a.name.localeCompare(b.name))
       .map(({ id, name }) => ({ id, name }));
 

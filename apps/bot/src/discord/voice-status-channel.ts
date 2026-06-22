@@ -17,6 +17,8 @@ export const voiceStatusChannelTopicMarker =
 
 export type VoiceStatusDisplayState = "started" | "active" | "ended";
 
+const VOICE_SESSION_ACTIVE_THRESHOLD_MS = 60_000;
+
 type Loc = ReturnType<typeof getLocale>;
 
 export function hasVoiceStatusChannelMarker(
@@ -69,7 +71,7 @@ export function resolveVoiceStatusDisplayState(input: {
     return "ended";
   }
 
-  return input.now.getTime() - input.startedAt.getTime() >= 60_000
+  return input.now.getTime() - input.startedAt.getTime() >= VOICE_SESSION_ACTIVE_THRESHOLD_MS
     ? "active"
     : "started";
 }
