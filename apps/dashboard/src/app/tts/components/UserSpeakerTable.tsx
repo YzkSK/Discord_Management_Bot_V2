@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Button } from "../../../components/ui/button";
@@ -19,10 +19,12 @@ export interface TtsUserSpeaker {
 
 export function UserSpeakerTable({
   loc,
-  userSpeakers
+  userSpeakers,
+  speakerMap = new Map(),
 }: {
   loc: ReturnType<typeof getDashboardLocale>;
   userSpeakers: TtsUserSpeaker[];
+  speakerMap?: Map<number, string>;
 }) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);
@@ -52,7 +54,7 @@ export function UserSpeakerTable({
           className="w-full rounded-md border border-[#3f4147] bg-[#383a40] px-3 py-1.5 text-sm text-[#f2f3f5] placeholder-[#4e5058] focus:border-[#5865f2] focus:outline-none"
         />
         {query && (
-          <span className="shrink-0 text-xs text-[#80848e]">
+          <span className="shrink-0 text-xs text-[#b5bac1]">
             {filtered.length} / {userSpeakers.length} 件
           </span>
         )}
@@ -63,7 +65,7 @@ export function UserSpeakerTable({
           <TableHeader>
             <TableRow>
               <TableHead scope="col">{loc.accessGrantUserId}</TableHead>
-              <TableHead scope="col">{loc.ttsSpeakerId}</TableHead>
+              <TableHead scope="col">話者</TableHead>
               <TableHead scope="col">{loc.updated}</TableHead>
               <TableHead scope="col"></TableHead>
             </TableRow>
@@ -71,7 +73,7 @@ export function UserSpeakerTable({
           <TableBody>
             {visible.length === 0 ? (
               <TableRow>
-                <TableCell className="py-8 text-center text-[#4e5058]" colSpan={4}>
+                <TableCell className="py-8 text-center text-[#80848e]" colSpan={4}>
                   {query ? "検索結果がありません" : `${loc.ttsUserSpeakers}: 0`}
                 </TableCell>
               </TableRow>
@@ -80,11 +82,11 @@ export function UserSpeakerTable({
                 <TableCell>
                   <UserMention userId={speaker.userId} actorName={null} />
                 </TableCell>
-                <TableCell>{speaker.speakerId}</TableCell>
-                <TableCell className="text-xs text-[#80848e]">{speaker.updatedAt}</TableCell>
+                <TableCell>{speakerMap.get(speaker.speakerId) ?? `#${speaker.speakerId}`}</TableCell>
+                <TableCell className="text-xs text-[#b5bac1]">{speaker.updatedAt}</TableCell>
                 <TableCell>
                   <Button
-                    aria-label={`話者 ID ${speaker.speakerId} を試聴`}
+                    aria-label={`${speakerMap.get(speaker.speakerId) ?? `話者 ${speaker.speakerId}`} を試聴`}
                     disabled={playingId !== null}
                     onClick={() => void playPreview(speaker.speakerId)}
                     size="sm"
@@ -102,7 +104,7 @@ export function UserSpeakerTable({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
-          <span className="text-xs text-[#80848e]">
+          <span className="text-xs text-[#b5bac1]">
             {safePage + 1} / {totalPages} ページ
           </span>
           <div className="flex gap-1">

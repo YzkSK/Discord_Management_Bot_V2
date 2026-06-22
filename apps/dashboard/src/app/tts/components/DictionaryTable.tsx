@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Badge } from "../../../components/ui/badge";
@@ -60,7 +60,7 @@ export function DictionaryTable({
           className="w-full rounded-md border border-[#3f4147] bg-[#383a40] px-3 py-1.5 text-sm text-[#f2f3f5] placeholder-[#4e5058] focus:border-[#5865f2] focus:outline-none"
         />
         {query && (
-          <span className="shrink-0 text-xs text-[#80848e]">
+          <span className="shrink-0 text-xs text-[#b5bac1]">
             {filtered.length} / {entries.length} 件
           </span>
         )}
@@ -80,7 +80,7 @@ export function DictionaryTable({
           <TableBody>
             {visible.length === 0 ? (
               <TableRow>
-                <TableCell className="py-8 text-center text-[#4e5058]" colSpan={5}>
+                <TableCell className="py-8 text-center text-[#80848e]" colSpan={5}>
                   {query ? "検索結果がありません" : `${loc.ttsDictionaryEntries}: 0`}
                 </TableCell>
               </TableRow>
@@ -109,7 +109,7 @@ export function DictionaryTable({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
-          <span className="text-xs text-[#80848e]">
+          <span className="text-xs text-[#b5bac1]">
             {safePage + 1} / {totalPages} ページ
           </span>
           <div className="flex gap-1">
