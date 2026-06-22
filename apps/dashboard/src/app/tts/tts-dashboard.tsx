@@ -310,7 +310,7 @@ function DictionaryAddForm({
         const body = await res.json().catch((e: unknown) => {
           console.error("Failed to parse error response", e);
           return {} as { error?: string };
-        }) as { error?: string };
+        });
         setFormError(body.error ?? "登録に失敗しました");
         return;
       }

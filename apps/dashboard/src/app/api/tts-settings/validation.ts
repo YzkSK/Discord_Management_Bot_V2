@@ -1,5 +1,16 @@
 import { ttsDictionaryScopes, type TtsDictionaryScope } from "@discord-bot/db";
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readRequiredString(value: unknown, field: string) {
+  if (typeof value !== "string" || !value.trim()) {
+    return { ok: false as const, error: `${field} is required.` };
+  }
+  return { ok: true as const, value: value.trim() };
+}
+
 type ParseResult<T> =
   | { ok: true; value: T }
   | { ok: false; error: string };
@@ -254,14 +265,3 @@ function readNonNegativeInteger(value: unknown, field: string) {
   return { ok: true as const, value: Number(value) };
 }
 
-function readRequiredString(value: unknown, field: string) {
-  if (typeof value !== "string" || !value.trim()) {
-    return { ok: false as const, error: `${field} is required.` };
-  }
-
-  return { ok: true as const, value: value.trim() };
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}

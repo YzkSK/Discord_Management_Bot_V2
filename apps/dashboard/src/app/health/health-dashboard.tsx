@@ -212,7 +212,7 @@ function getServiceIcon(name: string) {
 
 async function fetchHealthReport(): Promise<HealthReportResponse> {
   const response = await fetch("/api/health", { cache: "no-store" });
-  // 503 縺ｯ繧ｵ繝ｼ繝薙せ襍ｷ蜍穂ｸｭ縺ｮ驛ｨ蛻・腐髫懊ｒ陦ｨ縺・窶・JSON 繝ｬ繧ｹ繝昴Φ繧ｹ縺ｯ霑斐ｋ縺ｮ縺ｧ邯夊｡・
+  // 503はサービス起動中の部分的エラーを示す。JSONレスポンスは返るので許可
   if (!response.ok && response.status !== 503) {
     throw new Error(`Failed to load health state (${response.status})`);
   }

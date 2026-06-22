@@ -292,7 +292,7 @@ function CreateRecruitmentForm({
         body: JSON.stringify({ guildId, genre: title, content, capacity, deadlineDays }),
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({} as { error?: string })) as { error?: string };
+        const body = await res.json().catch(() => ({} as { error?: string }));
         setFormError(body.error ?? "作成に失敗しました");
         return;
       }
@@ -302,7 +302,8 @@ function CreateRecruitmentForm({
       setCapacity(4);
       setDeadlineDays(3);
       onSuccess();
-    } catch {
+    } catch (e: unknown) {
+      console.error("recruitment-dashboard: create failed", e);
       setFormError("作成に失敗しました");
     } finally {
       setSubmitting(false);
@@ -431,12 +432,13 @@ export function RecruitmentDashboard({
         body: JSON.stringify({ action, guildId }),
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({} as { error?: string })) as { error?: string };
+        const body = await res.json().catch(() => ({} as { error?: string }));
         setActionError(body.error ?? "操作に失敗しました");
         return;
       }
       reload();
-    } catch {
+    } catch (e: unknown) {
+      console.error("recruitment-dashboard: action failed", e);
       setActionError("操作に失敗しました");
     } finally {
       setClosingId(null);

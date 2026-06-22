@@ -33,8 +33,10 @@ export function GuildSelector() {
   }, []);
 
   function selectGuild(guild: GuildItem) {
-    document.cookie = `dashboard-guild-id=${guild.id}; path=/; max-age=${GUILD_COOKIE_MAX_AGE_SEC}`;
-    document.cookie = `dashboard-guild-name=${encodeURIComponent(guild.name)}; path=/; max-age=${GUILD_COOKIE_MAX_AGE_SEC}`;
+    const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+    const flags = `path=/; max-age=${GUILD_COOKIE_MAX_AGE_SEC}; SameSite=Strict${secure}`;
+    document.cookie = `dashboard-guild-id=${guild.id}; ${flags}`;
+    document.cookie = `dashboard-guild-name=${encodeURIComponent(guild.name)}; ${flags}`;
     localStorage.setItem(dashboardGuildStorageKey, guild.id);
     window.location.href = "/";
   }

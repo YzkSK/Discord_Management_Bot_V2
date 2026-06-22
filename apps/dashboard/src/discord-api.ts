@@ -51,7 +51,8 @@ export async function fetchCurrentUserGuilds(
 
   const response = await fetch(`${discordApiBaseUrl}/users/@me/guilds`, {
     headers: { Authorization: `Bearer ${accessToken}` },
-    cache: "no-store"
+    cache: "no-store",
+    signal: AbortSignal.timeout(5000)
   });
   if (!response.ok) {
     throw new DiscordApiError(
@@ -85,7 +86,8 @@ export async function fetchGuildMemberRoleIds(
     `${discordApiBaseUrl}/guilds/${guildId}/members/${userId}`,
     {
       headers: { Authorization: `Bot ${botToken}` },
-      cache: "no-store"
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000)
     }
   );
   if (response.status === 404 || response.status === 403) return [];
@@ -108,7 +110,8 @@ export async function fetchGuildOwnerId(
     `${discordApiBaseUrl}/guilds/${guildId}`,
     {
       headers: { Authorization: `Bot ${botToken}` },
-      cache: "no-store"
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000)
     }
   );
   if (!response.ok) return null;
@@ -124,7 +127,8 @@ export async function fetchGuildRoles(
     `${discordApiBaseUrl}/guilds/${guildId}/roles`,
     {
       headers: { Authorization: `Bot ${botToken}` },
-      cache: "no-store"
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000)
     }
   );
   if (!response.ok) {
@@ -170,7 +174,8 @@ export async function fetchGuildChannels(
     `${discordApiBaseUrl}/guilds/${guildId}/channels`,
     {
       headers: { Authorization: `Bot ${botToken}` },
-      cache: "no-store"
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000)
     }
   );
   if (!response.ok) {

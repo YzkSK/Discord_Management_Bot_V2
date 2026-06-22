@@ -19,7 +19,7 @@ export async function fetchDiscordApiChannel(
 
   const response = await fetcher(
     `https://discord.com/api/v10/channels/${encodeURIComponent(channelId)}`,
-    { headers: { Authorization: `Bot ${botToken}` } }
+    { headers: { Authorization: `Bot ${botToken}` }, signal: AbortSignal.timeout(5000) }
   );
 
   if (response.status === 404) return null;

@@ -31,6 +31,7 @@ import {
 } from "../lib/event-display";
 import { formatEventDescriptionJSX } from "../lib/format-event-jsx";
 import { LoadingSpinner } from "../components/loading-spinner";
+import { roleRank } from "../lib/roles";
 
 interface VoiceSession {
   channelId: string;
@@ -92,7 +93,6 @@ const kpiDefs = [
   },
 ] as const;
 
-const roleRank: Record<string, number> = { viewer: 1, admin: 2, owner: 3 };
 
 const ALL_QUICK_LINKS = [
   { label: "Voice", href: "/voice", icon: Headphones, desc: "通話状況", minRole: "admin" as const },
@@ -122,7 +122,8 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
       setSessions(data.sessions ?? []);
       setRecruitments(data.recruitments ?? []);
       setRecentLogs(data.logItems ?? []);
-    } catch {
+    } catch (e: unknown) {
+      console.error("overview: load failed", e);
       setError(true);
     } finally {
       setLoading(false);
@@ -193,11 +194,13 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
 
   const isViewer = role === "viewer";
 
+  const VIEWER_KPI_KEYS = new Set(["activeVcCount", "openRecruitCount"]);
+
   if (isViewer) {
     return (
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
-          {[kpiDefs[0], kpiDefs[2]].map((kpi) => {
+          {kpiDefs.filter((kpi) => VIEWER_KPI_KEYS.has(kpi.key)).map((kpi) => {
             const Icon = kpi.icon;
             return (
               <div key={kpi.label} className="rounded-lg bg-[#383a40] p-4">

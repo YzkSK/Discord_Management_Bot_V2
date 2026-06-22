@@ -29,7 +29,7 @@ export function ChannelMention({ channelId, channelName, guildId }: ChannelMenti
     setLoadingName(true);
     fetchCachedDiscordChannel(channelId, guildId)
       .then(setChannel)
-      .catch(() => {})
+      .catch((e: unknown) => { console.warn("channel-mention: name fetch failed", e); })
       .finally(() => setLoadingName(false));
   }, [channelId, knownName, guildId]);
 

@@ -5,6 +5,7 @@ import {
 } from "@discord-bot/db";
 import { NextResponse, type NextRequest } from "next/server";
 import { authorizeDashboardApi } from "../../../dashboard-auth";
+import { optionalParam } from "../../../lib/request-params";
 
 export const dynamic = "force-dynamic";
 
@@ -74,10 +75,6 @@ function setStringFilter(
   }
 }
 
-function optionalParam(query: URLSearchParams, key: string) {
-  const value = query.get(key)?.trim();
-  return value ? value : undefined;
-}
 
 function optionalDateParam(query: URLSearchParams, key: string) {
   const value = optionalParam(query, key);

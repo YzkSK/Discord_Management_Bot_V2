@@ -76,19 +76,16 @@ export function buildRecruitmentSummary(
     voiceChannelId: recruitment.voiceChannelId
   }));
 
+  const statusCounts = recruitments.reduce(
+    (acc, r) => { acc[r.status]++; return acc; },
+    { open: 0, full: 0, closed: 0 } as Record<RecruitmentStatus, number>
+  );
+
   return {
-    closedCount: countStatus(recruitments, "closed"),
-    fullCount: countStatus(recruitments, "full"),
-    openCount: countStatus(recruitments, "open"),
+    closedCount: statusCounts.closed,
+    fullCount: statusCounts.full,
+    openCount: statusCounts.open,
     recruitments,
     totalCount: recruitments.length
   };
-}
-
-function countStatus(
-  recruitments: readonly RecruitmentSummaryItem[],
-  status: RecruitmentStatus
-) {
-  return recruitments.filter((recruitment) => recruitment.status === status)
-    .length;
 }

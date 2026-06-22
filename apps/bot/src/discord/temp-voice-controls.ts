@@ -6,6 +6,7 @@ import {
   ComponentType,
   type Guild,
   type GuildBasedChannel,
+  type Message,
   MessageFlags,
   ModalBuilder,
   type MessageCreateOptions,
@@ -27,6 +28,21 @@ import {
 import { getLocale } from "@discord-bot/shared";
 
 import { createComponentsV2TextMessage, EVENT_COLORS } from "./components-v2.js";
+
+type PermOverwrite = { type: number; allow: { has: (flag: bigint) => boolean }; deny: { has: (flag: bigint) => boolean } };
+type PermOverwriteCache = Map<string, PermOverwrite>;
+type ChannelWithOverwrites = { permissionOverwrites: { cache: PermOverwriteCache } };
+
+function hasCustomId(msg: Message, customId: string): boolean {
+  return msg.components.some((row) =>
+    "components" in row &&
+    Array.isArray(row.components) &&
+    row.components.some(
+      (c: unknown) => typeof c === "object" && c !== null && "customId" in c &&
+        (c as { customId: string }).customId === customId
+    )
+  );
+}
 import { updateControlChannelOwnerPermissions } from "./temp-voice.js";
 import { resolveGuildLocale } from "./resolve-locale.js";
 
@@ -202,9 +218,9 @@ export function getTempVoiceState(channel: GuildBasedChannel) {
   if (!("permissionOverwrites" in channel)) {
     return { isLocked: false, isHidden: false };
   }
-  const overwrites = (channel as { permissionOverwrites: { cache: Map<string, { type: number; deny: { has: (flag: bigint) => boolean } }> } }).permissionOverwrites.cache;
+  const overwrites = (channel as ChannelWithOverwrites).permissionOverwrites.cache;
   const everyoneOverwrite = [...overwrites.values()].find(
-    (o) => o.type === 0 // OverwriteType.Role = 0
+    (o) => o.type === OverwriteType.Role
   );
   return {
     isLocked: everyoneOverwrite?.deny.has(PermissionFlagsBits.Connect) ?? false,
@@ -218,7 +234,7 @@ function getChannelUserPermissions(channel: GuildBasedChannel & { isVoiceBased: 
 
   if (!("permissionOverwrites" in channel)) return { allowedUserIds, deniedUserIds };
 
-  const overwrites = (channel as { permissionOverwrites: { cache: Map<string, { type: number; allow: { has: (flag: bigint) => boolean }; deny: { has: (flag: bigint) => boolean } }> } }).permissionOverwrites.cache;
+  const overwrites = (channel as ChannelWithOverwrites).permissionOverwrites.cache;
 
   for (const [id, overwrite] of overwrites) {
     if (overwrite.type !== OverwriteType.Member) continue;
@@ -250,15 +266,7 @@ async function updateControlPanel(
   if (!messages) return;
 
   const renameCustomId = toTempVoiceControlCustomId({ action: "rename", channelId: tempVoice.channelId });
-  const panelMessage = messages.find(msg =>
-    msg.components.some(component =>
-      "components" in component &&
-      Array.isArray(component.components) &&
-      component.components.some(
-        (c: unknown) => typeof c === "object" && c !== null && "customId" in c && (c as { customId: string }).customId === renameCustomId
-      )
-    )
-  );
+  const panelMessage = messages.find((msg) => hasCustomId(msg, renameCustomId));
 
   if (!panelMessage) return;
 

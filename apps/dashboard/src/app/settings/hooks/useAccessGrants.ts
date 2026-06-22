@@ -63,7 +63,11 @@ export function useAccessGrants(
       await updateManagementRoles(guildId, managementRoleIds);
       savedManagementRoleIdsRef.current = managementRoleIds;
       toast.success(loc.accessRolesUpdated);
-    } catch (e) { toast.error(toErrorMessage(e)); } finally { setSavingRoles(false); }
+    } catch (e) {
+      toast.error(toErrorMessage(e));
+    } finally {
+      setSavingRoles(false);
+    }
   }
 
   async function saveAccessGrant() {
@@ -86,7 +90,11 @@ export function useAccessGrants(
       setAccessGrants((current) => upsertAccessGrant(current, grant));
       setGrantTargetId("");
       toast.success(loc.accessGrantSaved);
-    } catch (e) { toast.error(toErrorMessage(e)); } finally { setSavingGrant(false); }
+    } catch (e) {
+      toast.error(toErrorMessage(e));
+    } finally {
+      setSavingGrant(false);
+    }
   }
 
   async function deleteAccessGrant(grant: DashboardAccessGrant) {
@@ -101,7 +109,11 @@ export function useAccessGrants(
       });
       setAccessGrants((current) => removeAccessGrant(current, grant));
       toast.success(loc.accessGrantDeleted);
-    } catch (e) { toast.error(toErrorMessage(e)); } finally { setDeletingGrantKey(null); }
+    } catch (e) {
+      toast.error(toErrorMessage(e));
+    } finally {
+      setDeletingGrantKey(null);
+    }
   }
 
   async function updateAccessGrantRole(grant: DashboardAccessGrant, role: GrantableAccessRole) {
@@ -115,7 +127,9 @@ export function useAccessGrants(
       });
       setAccessGrants((current) => upsertAccessGrant(current, updatedGrant));
       toast.success(loc.accessGrantUpdated);
-    } catch (e) { toast.error(toErrorMessage(e)); }
+    } catch (e) {
+      toast.error(toErrorMessage(e));
+    }
   }
 
   return {

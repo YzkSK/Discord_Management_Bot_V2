@@ -26,6 +26,7 @@ import {
 
 import { AuthStatus } from "./auth-status";
 import { getDashboardNavGroups } from "./dashboard-ui";
+import { roleRank, canSeeItem } from "../lib/roles";
 
 interface DashboardShellProps {
   actions?: ReactNode;
@@ -49,14 +50,6 @@ const icons: Record<string, ReactNode> = {
   "/settings": <KeyRound className="h-4 w-4 shrink-0" />,
 };
 
-const roleRank: Record<string, number> = { viewer: 1, admin: 2, owner: 3 };
-
-function canSeeItem(itemMinRole: string | undefined, role: string | null | undefined) {
-  if (!itemMinRole) return true;
-  if (role === undefined) return true;
-  if (!role) return false;
-  return (roleRank[role] ?? 0) >= (roleRank[itemMinRole] ?? 99);
-}
 
 const COLLAPSED_KEY = "sidebar-collapsed";
 

@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     queryUrl.searchParams.set("speaker", String(speakerId));
     queryUrl.searchParams.set("text", SAMPLE_TEXT);
 
-    const queryRes = await fetch(queryUrl, { method: "POST" });
+    const queryRes = await fetch(queryUrl, { method: "POST", signal: AbortSignal.timeout(5000) });
     if (!queryRes.ok) {
       return NextResponse.json({ error: "VOICEVOX audio_query failed." }, { status: 502 });
     }
@@ -38,7 +38,8 @@ export async function GET(request: NextRequest) {
     const synthRes = await fetch(synthUrl, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(query)
+      body: JSON.stringify(query),
+      signal: AbortSignal.timeout(30000)
     });
 
     if (!synthRes.ok) {

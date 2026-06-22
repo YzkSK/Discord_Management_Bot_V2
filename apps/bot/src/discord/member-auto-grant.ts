@@ -55,9 +55,9 @@ export function installMemberAutoGrantHandlers(client: Client, db: DbClient) {
     void Promise.allSettled(
       guildIds.map((guildId) => syncViewerGrantsForGuild(db, guildId, readyClient))
     ).then((results) => {
-      const failed = results.filter((r) => r.status === "rejected").length;
-      if (failed > 0) {
-        console.warn(`viewer sync: ${failed}/${guildIds.length} guilds failed`);
+      const failedGuildIds = guildIds.filter((_, i) => results[i]?.status === "rejected");
+      if (failedGuildIds.length > 0) {
+        console.warn(`viewer sync: ${failedGuildIds.length}/${guildIds.length} guilds failed`, { failedGuildIds });
       }
     });
   });

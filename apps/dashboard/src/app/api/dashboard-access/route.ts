@@ -7,6 +7,7 @@ import {
 import { NextResponse, type NextRequest } from "next/server";
 
 import { authorizeDashboardApi } from "../../../dashboard-auth";
+import { optionalParam } from "../../../lib/request-params";
 import {
   parseDashboardAccessGrantBody,
   parseDashboardAccessGrantDeleteBody
@@ -148,7 +149,3 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-function optionalParam(query: URLSearchParams, key: string) {
-  const value = query.get(key)?.trim();
-  return value ? value : undefined;
-}

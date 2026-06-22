@@ -15,9 +15,8 @@ export default async function LogsPage() {
 
   const cookieStore = await cookies();
   const guildId = cookieStore.get("dashboard-guild-id")?.value;
-  const guildName = cookieStore.get("dashboard-guild-name")?.value
-    ? decodeURIComponent(cookieStore.get("dashboard-guild-name")!.value)
-    : null;
+  const guildNameRaw = cookieStore.get("dashboard-guild-name")?.value;
+  const guildName = guildNameRaw ? decodeURIComponent(guildNameRaw) : null;
 
   if (!guildId) redirect("/guild");
 

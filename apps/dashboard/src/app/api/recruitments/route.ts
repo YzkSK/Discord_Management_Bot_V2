@@ -5,6 +5,7 @@ import {
 import { NextResponse, type NextRequest } from "next/server";
 
 import { authorizeDashboardApi } from "../../../dashboard-auth";
+import { optionalParam } from "../../../lib/request-params";
 import { buildRecruitmentSummary } from "./summary";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +45,3 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function optionalParam(query: URLSearchParams, key: string) {
-  const value = query.get(key)?.trim();
-  return value ? value : undefined;
-}

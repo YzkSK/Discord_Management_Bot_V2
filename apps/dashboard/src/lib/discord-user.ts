@@ -29,6 +29,7 @@ export async function fetchDiscordApiUser(
 ): Promise<DiscordUserResponse | null> {
   const response = await fetcher(`https://discord.com/api/v10/users/${userId}`, {
     headers: { Authorization: `Bot ${botToken}` },
+    signal: AbortSignal.timeout(5000)
   });
 
   if (response.status === 404) return null;

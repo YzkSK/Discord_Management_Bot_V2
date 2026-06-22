@@ -58,7 +58,7 @@ async function reconcileVoiceSessions(client: Client, db: DbClient) {
   const activeSessions = await listAllActiveCallSessions(db);
   console.log("voice reconciliation: start", {
     activeSessionCount: activeSessions.length,
-    cachedGuildIds: [...client.guilds.cache.keys()]
+    cachedGuildCount: client.guilds.cache.size
   });
   if (activeSessions.length === 0) return;
 
