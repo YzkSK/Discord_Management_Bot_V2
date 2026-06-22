@@ -80,16 +80,14 @@ export function buildTtsSummary(input: TtsSummaryInput): TtsSummary {
 
   return {
     dictionaryEntries,
-    dictionaryStats: {
-      disabledCount: dictionaryEntries.filter((entry) => !entry.isEnabled)
-        .length,
-      enabledCount: dictionaryEntries.filter((entry) => entry.isEnabled).length,
-      guildCount: dictionaryEntries.filter((entry) => entry.scope === "guild")
-        .length,
-      totalCount: dictionaryEntries.length,
-      userCount: dictionaryEntries.filter((entry) => entry.scope === "user")
-        .length
-    },
+    dictionaryStats: dictionaryEntries.reduce(
+      (acc, entry) => {
+        if (entry.isEnabled) acc.enabledCount++; else acc.disabledCount++;
+        if (entry.scope === "guild") acc.guildCount++; else acc.userCount++;
+        return acc;
+      },
+      { disabledCount: 0, enabledCount: 0, guildCount: 0, totalCount: dictionaryEntries.length, userCount: 0 }
+    ),
     guildDefaultSpeaker: input.guildDefaultSpeaker
       ? {
           speakerId: input.guildDefaultSpeaker.speakerId,

@@ -8,6 +8,7 @@ import { lookupAuditLog } from "../audit-log.js";
 import { createVoiceEvent, type WriteEventFn } from "./payloads.js";
 
 const GUILD_CONFIG_CACHE_TTL_MS = 60_000;
+const GUILD_CONFIG_CACHE_MAX_SIZE = 200;
 
 type GuildConfig = Awaited<ReturnType<typeof getGuildConfigByGuildId>>;
 const guildConfigCache = new Map<string, { value: GuildConfig; expiresAt: number }>();
@@ -16,6 +17,10 @@ async function getCachedGuildConfig(db: DbClient, guildId: string): Promise<Guil
   const cached = guildConfigCache.get(guildId);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
   const config = await getGuildConfigByGuildId(db, guildId);
+  if (guildConfigCache.size >= GUILD_CONFIG_CACHE_MAX_SIZE) {
+    const oldest = guildConfigCache.keys().next().value;
+    if (oldest !== undefined) guildConfigCache.delete(oldest);
+  }
   guildConfigCache.set(guildId, { value: config, expiresAt: Date.now() + GUILD_CONFIG_CACHE_TTL_MS });
   return config;
 }

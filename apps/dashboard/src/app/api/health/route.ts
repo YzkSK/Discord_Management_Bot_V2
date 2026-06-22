@@ -52,7 +52,7 @@ async function checkRedis() {
 async function checkVoicevox() {
   return measureHealthProbe(async () => {
     const baseUrl = process.env.VOICEVOX_URL ?? "http://localhost:50021";
-    const response = await fetch(`${baseUrl}/version`);
+    const response = await fetch(`${baseUrl}/version`, { signal: AbortSignal.timeout(3000) });
 
     if (!response.ok) {
       throw new Error(`VOICEVOX returned ${response.status}.`);
