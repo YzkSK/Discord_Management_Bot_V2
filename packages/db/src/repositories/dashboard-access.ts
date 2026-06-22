@@ -173,6 +173,81 @@ export async function getGuildsWithRoleAccessGrants(
   return rows.map((r) => r.guildId);
 }
 
+export async function batchEnsureViewerAccess(
+  db: DbClient,
+  guildId: string,
+  userIds: string[]
+) {
+  if (userIds.length === 0) return;
+
+  const CHUNK = 500;
+  for (let i = 0; i < userIds.length; i += CHUNK) {
+    const chunk = userIds.slice(i, i + CHUNK);
+    await db
+      .insert(dashboardAccessGrants)
+      .values(
+        chunk.map((userId) => ({
+          guildId,
+          targetType: "user" as const,
+          targetId: userId,
+          role: "viewer" as const,
+        }))
+      )
+      .onConflictDoNothing();
+  }
+}
+
+// 退出時: ユーザーの全 grant を削除
+export async function revokeAllUserGrants(
+  db: DbClient,
+  guildId: string,
+  userId: string
+) {
+  await db
+    .delete(dashboardAccessGrants)
+    .where(
+      and(
+        eq(dashboardAccessGrants.guildId, guildId),
+        eq(dashboardAccessGrants.targetType, "user"),
+        eq(dashboardAccessGrants.targetId, userId)
+      )
+    );
+}
+
+// 現在のメンバー一覧にいないユーザーの全 grant を一括削除（reconciliation 用）
+export async function pruneStaleUserGrants(
+  db: DbClient,
+  guildId: string,
+  currentMemberIds: string[]
+) {
+  const existing = await db
+    .select({ targetId: dashboardAccessGrants.targetId })
+    .from(dashboardAccessGrants)
+    .where(
+      and(
+        eq(dashboardAccessGrants.guildId, guildId),
+        eq(dashboardAccessGrants.targetType, "user")
+      )
+    );
+
+  const memberSet = new Set(currentMemberIds);
+  const stale = [...new Set(existing.map((r) => r.targetId).filter((id) => !memberSet.has(id)))];
+  if (stale.length === 0) return;
+
+  const CHUNK = 500;
+  for (let i = 0; i < stale.length; i += CHUNK) {
+    await db
+      .delete(dashboardAccessGrants)
+      .where(
+        and(
+          eq(dashboardAccessGrants.guildId, guildId),
+          eq(dashboardAccessGrants.targetType, "user"),
+          inArray(dashboardAccessGrants.targetId, stale.slice(i, i + CHUNK))
+        )
+      );
+  }
+}
+
 export async function deleteDashboardAccessGrant(
   db: DbClient,
   input: DeleteDashboardAccessGrantInput

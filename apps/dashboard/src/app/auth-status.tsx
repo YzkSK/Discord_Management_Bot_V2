@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type { Session } from "next-auth";
 import { signOut } from "next-auth/react";
@@ -19,10 +19,10 @@ export function AuthStatus({ session }: { session: Session | null }) {
   return (
     <div className="flex items-center gap-2">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-medium text-zinc-300">
+        <p className="truncate text-xs font-medium text-[#dbdee1]">
           {session.user.name ?? "Signed in"}
         </p>
-        <p className="truncate text-[10px] text-zinc-600">
+        <p className="truncate text-[10px] text-[#80848e]">
           {session.user.id}
         </p>
       </div>

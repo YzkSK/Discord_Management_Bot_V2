@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
 import { Crown, Mic2, Timer, Users } from "lucide-react";
+import { UserMention } from "../../components/user-mention";
 import {
   BarChart,
   Bar,
@@ -97,7 +98,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
   if (loading) return <LoadingSpinner />;
 
   if (!data) {
-    return <ErrorAlert message={error ?? loc.voiceFailedToLoad} />;
+    return <ErrorAlert message={error ?? loc.voiceFailedToLoad} onRetry={reload} />;
   }
 
   return (
@@ -123,13 +124,13 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
         ].map((kpi) => (
           <div
             key={kpi.label}
-            className="rounded-lg border border-zinc-800 bg-zinc-900 p-4"
+            className="rounded-lg rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4"
           >
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-zinc-500">{kpi.label}</p>
-              <span className="text-zinc-500">{kpi.icon}</span>
+              <p className="text-xs font-medium text-[#b5bac1]">{kpi.label}</p>
+              <span className="text-[#b5bac1]">{kpi.icon}</span>
             </div>
-            <p className="mt-2 text-2xl font-bold text-zinc-100">
+            <p className="mt-2 text-2xl font-bold text-[#f2f3f5]">
               {kpi.value}
             </p>
           </div>
@@ -139,16 +140,16 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
       {/* アクティブセッション */}
       <section>
         <div className="mb-3 flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-zinc-400">
+          <h2 className="text-sm font-semibold text-[#b5bac1]">
             {loc.voiceActiveCalls}
           </h2>
           <span className="relative flex h-2 w-2" title="リアルタイム更新">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-[50%] bg-green-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-[50%] bg-green-500" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-[50%] bg-indigo-400 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-[50%] bg-[#5865f2]" />
           </span>
         </div>
         {data.activeSessions.length === 0 ? (
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 py-10 text-center text-sm text-zinc-600">
+          <div className="rounded-lg rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm py-10 text-center text-sm text-[#80848e]">
             {loc.voiceNoActiveCalls}
           </div>
         ) : (
@@ -161,18 +162,18 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
               return (
                 <div
                   key={s.id}
-                  className="rounded-lg border border-zinc-800 bg-zinc-900 p-4"
+                  className="rounded-lg rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4"
                 >
                   <div className="flex items-center gap-2">
                     <span className="relative flex h-2 w-2">
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-[50%] bg-purple-400 opacity-75" />
                       <span className="relative inline-flex h-2 w-2 rounded-[50%] bg-purple-500" />
                     </span>
-                    <span className="truncate text-sm font-medium text-zinc-200">
+                    <span className="truncate text-sm font-medium text-[#dbdee1]">
                       {s.channelName ?? `#${s.channelId}`}
                     </span>
                   </div>
-                  <div className="mt-2 flex items-center gap-4 text-xs text-zinc-500">
+                  <div className="mt-2 flex items-center gap-4 text-xs text-[#b5bac1]">
                     <span className="flex items-center gap-1">
                       <Users className="h-3 w-3" />
                       {s.memberCount}人
@@ -195,21 +196,21 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
       {/* 一時 VC */}
       {data.tempVoiceChannels.length > 0 && (
         <section>
-          <h2 className="mb-3 text-sm font-semibold text-zinc-400">
+          <h2 className="mb-3 text-sm font-semibold text-[#b5bac1]">
             {loc.voiceTempVcChannels}
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {data.tempVoiceChannels.map((vc) => (
               <div
                 key={vc.channelId}
-                className="rounded-lg border border-zinc-800 bg-zinc-900 p-4"
+                className="rounded-lg rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4"
               >
-                <p className="truncate text-sm font-medium text-zinc-200">
+                <p className="truncate text-sm font-medium text-[#dbdee1]">
                   {vc.channelName ?? `#${vc.channelId}`}
                 </p>
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-zinc-500">
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-[#b5bac1]">
                   <Crown className="h-3 w-3 text-yellow-500" />
-                  <span className="font-mono">{vc.ownerId}</span>
+                  <UserMention userId={vc.ownerId} actorName={null} />
                 </div>
                 {vc.deleteScheduledAt && (
                   <p className="mt-1 text-xs text-amber-500/70">
@@ -224,33 +225,33 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
 
       {/* ピーク時間チャート */}
       <section>
-        <h2 className="mb-3 text-sm font-semibold text-zinc-400">
+        <h2 className="mb-3 text-sm font-semibold text-[#b5bac1]">
           ピーク時間帯
         </h2>
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+        <div className="rounded-lg rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4">
           <ResponsiveContainer width="100%" height={120}>
             <BarChart data={peakData}>
               <XAxis
                 dataKey="hour"
-                tick={{ fontSize: 10, fill: "#71717A" }}
+                tick={{ fontSize: 10, fill: "var(--chart-axis-tick)" }}
                 tickLine={false}
                 axisLine={false}
                 interval={2}
               />
               <YAxis
-                tick={{ fontSize: 10, fill: "#71717A" }}
+                tick={{ fontSize: 10, fill: "var(--chart-axis-tick)" }}
                 tickLine={false}
                 axisLine={false}
               />
               <Tooltip
                 contentStyle={{
-                  background: "#18181B",
-                  border: "1px solid #3F3F46",
+                  background: "var(--chart-tooltip-bg)",
+                  border: "1px solid var(--chart-tooltip-border)",
                   fontSize: 12,
                 }}
-                labelStyle={{ color: "#A1A1AA" }}
+                labelStyle={{ color: "var(--chart-tooltip-label)" }}
               />
-              <Bar dataKey="count" fill="#8B5CF6" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="count" fill="var(--chart-purple)" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

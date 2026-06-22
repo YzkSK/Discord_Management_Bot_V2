@@ -1,13 +1,15 @@
-"use client";
+﻿"use client";
 
+import { useState } from "react";
 import { Button } from "../../../components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "../../../components/ui/table";
 import type { getDashboardLocale } from "../../../lib/locale";
+import { UserMention } from "../../../components/user-mention";
 import { usePreviewAudio } from "./usePreviewAudio";
 
-const USER_SPEAKER_DISPLAY_LIMIT = 8;
+const PAGE_SIZE = 10;
 
 export interface TtsUserSpeaker {
   speakerId: number;
@@ -17,54 +19,116 @@ export interface TtsUserSpeaker {
 
 export function UserSpeakerTable({
   loc,
-  userSpeakers
+  userSpeakers,
+  speakerMap = new Map(),
 }: {
   loc: ReturnType<typeof getDashboardLocale>;
   userSpeakers: TtsUserSpeaker[];
+  speakerMap?: Map<number, string>;
 }) {
-  const visibleSpeakers = userSpeakers.slice(0, USER_SPEAKER_DISPLAY_LIMIT);
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
   const { playingId, playPreview } = usePreviewAudio();
 
+  const filtered = query.trim()
+    ? userSpeakers.filter((s) => s.userId.includes(query.trim()))
+    : userSpeakers;
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const visible = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+
+  function handleQuery(q: string) {
+    setQuery(q);
+    setPage(0);
+  }
+
   return (
-    <div className="overflow-hidden rounded-md border border-zinc-800">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{loc.accessGrantUserId}</TableHead>
-            <TableHead>{loc.ttsSpeakerId}</TableHead>
-            <TableHead>{loc.updated}</TableHead>
-            <TableHead></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {visibleSpeakers.length === 0 ? (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => handleQuery(e.target.value)}
+          placeholder="ユーザーIDで検索..."
+          className="w-full rounded-md border border-[#3f4147] bg-[#383a40] px-3 py-1.5 text-sm text-[#f2f3f5] placeholder-[#4e5058] focus:border-[#5865f2] focus:outline-none"
+        />
+        {query && (
+          <span className="shrink-0 text-xs text-[#b5bac1]">
+            {filtered.length} / {userSpeakers.length} 件
+          </span>
+        )}
+      </div>
+
+      <div className="overflow-hidden rounded-md border border-[#1e1f22]">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell className="py-8 text-center text-zinc-600" colSpan={4}>
-                {loc.ttsUserSpeakers}: 0
-              </TableCell>
+              <TableHead scope="col">{loc.accessGrantUserId}</TableHead>
+              <TableHead scope="col">話者</TableHead>
+              <TableHead scope="col">{loc.updated}</TableHead>
+              <TableHead scope="col"></TableHead>
             </TableRow>
-          ) : visibleSpeakers.map((speaker) => (
-            <TableRow key={speaker.userId}>
-              <TableCell className="break-all font-mono text-xs text-zinc-400">
-                {speaker.userId}
-              </TableCell>
-              <TableCell>{speaker.speakerId}</TableCell>
-              <TableCell className="text-xs text-zinc-500">{speaker.updatedAt}</TableCell>
-              <TableCell>
-                <Button
-                  disabled={playingId !== null}
-                  onClick={() => void playPreview(speaker.speakerId)}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  {playingId === speaker.speakerId ? "..." : "試聴"}
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {visible.length === 0 ? (
+              <TableRow>
+                <TableCell className="py-8 text-center text-[#80848e]" colSpan={4}>
+                  {query ? "検索結果がありません" : `${loc.ttsUserSpeakers}: 0`}
+                </TableCell>
+              </TableRow>
+            ) : visible.map((speaker) => (
+              <TableRow key={speaker.userId}>
+                <TableCell>
+                  <UserMention userId={speaker.userId} actorName={null} />
+                </TableCell>
+                <TableCell>{speakerMap.get(speaker.speakerId) ?? `#${speaker.speakerId}`}</TableCell>
+                <TableCell className="text-xs text-[#b5bac1]">{speaker.updatedAt}</TableCell>
+                <TableCell>
+                  <Button
+                    aria-label={`${speakerMap.get(speaker.speakerId) ?? `話者 ${speaker.speakerId}`} を試聴`}
+                    disabled={playingId !== null}
+                    onClick={() => void playPreview(speaker.speakerId)}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    {playingId === speaker.speakerId ? "再生中..." : "試聴"}
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs text-[#b5bac1]">
+            {safePage + 1} / {totalPages} ページ
+          </span>
+          <div className="flex gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={safePage === 0}
+              onClick={() => setPage(safePage - 1)}
+              type="button"
+            >
+              ‹ 前
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={safePage >= totalPages - 1}
+              onClick={() => setPage(safePage + 1)}
+              type="button"
+            >
+              次 ›
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

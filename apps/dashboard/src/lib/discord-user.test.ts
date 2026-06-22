@@ -26,11 +26,11 @@ describe("fetchDiscordApiUser", () => {
     assert.equal(result, null);
   });
 
-  it("429 の場合はエラーを投げる", async () => {
+  it("429 でリトライ残なしの場合はエラーを投げる", async () => {
     const mockFetch = async (_url: string, _init?: RequestInit): Promise<Response> =>
-      ({ status: 429, ok: false } as Response);
+      ({ status: 429, ok: false, headers: new Headers() } as Response);
     await assert.rejects(
-      () => fetchDiscordApiUser("123", "token", mockFetch),
+      () => fetchDiscordApiUser("123", "token", mockFetch, undefined, 0),
       /Discord API returned 429/
     );
   });

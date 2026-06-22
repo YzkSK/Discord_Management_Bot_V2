@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { ChevronRight, Search } from "lucide-react";
@@ -40,7 +40,7 @@ export function GuildSelector() {
   }
 
   if (loading) {
-    return <p className="text-sm text-zinc-500">Loading guilds...</p>;
+    return <p className="text-sm text-[#b5bac1]">Loading guilds...</p>;
   }
 
   if (error) {
@@ -63,7 +63,7 @@ export function GuildSelector() {
   return (
     <div className="flex flex-col gap-3">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
+        <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#b5bac1]" />
         <Input
           className="pl-9"
           onChange={(e) => setSearch(e.target.value)}
@@ -73,21 +73,21 @@ export function GuildSelector() {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="py-4 text-center text-sm text-zinc-500">No guilds found.</p>
+        <p className="py-4 text-center text-sm text-[#b5bac1]">No guilds found.</p>
       ) : (
         <div className="flex flex-col gap-1.5">
           {filtered.map((guild) => (
             <button
-              className="flex items-center justify-between rounded-md border border-zinc-700 bg-zinc-900 px-4 py-3 text-left transition-colors hover:border-green-500/40 hover:bg-zinc-800"
+              className="flex min-h-[44px] items-center justify-between rounded-md border border-[#3f4147] bg-[#2b2d31] px-4 py-3 text-left transition-colors hover:border-[#5865f2]/40 hover:bg-[#383a40]"
               key={guild.id}
               onClick={() => selectGuild(guild)}
               type="button"
             >
               <div>
-                <p className="text-sm font-medium text-zinc-100">{guild.name}</p>
-                <p className="font-mono text-xs text-zinc-500">{guild.id}</p>
+                <p className="text-sm font-medium text-[#f2f3f5]">{guild.name}</p>
+                <p className="font-mono text-xs text-[#b5bac1]">{guild.id}</p>
               </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-zinc-600" />
+              <ChevronRight className="h-4 w-4 shrink-0 text-[#80848e]" />
             </button>
           ))}
         </div>

@@ -35,6 +35,8 @@
     "src/app/api/voice/summary.test.ts",
     "src/app/api/recruitments/summary.ts",
     "src/app/api/recruitments/summary.test.ts",
+    "src/app/api/recruitments/[id]/message.ts",
+    "src/app/api/recruitments/[id]/message.test.ts",
     "src/app/api/tts/summary.ts",
     "src/app/api/tts/summary.test.ts",
     "src/app/api/health/summary.ts",

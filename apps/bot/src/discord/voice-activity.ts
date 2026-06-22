@@ -295,6 +295,12 @@ async function handleVoiceJoin(
     });
   }
 
+  await context.repository.upsertMember({
+    callSessionId: session.id,
+    joinedAt: now,
+    userId: transition.userId
+  });
+
   if (shouldPublishStarted) {
     await context.writeLog(
       createVoiceActivityStartedEvent({
@@ -326,15 +332,7 @@ async function handleVoiceJoin(
     }
 
     await context.scheduleActiveStatusUpdate?.(session.id, 60_000);
-  }
-
-  await context.repository.upsertMember({
-    callSessionId: session.id,
-    joinedAt: now,
-    userId: transition.userId
-  });
-
-  if (!shouldPublishStarted) {
+  } else {
     const allActiveMembers = await context.repository.listActiveMembers(session.id);
     await context.updateVoiceStatus?.({
       activeMemberCount: allActiveMembers.length,
@@ -458,6 +456,7 @@ function resolveNow(context: VoiceActivityContext) {
   return context.now?.() ?? new Date();
 }
 
+
 async function refreshActiveVoiceStatus(
   client: Client,
   options: InstallVoiceActivityHandlersOptions,
@@ -539,5 +538,11 @@ export async function updateDiscordVoiceStatusMessage(
   }
 
   const sentMessage = await channel.send({ ...message, allowedMentions: { parse: [] } });
+
+  await updateCallSessionStatusMessage(db, {
+    callSessionId: input.session.id,
+    statusMessageId: sentMessage.id
+  }).catch(() => null);
+
   return sentMessage.id;
 }

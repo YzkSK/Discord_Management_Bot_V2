@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import type { DashboardLoc, TtsDictionaryEntry, TtsSettingsResponse } from "../components/shared";
 
 export function useTtsSettings(
   guildId: string | null,
-  loc: DashboardLoc,
-  setError: (msg: string | null) => void,
-  setMessage: (msg: string | null) => void
+  loc: DashboardLoc
 ) {
   const [ttsSettings, setTtsSettings] = useState<TtsSettingsResponse | null>(null);
   const [ttsDefaultSpeakerId, setTtsDefaultSpeakerId] = useState("");
@@ -29,12 +28,12 @@ export function useTtsSettings(
         setTtsSettings(tts);
         setTtsDefaultSpeakerId(tts.guildDefaultSpeaker?.speakerId.toString() ?? "");
       })
-      .catch((e: unknown) => setError(toErrorMessage(e)));
+      .catch((e: unknown) => toast.error(toErrorMessage(e)));
   }, [guildId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function saveTtsDefaultSpeaker() {
     if (!guildId) return;
-    setSavingTtsSpeaker(true); setError(null); setMessage(null);
+    setSavingTtsSpeaker(true);
     try {
       const data = await patchTtsSpeaker({
         guildId,
@@ -43,13 +42,13 @@ export function useTtsSettings(
       });
       setTtsDefaultSpeakerId(data.setting.speakerId.toString());
       setTtsSettings(await fetchTtsSettings(guildId));
-      setMessage(loc.ttsSpeakerSaved);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTtsSpeaker(false); }
+      toast.success(loc.ttsSpeakerSaved);
+    } catch (e) { toast.error(toErrorMessage(e)); } finally { setSavingTtsSpeaker(false); }
   }
 
   async function saveTtsUserSpeaker() {
     if (!guildId) return;
-    setSavingTtsSpeaker(true); setError(null); setMessage(null);
+    setSavingTtsSpeaker(true);
     try {
       await patchTtsSpeaker({
         guildId,
@@ -60,24 +59,24 @@ export function useTtsSettings(
       setTtsUserSpeakerId("");
       setTtsUserSpeakerUserId("");
       setTtsSettings(await fetchTtsSettings(guildId));
-      setMessage(loc.ttsSpeakerSaved);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTtsSpeaker(false); }
+      toast.success(loc.ttsSpeakerSaved);
+    } catch (e) { toast.error(toErrorMessage(e)); } finally { setSavingTtsSpeaker(false); }
   }
 
   async function deleteTtsSpeaker(input: { target: "guild-default" | "user"; userId?: string }) {
     if (!guildId) return;
-    setSavingTtsSpeaker(true); setError(null); setMessage(null);
+    setSavingTtsSpeaker(true);
     try {
       await deleteTtsSpeakerSetting({ guildId, ...input });
       if (input.target === "guild-default") setTtsDefaultSpeakerId("");
       setTtsSettings(await fetchTtsSettings(guildId));
-      setMessage(loc.ttsSpeakerDeleted);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTtsSpeaker(false); }
+      toast.success(loc.ttsSpeakerDeleted);
+    } catch (e) { toast.error(toErrorMessage(e)); } finally { setSavingTtsSpeaker(false); }
   }
 
   async function saveTtsDictionaryEntry() {
     if (!guildId) return;
-    setSavingTtsDictionary(true); setError(null); setMessage(null);
+    setSavingTtsDictionary(true);
     try {
       await patchTtsDictionaryEntry({
         fromText: ttsDictionaryFromText,
@@ -94,13 +93,13 @@ export function useTtsSettings(
       setTtsDictionaryPriority("0");
       setTtsDictionaryEnabled(true);
       setTtsSettings(await fetchTtsSettings(guildId));
-      setMessage(loc.ttsDictionarySaved);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTtsDictionary(false); }
+      toast.success(loc.ttsDictionarySaved);
+    } catch (e) { toast.error(toErrorMessage(e)); } finally { setSavingTtsDictionary(false); }
   }
 
   async function deleteTtsDictionary(entry: TtsDictionaryEntry) {
     if (!guildId) return;
-    setSavingTtsDictionary(true); setError(null); setMessage(null);
+    setSavingTtsDictionary(true);
     try {
       await deleteTtsDictionaryEntry({
         fromText: entry.fromText,
@@ -109,8 +108,8 @@ export function useTtsSettings(
         ...(entry.userId ? { userId: entry.userId } : {})
       });
       setTtsSettings(await fetchTtsSettings(guildId));
-      setMessage(loc.ttsDictionaryDeleted);
-    } catch (e) { setError(toErrorMessage(e)); } finally { setSavingTtsDictionary(false); }
+      toast.success(loc.ttsDictionaryDeleted);
+    } catch (e) { toast.error(toErrorMessage(e)); } finally { setSavingTtsDictionary(false); }
   }
 
   return {

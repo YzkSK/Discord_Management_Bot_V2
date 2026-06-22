@@ -34,7 +34,7 @@ export default async function RecruitmentPage() {
       session={session}
       title="Recruitment"
     >
-      <RecruitmentDashboard guildId={guildId} />
+      <RecruitmentDashboard guildId={guildId} userId={session.user.id ?? ""} role={role} />
     </DashboardShell>
   );
 }

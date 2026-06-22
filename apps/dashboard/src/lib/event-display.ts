@@ -148,7 +148,10 @@ const eventDescriptions: Record<string, (v: EventVars) => string> = {
   // 音声
   "voice.session.join": (v) => `🎤 ${actor(v)} が${ch(v) ? `${ch(v)}` : "VCチャンネル"} に参加`,
   "voice.session.leave": (v) => `🎤 ${actor(v)} が${ch(v) ? `${ch(v)}` : "VCチャンネル"} から退出`,
-  "voice.session.move": (v) => `🎤 ${actor(v)} が${ch(v) ? `${ch(v)}` : "VCチャンネル"} に移動`,
+  "voice.session.move": (v) =>
+    v.targetId && v.actorId !== v.targetId
+      ? `🎤 ${actor(v)} が ${target(v)} を${ch(v) ? `${ch(v)}` : "VCチャンネル"} に移動`
+      : `🎤 ${actor(v)} が${ch(v) ? `${ch(v)}` : "VCチャンネル"} に移動`,
   "voice.state.update": (v) => {
     const detail = formatVoiceStateChanges(v.voiceStateChanges);
     return detail
@@ -287,7 +290,7 @@ export const eventColorClasses: Record<EventColorKey, { dot: string; badge: stri
   red:    { dot: "bg-red-500",    badge: "bg-red-500/10 text-red-400",       border: "border-red-500/20" },
   orange: { dot: "bg-orange-500", badge: "bg-orange-500/10 text-orange-400", border: "border-orange-500/20" },
   sky:    { dot: "bg-sky-500",    badge: "bg-sky-500/10 text-sky-400",       border: "border-sky-500/20" },
-  gray:   { dot: "bg-zinc-500",   badge: "bg-zinc-500/10 text-zinc-400",     border: "border-zinc-500/20" },
+  gray:   { dot: "bg-slate-500",   badge: "bg-slate-500/10 text-slate-400",     border: "border-slate-500/20" },
 };
 
 export function isObj(v: unknown): v is Record<string, unknown> {
@@ -304,6 +307,12 @@ export function extractActorName(payload: unknown): string | null {
   // represents the TARGET (affected person), not the actor. Skip them to avoid
   // showing the wrong name for the executor.
   if (typeof payload["targetId"] === "string") {
+    const auditLog = payload["auditLog"];
+    if (isObj(auditLog)) {
+      const executor = auditLog["executor"];
+      if (isObj(executor) && typeof executor["username"] === "string")
+        return (typeof executor["globalName"] === "string" ? executor["globalName"] : null) ?? executor["username"];
+    }
     const author = payload["author"];
     if (isObj(author) && typeof author["username"] === "string")
       return (typeof author["globalName"] === "string" ? author["globalName"] : null) ?? author["username"];

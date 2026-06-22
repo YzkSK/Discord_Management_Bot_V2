@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as Popover from "@radix-ui/react-popover";
 import { Copy } from "lucide-react";
@@ -68,40 +68,40 @@ export function ChannelMention({ channelId, channelName, guildId }: ChannelMenti
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          className="z-50 w-56 rounded-lg border border-zinc-700 bg-zinc-800 p-3 shadow-xl"
+          className="z-50 w-56 rounded-lg border border-[#3f4147] bg-[#383a40] p-3 shadow-xl"
           sideOffset={6}
           onClick={(e) => e.stopPropagation()}
         >
           {loadingPopover && (
-            <p className="text-xs text-zinc-500">読み込み中...</p>
+            <p className="text-xs text-[#b5bac1]">読み込み中...</p>
           )}
           {error && !loadingPopover && (
-            <p className="text-xs text-zinc-500">情報を取得できませんでした</p>
+            <p className="text-xs text-[#b5bac1]">情報を取得できませんでした</p>
           )}
           {channel && !loadingPopover && (
             <div>
-              <p className="truncate text-sm font-semibold text-zinc-100">
+              <p className="truncate text-sm font-semibold text-[#f2f3f5]">
                 #{channel.name}
               </p>
               <div className="mt-1 flex items-center gap-1">
-                <p className="truncate font-mono text-xs text-zinc-500">
+                <p className="truncate font-mono text-xs text-[#b5bac1]">
                   {channel.id}
                 </p>
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="shrink-0 text-zinc-500 hover:text-zinc-300"
+                  className="shrink-0 text-[#b5bac1] hover:text-[#dbdee1]"
                   aria-label="IDをコピー"
                 >
                   <Copy className="h-3 w-3" />
                 </button>
               </div>
               {copied && (
-                <p className="mt-0.5 text-xs text-green-400">コピーしました</p>
+                <p className="mt-0.5 text-xs text-emerald-400">コピーしました</p>
               )}
             </div>
           )}
-          <Popover.Arrow className="fill-zinc-700" />
+          <Popover.Arrow className="fill-slate-700" />
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

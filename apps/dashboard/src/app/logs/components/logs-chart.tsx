@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo } from "react";
 import {
@@ -14,14 +14,14 @@ import { getEventColor } from "../../../lib/event-display";
 import type { LogItem } from "../hooks/use-logs-data";
 
 const CHART_COLORS: Record<string, string> = {
-  blue: "#3B82F6",
-  purple: "#8B5CF6",
-  teal: "#14B8A6",
-  green: "#10B981",
-  red: "#EF4444",
-  orange: "#F59E0B",
-  sky: "#0EA5E9",
-  gray: "#71717A",
+  blue: "var(--chart-blue)",
+  purple: "var(--chart-purple)",
+  teal: "var(--chart-teal)",
+  green: "var(--chart-emerald)",
+  red: "var(--chart-red)",
+  orange: "var(--chart-amber)",
+  sky: "var(--chart-sky)",
+  gray: "var(--chart-muted)",
 };
 
 const COLOR_LABELS: Record<string, string> = {
@@ -58,8 +58,8 @@ export function LogsChart({ logs }: { logs: LogItem[] }) {
   }, [logs]);
 
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-      <p className="mb-3 text-xs font-medium text-zinc-500">
+    <div className="rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4">
+      <p className="mb-3 text-xs font-medium text-[#b5bac1]">
         直近24時間のイベント頻度
       </p>
       <ResponsiveContainer width="100%" height={80}>
@@ -69,23 +69,23 @@ export function LogsChart({ logs }: { logs: LogItem[] }) {
         >
           <XAxis
             dataKey="hour"
-            tick={{ fontSize: 10, fill: "#71717A" }}
+            tick={{ fontSize: 10, fill: "var(--chart-axis-tick)" }}
             tickLine={false}
             axisLine={false}
             interval={3}
           />
           <YAxis
-            tick={{ fontSize: 10, fill: "#71717A" }}
+            tick={{ fontSize: 10, fill: "var(--chart-axis-tick)" }}
             tickLine={false}
             axisLine={false}
           />
           <Tooltip
             contentStyle={{
-              background: "#18181B",
-              border: "1px solid #3F3F46",
+              background: "var(--chart-tooltip-bg)",
+              border: "1px solid var(--chart-tooltip-border)",
               fontSize: 12,
             }}
-            labelStyle={{ color: "#A1A1AA" }}
+            labelStyle={{ color: "var(--chart-tooltip-label)" }}
           />
           {Object.entries(CHART_COLORS).map(([key, color]) => (
             <Bar

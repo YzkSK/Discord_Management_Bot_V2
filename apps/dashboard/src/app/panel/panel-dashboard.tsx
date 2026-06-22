@@ -1,10 +1,12 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { toast } from "sonner";
 import { BookOpen, Mic2, Users } from "lucide-react";
 
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { ConfirmDialog } from "../../components/ui/confirm-dialog";
 
 interface VoicevoxSpeaker {
   id: number;
@@ -25,21 +27,10 @@ interface DiscordChannel {
   name: string;
 }
 
-type Feedback = { type: "ok" | "err"; text: string } | null;
-
 const input =
-  "w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-green-500 focus:outline-none";
+  "w-full rounded-md border border-[#3f4147] bg-[#383a40] px-3 py-1.5 text-sm text-[#f2f3f5] placeholder-[#4e5058] focus:border-[#5865f2] focus:outline-none";
 
-const label = "text-xs font-medium text-zinc-400";
-
-function FeedbackLine({ msg }: { msg: Feedback }) {
-  if (!msg) return null;
-  return (
-    <p className={`text-xs ${msg.type === "ok" ? "text-green-400" : "text-red-400"}`}>
-      {msg.text}
-    </p>
-  );
-}
+const label = "text-xs font-medium text-[#b5bac1]";
 
 function Field({ labelText, children }: { labelText: string; children: React.ReactNode }) {
   return (
@@ -66,7 +57,6 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
   const [selectedId, setSelectedId] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<Feedback>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -89,7 +79,7 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
           if (first) setSelectedId(String(first.id));
         }
       })
-      .catch(() => setMsg({ type: "err", text: "データの読み込みに失敗しました。" }))
+      .catch(() => toast.error("データの読み込みに失敗しました。"))
       .finally(() => setLoading(false));
   }, [guildId]);
 
@@ -104,7 +94,6 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
     const speakerId = parseInt(selectedId, 10);
     if (!Number.isFinite(speakerId) || speakerId < 0) return;
     setSaving(true);
-    setMsg(null);
     try {
       const res = await fetch("/api/panel/speaker", {
         method: "PATCH",
@@ -113,14 +102,14 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
       });
       if (!res.ok) {
         const data = (await res.json()) as { error?: string };
-        setMsg({ type: "err", text: data.error ?? "保存に失敗しました。" });
+        toast.error(data.error ?? "保存に失敗しました。");
         return;
       }
       const data = (await res.json()) as { setting: SpeakerSetting };
       setSetting(data.setting);
-      setMsg({ type: "ok", text: "話者を変更しました。" });
+      toast.success("話者を変更しました。");
     } catch {
-      setMsg({ type: "err", text: "通信エラーが発生しました。" });
+      toast.error("通信エラーが発生しました。");
     } finally {
       setSaving(false);
     }
@@ -128,7 +117,6 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
 
   async function handleClear() {
     setSaving(true);
-    setMsg(null);
     try {
       await fetch("/api/panel/speaker", {
         method: "DELETE",
@@ -138,9 +126,9 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
       setSetting(null);
       const first = speakers[0];
       if (first) setSelectedId(String(first.id));
-      setMsg({ type: "ok", text: "個人設定をリセットしました。サーバーデフォルトが使用されます。" });
+      toast.success("個人設定をリセットしました。サーバーデフォルトが使用されます。");
     } catch {
-      setMsg({ type: "err", text: "通信エラーが発生しました。" });
+      toast.error("通信エラーが発生しました。");
     } finally {
       setSaving(false);
     }
@@ -156,21 +144,21 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
   }
 
   return (
-    <Card className="border-zinc-800 bg-zinc-900">
+    <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
-          <Mic2 className="h-4 w-4 text-green-400" />
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-[#f2f3f5]">
+          <Mic2 className="h-4 w-4 text-[#c9cdfb]" />
           TTS 話者設定
         </CardTitle>
       </CardHeader>
       <CardContent>
         {loading ? (
-          <p className="text-sm text-zinc-500">読み込み中...</p>
+          <p className="text-sm text-[#b5bac1]">読み込み中...</p>
         ) : (
           <form onSubmit={(e) => void handleSave(e)} className="flex flex-col gap-3">
             <p className={label}>
               現在の設定:{" "}
-              <span className="text-zinc-300">{currentLabel()}</span>
+              <span className="text-[#dbdee1]">{currentLabel()}</span>
             </p>
             <Field labelText="話者を選択">
               {speakers.length > 0 ? (
@@ -221,7 +209,6 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
                 </Button>
               )}
             </div>
-            <FeedbackLine msg={msg} />
           </form>
         )}
       </CardContent>
@@ -235,14 +222,14 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
   const [fromText, setFromText] = useState("");
   const [toText, setToText] = useState("");
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<Feedback>(null);
+  const [pendingDeleteFrom, setPendingDeleteFrom] = useState<string | null>(null);
 
   const loadEntries = useCallback(() => {
     setLoading(true);
     fetch(`/api/panel/dictionary?guildId=${guildId}`)
       .then((r) => r.json() as Promise<{ entries: DictionaryEntry[] }>)
       .then((data) => setEntries(data.entries ?? []))
-      .catch(() => setMsg({ type: "err", text: "データの読み込みに失敗しました。" }))
+      .catch(() => toast.error("データの読み込みに失敗しました。"))
       .finally(() => setLoading(false));
   }, [guildId]);
 
@@ -254,7 +241,6 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
     e.preventDefault();
     if (!fromText.trim() || !toText.trim()) return;
     setSaving(true);
-    setMsg(null);
     try {
       const res = await fetch("/api/panel/dictionary", {
         method: "PATCH",
@@ -263,15 +249,15 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
       });
       if (!res.ok) {
         const data = (await res.json()) as { error?: string };
-        setMsg({ type: "err", text: data.error ?? "登録に失敗しました。" });
+        toast.error(data.error ?? "登録に失敗しました。");
         return;
       }
       setFromText("");
       setToText("");
-      setMsg({ type: "ok", text: "登録しました。" });
+      toast.success("登録しました。");
       loadEntries();
     } catch {
-      setMsg({ type: "err", text: "通信エラーが発生しました。" });
+      toast.error("通信エラーが発生しました。");
     } finally {
       setSaving(false);
     }
@@ -286,15 +272,16 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
       });
       loadEntries();
     } catch {
-      setMsg({ type: "err", text: "削除に失敗しました。" });
+      toast.error("削除に失敗しました。");
     }
   }
 
   return (
-    <Card className="border-zinc-800 bg-zinc-900">
+    <>
+    <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
-          <BookOpen className="h-4 w-4 text-green-400" />
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-[#f2f3f5]">
+          <BookOpen className="h-4 w-4 text-[#c9cdfb]" />
           辞書登録（個人）
         </CardTitle>
       </CardHeader>
@@ -310,7 +297,7 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
                 className={input}
               />
             </Field>
-            <span className="pb-1.5 text-zinc-500">→</span>
+            <span className="pb-1.5 text-[#b5bac1]">→</span>
             <Field labelText="変換後">
               <input
                 type="text"
@@ -330,20 +317,19 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
               {saving ? "登録中..." : "追加"}
             </Button>
           </div>
-          <FeedbackLine msg={msg} />
         </form>
 
         {loading ? (
-          <p className="text-sm text-zinc-500">読み込み中...</p>
+          <p className="text-sm text-[#b5bac1]">読み込み中...</p>
         ) : entries.length === 0 ? (
-          <p className="text-sm text-zinc-500">登録された辞書エントリはありません。</p>
+          <p className="text-sm text-[#b5bac1]">登録された辞書エントリはありません。</p>
         ) : (
-          <div className="rounded-md border border-zinc-800">
+          <div className="rounded-md border border-[#1e1f22]">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-zinc-800 text-left">
-                  <th className="px-3 py-2 text-xs font-medium text-zinc-500">変換前</th>
-                  <th className="px-3 py-2 text-xs font-medium text-zinc-500">変換後</th>
+                <tr className="border-b border-[#1e1f22] text-left">
+                  <th className="px-3 py-2 text-xs font-medium text-[#b5bac1]">変換前</th>
+                  <th className="px-3 py-2 text-xs font-medium text-[#b5bac1]">変換後</th>
                   <th className="px-3 py-2" />
                 </tr>
               </thead>
@@ -351,18 +337,18 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
                 {entries.map((entry) => (
                   <tr
                     key={entry.fromText}
-                    className="border-b border-zinc-800/50 last:border-0"
+                    className="border-b border-[#1e1f22]/50 last:border-0"
                   >
-                    <td className="px-3 py-2 font-mono text-sm text-zinc-300">
+                    <td className="px-3 py-2 font-mono text-sm text-[#dbdee1]">
                       {entry.fromText}
                     </td>
-                    <td className="px-3 py-2 font-mono text-sm text-zinc-300">
+                    <td className="px-3 py-2 font-mono text-sm text-[#dbdee1]">
                       {entry.toText}
                     </td>
                     <td className="px-3 py-2 text-right">
                       <button
-                        onClick={() => void handleDelete(entry.fromText)}
-                        className="text-xs text-zinc-500 hover:text-red-400"
+                        onClick={() => setPendingDeleteFrom(entry.fromText)}
+                        className="text-xs text-[#b5bac1] hover:text-red-400"
                       >
                         削除
                       </button>
@@ -375,6 +361,19 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
         )}
       </CardContent>
     </Card>
+
+    {pendingDeleteFrom && (
+      <ConfirmDialog
+        title="辞書エントリを削除しますか？"
+        description={`「${pendingDeleteFrom}」の変換ルールを削除します。`}
+        onConfirm={() => {
+          void handleDelete(pendingDeleteFrom);
+          setPendingDeleteFrom(null);
+        }}
+        onCancel={() => setPendingDeleteFrom(null)}
+      />
+    )}
+    </>
   );
 }
 
@@ -389,7 +388,6 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
   const [content, setContent] = useState("");
   const [deadlineDays, setDeadlineDays] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [msg, setMsg] = useState<Feedback>(null);
 
   useEffect(() => {
     setConfigLoading(true);
@@ -408,35 +406,41 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
         const firstCh = list[0];
         if (firstCh) setSelectedChannelId(firstCh.id);
       })
-      .catch(() => setMsg({ type: "err", text: "データの読み込みに失敗しました。" }))
+      .catch(() => toast.error("データの読み込みに失敗しました。"))
       .finally(() => setConfigLoading(false));
   }, [guildId]);
 
   const needsChannelPicker = !configChannelId;
+  const capacityNum = parseInt(capacity, 10);
+  const capacityInvalid = capacity !== "" && (isNaN(capacityNum) || capacityNum < 1 || capacityNum > 99);
+  const deadlineDaysNum = parseInt(deadlineDays, 10);
+  const deadlineDaysInvalid = deadlineDays.trim() !== "" && (isNaN(deadlineDaysNum) || deadlineDaysNum < 1 || deadlineDaysNum > 30);
+
   const canSubmit =
     genre.trim() &&
     content.trim() &&
+    !capacityInvalid &&
+    !deadlineDaysInvalid &&
     (!needsChannelPicker || selectedChannelId);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const cap = parseInt(capacity, 10);
     if (!genre.trim() || !content.trim() || !Number.isFinite(cap) || cap < 1 || cap > 99) {
-      setMsg({ type: "err", text: "全項目を正しく入力してください（定員: 1〜99）。" });
+      toast.error("全項目を正しく入力してください（定員: 1〜99）。");
       return;
     }
     if (needsChannelPicker && !selectedChannelId) {
-      setMsg({ type: "err", text: "投稿先チャンネルを選択してください。" });
+      toast.error("投稿先チャンネルを選択してください。");
       return;
     }
     setSubmitting(true);
-    setMsg(null);
     try {
       const deadlineDaysParsed = deadlineDays.trim() === ""
         ? undefined
         : parseInt(deadlineDays.trim(), 10);
       if (deadlineDaysParsed !== undefined && (isNaN(deadlineDaysParsed) || deadlineDaysParsed < 1 || deadlineDaysParsed > 30)) {
-        setMsg({ type: "err", text: "締め切りは1〜30の整数を入力してください。" });
+        toast.error("締め切りは1〜30の整数を入力してください。");
         return;
       }
 
@@ -456,32 +460,32 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
-        setMsg({ type: "err", text: data.error ?? "作成に失敗しました。" });
+        toast.error(data.error ?? "作成に失敗しました。");
         return;
       }
       setGenre("");
       setCapacity("4");
       setContent("");
       setDeadlineDays("");
-      setMsg({ type: "ok", text: "募集を作成しました。" });
+      toast.success("募集を作成しました。");
     } catch {
-      setMsg({ type: "err", text: "通信エラーが発生しました。" });
+      toast.error("通信エラーが発生しました。");
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Card className="border-zinc-800 bg-zinc-900">
+    <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
-          <Users className="h-4 w-4 text-green-400" />
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-[#f2f3f5]">
+          <Users className="h-4 w-4 text-[#c9cdfb]" />
           募集作成
         </CardTitle>
       </CardHeader>
       <CardContent>
         {configLoading ? (
-          <p className="text-sm text-zinc-500">読み込み中...</p>
+          <p className="text-sm text-[#b5bac1]">読み込み中...</p>
         ) : (
           <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-3">
             {needsChannelPicker && (
@@ -505,7 +509,13 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
                 )}
               </Field>
             )}
-            <Field labelText="タイトル（最大80文字）">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <p className={label}>タイトル</p>
+                <span className={`text-xs tabular-nums ${genre.length >= 80 ? "text-red-400" : "text-[#b5bac1]"}`}>
+                  {genre.length}/80
+                </span>
+              </div>
               <input
                 type="text"
                 maxLength={80}
@@ -514,18 +524,26 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
                 placeholder="例: 原神　螺旋12層"
                 className={input}
               />
-            </Field>
-            <Field labelText="定員（1〜99）">
+            </div>
+            <div className="flex flex-col gap-1">
+              <p className={label}>定員（1〜99）</p>
               <input
                 type="number"
                 min={1}
                 max={99}
                 value={capacity}
                 onChange={(e) => setCapacity(e.target.value)}
-                className={`${input} w-24`}
+                className={`${input} w-24 ${capacityInvalid ? "border-red-500" : ""}`}
               />
-            </Field>
-            <Field labelText="内容（最大1000文字）">
+              {capacityInvalid && <p className="text-xs text-red-400">1〜99の整数を入力してください</p>}
+            </div>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <p className={label}>内容</p>
+                <span className={`text-xs tabular-nums ${content.length >= 1000 ? "text-red-400" : "text-[#b5bac1]"}`}>
+                  {content.length}/1000
+                </span>
+              </div>
               <textarea
                 maxLength={1000}
                 rows={3}
@@ -534,8 +552,9 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
                 placeholder="募集の説明を入力..."
                 className={input}
               />
-            </Field>
-            <Field labelText="締め切り（日数・省略で7日）">
+            </div>
+            <div className="flex flex-col gap-1">
+              <p className={label}>締め切り（日数・省略で7日）</p>
               <input
                 type="number"
                 min={1}
@@ -543,12 +562,17 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
                 value={deadlineDays}
                 onChange={(e) => setDeadlineDays(e.target.value)}
                 placeholder="1〜30"
-                className={`${input} w-24`}
+                className={`${input} w-24 ${deadlineDaysInvalid ? "border-red-500" : ""}`}
               />
-            </Field>
-            <FeedbackLine msg={msg} />
+              {deadlineDaysInvalid && <p className="text-xs text-red-400">1〜30の整数を入力してください</p>}
+            </div>
             <div>
-              <Button type="submit" size="sm" disabled={submitting || !canSubmit}>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={submitting || !canSubmit}
+                title={!canSubmit ? "全項目を正しく入力してください" : undefined}
+              >
                 {submitting ? "作成中..." : "募集を作成"}
               </Button>
             </div>

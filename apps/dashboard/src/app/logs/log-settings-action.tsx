@@ -1,22 +1,26 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
+import { toast } from "sonner";
 import { Save, Settings } from "lucide-react";
 import { fetchSettings, updateSettings, toSettingsError } from "../../lib/settings-api";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
+import { Skeleton } from "../../components/ui/skeleton";
+import { useBeforeUnload } from "../../hooks/use-before-unload";
 import { LogsSettingsTab } from "../settings/components/LogsSettingsTab";
 import { SettingsModal } from "../../components/settings-modal";
 
 function LogSettingsCard({ guildId }: { guildId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [logMode, setLogMode] = useState("full");
   const [language, setLanguage] = useState("en");
   const [uiLang, setUiLang] = useState<GuildLanguage>("en");
+  const [saved, setSaved] = useState({ logMode: "full", language: "en" });
 
   const loc = getDashboardLocale(uiLang);
+  useBeforeUnload(!loading && (logMode !== saved.logMode || language !== saved.language));
   const logModeOptions = [
     { label: loc.logModeFull, value: "full" },
     { label: loc.logModeMetadataOnly, value: "metadata_only" },
@@ -34,22 +38,32 @@ function LogSettingsCard({ guildId }: { guildId: string }) {
       .then((s) => {
         setLogMode(s.logMode);
         setLanguage(s.language);
+        setSaved({ logMode: s.logMode, language: s.language });
         if (s.language === "ja" || s.language === "en") setUiLang(s.language);
       })
-      .catch((e: unknown) => setError(toSettingsError(e)))
+      .catch((e: unknown) => toast.error(toSettingsError(e)))
       .finally(() => setLoading(false));
   }, [guildId]);
 
-  if (!guildId || loading) return null;
+  if (!guildId || loading) {
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-9 w-full" />
+        <Skeleton className="h-9 w-full" />
+      </div>
+    );
+  }
 
   async function save() {
     if (!guildId) return;
     setSaving(true);
-    setError(null);
     try {
       await updateSettings(guildId, logMode, language);
+      setSaved({ logMode, language });
+      toast.success("ログ設定を保存しました。");
     } catch (e) {
-      setError(toSettingsError(e));
+      toast.error(toSettingsError(e));
     } finally {
       setSaving(false);
     }
@@ -58,18 +72,17 @@ function LogSettingsCard({ guildId }: { guildId: string }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-medium text-zinc-300">{loc.logsSettings}</p>
+        <p className="text-sm font-medium text-[#dbdee1]">{loc.logsSettings}</p>
         <button
           type="button"
           disabled={saving}
           onClick={() => void save()}
-          className="flex items-center gap-1.5 rounded-md bg-zinc-800 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 disabled:opacity-40"
+          className="flex items-center gap-1.5 rounded-md bg-[#383a40] px-3 py-1.5 text-xs text-[#dbdee1] hover:bg-[#404249] disabled:opacity-40"
         >
           <Save className="h-3 w-3" />
           {saving ? loc.saving : "保存"}
         </button>
       </div>
-      {error && <p className="mb-2 text-xs text-red-400">{error}</p>}
       <div className="grid gap-3 sm:grid-cols-2">
         <LogsSettingsTab
           logMode={logMode}
@@ -95,7 +108,7 @@ export function LogSettingsAction({ guildId }: { guildId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 rounded-md border border-zinc-700 px-2.5 py-1.5 text-xs text-zinc-400 hover:border-zinc-600 hover:text-zinc-200"
+        className="flex items-center gap-1.5 rounded-md border border-[#3f4147] px-2.5 py-1.5 text-xs text-[#b5bac1] hover:border-[#3f4147] hover:text-[#dbdee1]"
         aria-label="ログ設定"
       >
         <Settings className="h-3.5 w-3.5" />

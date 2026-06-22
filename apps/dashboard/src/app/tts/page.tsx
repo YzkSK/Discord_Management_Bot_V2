@@ -6,6 +6,7 @@ import { getDashboardPageRole } from "../../dashboard-auth";
 import { DashboardShell } from "../dashboard-shell";
 import { TtsDashboard } from "./tts-dashboard";
 import { TtsSettingsAction } from "./tts-settings-action";
+import { TtsUserSettingsAction } from "./components/TtsUserSettingsModal";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,12 @@ export default async function TtsPage() {
 
   return (
     <DashboardShell
-      actions={role === "admin" || role === "owner" ? <TtsSettingsAction guildId={guildId} /> : undefined}
+      actions={
+        <div className="flex items-center gap-2">
+          <TtsUserSettingsAction guildId={guildId} />
+          {(role === "admin" || role === "owner") && <TtsSettingsAction guildId={guildId} />}
+        </div>
+      }
       currentPath="/tts"
       description="TTS setup, dictionary, speaker overrides, and command shortcuts"
       guildId={guildId}
@@ -34,7 +40,7 @@ export default async function TtsPage() {
       session={session}
       title="TTS"
     >
-      <TtsDashboard guildId={guildId} />
+      <TtsDashboard guildId={guildId} role={role} />
     </DashboardShell>
   );
 }

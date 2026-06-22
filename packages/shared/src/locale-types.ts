@@ -30,6 +30,7 @@ export type Locale = {
   tempVcCategorySame: string;
   logsSetupFailed: string;
   logsChannelMustBeText: string;
+  logsChannelMissingPermission: string;
   logsSetupComplete: string;
   logsChannel: (vars: { id: string }) => string;
   logsMarker: (vars: { marker: string }) => string;

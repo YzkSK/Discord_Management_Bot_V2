@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
@@ -20,6 +20,7 @@ import { useDashboardData } from "../../hooks/use-dashboard-data";
 import { DictionaryTable, type TtsDictionaryEntry } from "./components/DictionaryTable";
 import { UserSpeakerTable, type TtsUserSpeaker } from "./components/UserSpeakerTable";
 import { usePreviewAudio } from "./components/usePreviewAudio";
+import { TtsUserPersonalCard } from "./components/TtsUserPersonalCard";
 
 interface TtsResponse {
   accessRole: string;
@@ -42,7 +43,7 @@ interface TtsResponse {
   userSpeakers: TtsUserSpeaker[];
 }
 
-export function TtsDashboard({ guildId }: { guildId: string }) {
+export function TtsDashboard({ guildId, role }: { guildId: string; role?: "viewer" | "admin" | "owner" | null }) {
   const [uiLang, setUiLang] = useState<GuildLanguage>("en");
   const loc = getDashboardLocale(uiLang);
   const { data, loading, error, reload: refresh } = useDashboardData(
@@ -50,22 +51,28 @@ export function TtsDashboard({ guildId }: { guildId: string }) {
     [guildId],
     "TTS request failed"
   );
+  const [speakerMap, setSpeakerMap] = useState<Map<number, string>>(new Map());
 
   useEffect(() => {
     setUiLang(detectBrowserLanguage());
-  }, []);
+    void fetch(`/api/panel/speakers?guildId=${encodeURIComponent(guildId)}`)
+      .then((r) => r.ok ? r.json() as Promise<{ speakers: { id: number; label: string }[] }> : Promise.resolve({ speakers: [] }))
+      .then(({ speakers }) => setSpeakerMap(new Map(speakers.map((s) => [s.id, s.label]))));
+  }, [guildId]);
 
   if (loading) return <LoadingSpinner />;
 
   if (!data) {
-    return <ErrorAlert message={error ?? loc.failedToLoadSettings} />;
+    return <ErrorAlert message={error ?? loc.failedToLoadSettings} onRetry={refresh} />;
   }
+
+  const isAdmin = role === "admin" || role === "owner";
 
   return (
     <section className="grid max-w-6xl gap-4">
       <div className="grid gap-3 md:grid-cols-4">
         <TtsMetric
-          icon={<Radio className="h-4 w-4 text-green-400" />}
+          icon={<Radio className="h-4 w-4 text-[#c9cdfb]" />}
           label={loc.ttsStatus}
           value={
             data.isConfigured
@@ -74,106 +81,143 @@ export function TtsDashboard({ guildId }: { guildId: string }) {
           }
         />
         <TtsMetric
-          icon={<Mic2 className="h-4 w-4 text-green-400" />}
+          icon={<Mic2 className="h-4 w-4 text-[#c9cdfb]" />}
           label={loc.ttsSpeakerDefault}
-          value={data.guildDefaultSpeaker?.speakerId.toString() ?? "-"}
+          value={data.guildDefaultSpeaker
+            ? (speakerMap.get(data.guildDefaultSpeaker.speakerId) ?? `#${data.guildDefaultSpeaker.speakerId}`)
+            : "-"}
         />
         <TtsMetric
-          icon={<Volume2 className="h-4 w-4 text-green-400" />}
+          icon={<Volume2 className="h-4 w-4 text-[#c9cdfb]" />}
           label={loc.ttsUserSpeakers}
           value={data.userSpeakerCount.toString()}
         />
         <TtsMetric
-          icon={<BookOpen className="h-4 w-4 text-green-400" />}
+          icon={<BookOpen className="h-4 w-4 text-[#c9cdfb]" />}
           label={loc.ttsDictionaryEntries}
           value={data.dictionaryStats.totalCount.toString()}
         />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[.85fr_1.15fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Radio className="h-4 w-4 text-green-400" />
-              {loc.ttsSettings}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3">
-            <KeyValue
-              label={loc.ttsSourceChannel}
-              value={data.ttsTextChannelId ?? "-"}
-            />
-            <KeyValue
-              label={loc.ttsSpeakerDefault}
-              value={data.guildDefaultSpeaker?.speakerId.toString() ?? "-"}
-            />
-            {data.guildDefaultSpeaker && (
-              <GuildDefaultSpeakerPreview speakerId={data.guildDefaultSpeaker.speakerId} />
-            )}
-            <KeyValue
-              label={loc.ttsEnabledDictionaryEntries}
-              value={data.dictionaryStats.enabledCount.toString()}
-            />
-            <KeyValue
-              label={loc.ttsDisabledDictionaryEntries}
-              value={data.dictionaryStats.disabledCount.toString()}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-green-400" />
-              {loc.ttsDictionaryEntries}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <DictionaryTable entries={data.dictionaryEntries} loc={loc} />
-            {data.accessRole === "admin" && (
-              <div className="border-t border-zinc-800 pt-4">
-                <p className="mb-2 text-xs font-medium text-zinc-400">新しい単語を登録（サーバー辞書）</p>
-                <DictionaryAddForm guildId={guildId} onSuccess={refresh} />
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* 個人設定セクション */}
+      <div>
+        {isAdmin && (
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#80848e]">個人設定</p>
+        )}
+        <TtsUserPersonalCard guildId={guildId} guildDefaultSpeakerId={data.guildDefaultSpeaker?.speakerId ?? null} />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Volume2 className="h-4 w-4 text-green-400" />
-            {loc.ttsUserSpeakers}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <UserSpeakerTable loc={loc} userSpeakers={data.userSpeakers} />
-        </CardContent>
-      </Card>
+      {/* サーバー設定セクション（admin/owner のみ） */}
+      {isAdmin && (
+        <div>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#80848e]">サーバー設定</p>
+          <div className="grid gap-4 xl:grid-cols-[.85fr_1.15fr]">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Radio className="h-4 w-4 text-[#c9cdfb]" />
+                  {loc.ttsSettings}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-3">
+                <KeyValue
+                  label={loc.ttsSourceChannel}
+                  value={data.ttsTextChannelId ?? "-"}
+                />
+                <KeyValue
+                  label={loc.ttsSpeakerDefault}
+                  value={data.guildDefaultSpeaker
+                    ? (speakerMap.get(data.guildDefaultSpeaker.speakerId) ?? `#${data.guildDefaultSpeaker.speakerId}`)
+                    : "-"}
+                />
+                {data.guildDefaultSpeaker && (
+                  <GuildDefaultSpeakerPreview speakerId={data.guildDefaultSpeaker.speakerId} />
+                )}
+                <KeyValue
+                  label={loc.ttsEnabledDictionaryEntries}
+                  value={data.dictionaryStats.enabledCount.toString()}
+                />
+                <KeyValue
+                  label={loc.ttsDisabledDictionaryEntries}
+                  value={data.dictionaryStats.disabledCount.toString()}
+                />
+              </CardContent>
+            </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{loc.voiceSetupShortcuts}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-2 sm:grid-cols-3">
-          <TtsShortcut
-            body="/setup tts channel:<text channel>"
-            href="/settings"
-            label={loc.ttsSetupCommand}
-          />
-          <TtsShortcut
-            body="/join /leave /force-join"
-            href="/logs?eventName=tts"
-            label={loc.ttsVoiceCommands}
-          />
-          <TtsShortcut
-            body="/speaker user speaker_id:<id>"
-            href="/settings"
-            label={loc.ttsSpeakerDefault}
-          />
-        </CardContent>
-      </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="h-4 w-4 text-[#c9cdfb]" />
+                  {loc.ttsDictionaryEntries}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4">
+                <DictionaryTable entries={data.dictionaryEntries} loc={loc} />
+                <div className="border-t border-[#1e1f22] pt-4">
+                  <p className="mb-2 text-xs font-medium text-[#b5bac1]">新しい単語を登録（サーバー辞書）</p>
+                  <DictionaryAddForm guildId={guildId} onSuccess={refresh} />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* viewer 向け: サーバー辞書（読み取り専用） */}
+      {!isAdmin && (
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-[#c9cdfb]" />
+                {loc.ttsDictionaryEntries}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DictionaryTable entries={data.dictionaryEntries} loc={loc} />
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Volume2 className="h-4 w-4 text-[#c9cdfb]" />
+              {loc.ttsUserSpeakers}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <UserSpeakerTable loc={loc} userSpeakers={data.userSpeakers} speakerMap={speakerMap} />
+          </CardContent>
+        </Card>
+      )}
+
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{loc.voiceSetupShortcuts}</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-2 sm:grid-cols-3">
+            <TtsShortcut
+              body="/setup tts channel:<text channel>"
+              href="/settings"
+              label={loc.ttsSetupCommand}
+            />
+            <TtsShortcut
+              body="/join /leave /force-join"
+              href="/logs?eventName=tts"
+              label={loc.ttsVoiceCommands}
+            />
+            <TtsShortcut
+              body="/speaker user speaker_id:<id>"
+              href="/settings"
+              label={loc.ttsSpeakerDefault}
+            />
+          </CardContent>
+        </Card>
+      )}
     </section>
   );
 }
@@ -188,21 +232,21 @@ function TtsMetric({
   value: string;
 }) {
   return (
-    <div className="rounded-md border border-zinc-800 bg-zinc-900 p-4">
+    <div className="rounded-md border border-[#1e1f22] bg-[#2b2d31] p-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-medium text-zinc-500">{label}</p>
+        <p className="text-xs font-medium text-[#b5bac1]">{label}</p>
         {icon}
       </div>
-      <p className="mt-2 text-2xl font-semibold text-zinc-100">{value}</p>
+      <p className="mt-2 text-2xl font-semibold text-[#f2f3f5]">{value}</p>
     </div>
   );
 }
 
 function KeyValue({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-zinc-800 pb-2 last:border-b-0 last:pb-0">
-      <p className="text-sm text-zinc-500">{label}</p>
-      <p className="break-all text-right font-mono text-xs text-zinc-200">
+    <div className="flex items-center justify-between gap-4 border-b border-[#1e1f22] pb-2 last:border-b-0 last:pb-0">
+      <p className="text-sm text-[#b5bac1]">{label}</p>
+      <p className="break-all text-right font-mono text-xs text-[#dbdee1]">
         {value}
       </p>
     </div>
@@ -237,7 +281,6 @@ function DictionaryAddForm({
 }) {
   const [fromText, setFromText] = useState("");
   const [toText, setToText] = useState("");
-  const [priority, setPriority] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -257,7 +300,7 @@ function DictionaryAddForm({
           scope: "guild",
           fromText: fromText.trim(),
           toText: toText.trim(),
-          priority,
+          priority: 0,
           isEnabled: true,
           userId: null
         })
@@ -274,7 +317,6 @@ function DictionaryAddForm({
 
       setFromText("");
       setToText("");
-      setPriority(0);
       onSuccess();
     } catch (e: unknown) {
       console.error("Dictionary add failed", e);
@@ -288,11 +330,11 @@ function DictionaryAddForm({
     <form className="grid gap-3" onSubmit={(e) => void handleSubmit(e)}>
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="grid gap-1">
-          <label className="text-xs text-zinc-400" htmlFor="fromText">
+          <label className="text-xs text-[#b5bac1]" htmlFor="fromText">
             変換前
           </label>
           <input
-            className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+            className="rounded-md border border-[#3f4147] bg-[#2b2d31] px-3 py-1.5 text-sm text-[#f2f3f5] placeholder:text-[#80848e] focus:outline-none focus:ring-1 focus:ring-[#3f4147]"
             id="fromText"
             onChange={(e) => setFromText(e.target.value)}
             placeholder="例: Discord"
@@ -302,11 +344,11 @@ function DictionaryAddForm({
           />
         </div>
         <div className="grid gap-1">
-          <label className="text-xs text-zinc-400" htmlFor="toText">
+          <label className="text-xs text-[#b5bac1]" htmlFor="toText">
             変換後
           </label>
           <input
-            className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+            className="rounded-md border border-[#3f4147] bg-[#2b2d31] px-3 py-1.5 text-sm text-[#f2f3f5] placeholder:text-[#80848e] focus:outline-none focus:ring-1 focus:ring-[#3f4147]"
             id="toText"
             onChange={(e) => setToText(e.target.value)}
             placeholder="例: ディスコード"
@@ -316,22 +358,8 @@ function DictionaryAddForm({
           />
         </div>
       </div>
-      <div className="flex items-center gap-3">
-        <div className="grid gap-1">
-          <label className="text-xs text-zinc-400" htmlFor="priority">
-            優先度
-          </label>
-          <input
-            className="w-20 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-500"
-            id="priority"
-            min={0}
-            onChange={(e) => setPriority(Number(e.target.value))}
-            type="number"
-            value={priority}
-          />
-        </div>
+      <div className="flex justify-end">
         <Button
-          className="mt-4 self-end"
           disabled={submitting || !fromText.trim() || !toText.trim()}
           size="sm"
           type="submit"
@@ -358,12 +386,12 @@ function TtsShortcut({
 }) {
   return (
     <a
-      className="flex items-start justify-between gap-3 rounded-md border border-zinc-800 bg-zinc-950 p-3 transition-colors hover:border-zinc-600 hover:bg-zinc-900"
+      className="flex items-start justify-between gap-3 rounded-md border border-[#1e1f22] bg-[#1e1f22] p-3 transition-colors hover:border-[#3f4147] hover:bg-[#2b2d31]"
       href={href}
     >
       <div>
-        <p className="text-sm font-medium text-zinc-200">{label}</p>
-        <p className="mt-1 break-all font-mono text-xs text-zinc-500">{body}</p>
+        <p className="text-sm font-medium text-[#dbdee1]">{label}</p>
+        <p className="mt-1 break-all font-mono text-xs text-[#b5bac1]">{body}</p>
       </div>
       <Button aria-label={label} size="icon" type="button" variant="ghost">
         <Settings className="h-3.5 w-3.5" />
