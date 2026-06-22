@@ -124,7 +124,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
         ].map((kpi) => (
           <div
             key={kpi.label}
-            className="rounded-lg rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4"
+            className="rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4"
           >
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-[#b5bac1]">{kpi.label}</p>
@@ -149,7 +149,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
           </span>
         </div>
         {data.activeSessions.length === 0 ? (
-          <div className="rounded-lg rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm py-10 text-center text-sm text-[#80848e]">
+          <div className="rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm py-10 text-center text-sm text-[#80848e]">
             {loc.voiceNoActiveCalls}
           </div>
         ) : (
@@ -162,7 +162,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
               return (
                 <div
                   key={s.id}
-                  className="rounded-lg rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4"
+                  className="rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4"
                 >
                   <div className="flex items-center gap-2">
                     <span className="relative flex h-2 w-2">
@@ -203,7 +203,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
             {data.tempVoiceChannels.map((vc) => (
               <div
                 key={vc.channelId}
-                className="rounded-lg rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4"
+                className="rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4"
               >
                 <p className="truncate text-sm font-medium text-[#dbdee1]">
                   {vc.channelName ?? `#${vc.channelId}`}
@@ -228,7 +228,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
         <h2 className="mb-3 text-sm font-semibold text-[#b5bac1]">
           ピーク時間帯
         </h2>
-        <div className="rounded-lg rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4">
+        <div className="rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4">
           <ResponsiveContainer width="100%" height={120}>
             <BarChart data={peakData}>
               <XAxis

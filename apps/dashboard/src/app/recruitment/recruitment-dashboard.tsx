@@ -292,7 +292,7 @@ function CreateRecruitmentForm({
         body: JSON.stringify({ guildId, genre: title, content, capacity, deadlineDays }),
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({} as { error?: string })) as { error?: string };
+        const body = await res.json().catch(() => ({} as { error?: string }));
         setFormError(body.error ?? "作成に失敗しました");
         return;
       }
@@ -432,7 +432,7 @@ export function RecruitmentDashboard({
         body: JSON.stringify({ action, guildId }),
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({} as { error?: string })) as { error?: string };
+        const body = await res.json().catch(() => ({} as { error?: string }));
         setActionError(body.error ?? "操作に失敗しました");
         return;
       }
