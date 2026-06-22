@@ -15,6 +15,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { authorizeDashboardApi } from "../../../dashboard-auth";
 import { fetchGuildRoles, fetchGuildChannels } from "../../../discord-api";
+import { optionalParam } from "../../../lib/request-params";
 import {
   parseSettingsPatchBody,
   type SettingsPatchValue
@@ -191,10 +192,6 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-function optionalParam(query: URLSearchParams, key: string) {
-  const value = query.get(key)?.trim();
-  return value ? value : undefined;
-}
 
 function readBodyGuildId(body: unknown) {
   return typeof body === "object" &&

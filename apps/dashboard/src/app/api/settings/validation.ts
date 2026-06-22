@@ -169,7 +169,7 @@ function parseLogsValues(
   };
 }
 
-function readRequiredString(value: unknown, field: string) {
+export function readRequiredString(value: unknown, field: string) {
   if (typeof value !== "string" || !value.trim()) {
     return { ok: false as const, error: `${field} is required.` };
   }
@@ -201,7 +201,7 @@ function readOptionalNullableString(value: unknown) {
   return trimmed ? trimmed : null;
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
+export function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 

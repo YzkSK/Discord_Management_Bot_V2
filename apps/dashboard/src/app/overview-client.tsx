@@ -31,6 +31,7 @@ import {
 } from "../lib/event-display";
 import { formatEventDescriptionJSX } from "../lib/format-event-jsx";
 import { LoadingSpinner } from "../components/loading-spinner";
+import { roleRank } from "../lib/roles";
 
 interface VoiceSession {
   channelId: string;
@@ -92,7 +93,6 @@ const kpiDefs = [
   },
 ] as const;
 
-const roleRank: Record<string, number> = { viewer: 1, admin: 2, owner: 3 };
 
 const ALL_QUICK_LINKS = [
   { label: "Voice", href: "/voice", icon: Headphones, desc: "通話状況", minRole: "admin" as const },
