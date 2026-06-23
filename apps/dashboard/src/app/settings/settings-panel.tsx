@@ -107,9 +107,6 @@ export function SettingsPanel({
             }`;
           return (
             <>
-              <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">
-                {isJa ? "個人設定" : "Personal"}
-              </p>
               {personalTabs.map((tab) => (
                 <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)} className={btnClass(tab.key)}>
                   {tabLabel(tab.key, isJa)}
@@ -117,9 +114,7 @@ export function SettingsPanel({
               ))}
               {serverTabs.length > 0 && (
                 <>
-                  <p className="px-3 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">
-                    {isJa ? "サーバー設定" : "Server"}
-                  </p>
+                  <div className="my-2 border-t border-[#1e1f22]" />
                   {serverTabs.map((tab) => (
                     <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)} className={btnClass(tab.key)}>
                       {tabLabel(tab.key, isJa)}
