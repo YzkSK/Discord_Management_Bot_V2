@@ -29,7 +29,7 @@ const dashboardNavGroups: DashboardNavGroup[] = [
   {
     label: "System",
     items: [
-      { href: "/settings", label: "Access", description: "Access grants and management roles", minRole: "owner" },
+      { href: "/settings", label: "Settings", description: "Server and personal settings" },
       { href: "/health", label: "Health", description: "Dependency service status", minRole: "admin" },
     ],
   },
@@ -87,10 +87,9 @@ const dashboardNavItems: DashboardNavItem[] = [
     label: "Logs"
   },
   {
-    description: "Access grants and management roles",
+    description: "Server and personal settings",
     href: "/settings",
-    label: "Access",
-    minRole: "owner" as const,
+    label: "Settings",
   }
 ];
 

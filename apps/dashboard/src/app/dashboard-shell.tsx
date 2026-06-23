@@ -8,7 +8,6 @@ import {
   Mic2,
   ClipboardList,
   Headphones,
-  KeyRound,
   ScrollText,
   Settings,
   Activity,
@@ -47,7 +46,7 @@ const icons: Record<string, ReactNode> = {
   "/tts": <Mic2 className="h-4 w-4 shrink-0" />,
   "/health": <Activity className="h-4 w-4 shrink-0" />,
   "/logs": <ScrollText className="h-4 w-4 shrink-0" />,
-  "/settings": <KeyRound className="h-4 w-4 shrink-0" />,
+  "/settings": <Settings className="h-4 w-4 shrink-0" />,
 };
 
 
