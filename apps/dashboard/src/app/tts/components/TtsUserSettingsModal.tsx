@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Plus, Save, Trash2, User } from "lucide-react";
 import { Button } from "../../../components/ui/button";
+import { Skeleton } from "../../../components/ui/skeleton";
 import { SettingsModal } from "../../../components/settings-modal";
 import { usePreviewAudio } from "./usePreviewAudio";
 
@@ -23,8 +24,9 @@ interface VoicevoxSpeakerOption {
   label: string;
 }
 
-function PersonalSpeakerSection({ guildId }: { guildId: string }) {
-  const [setting, setSetting] = useState<PersonalSpeakerSetting | null | undefined>(undefined);
+export function PersonalSpeakerSection({ guildId }: { guildId: string }) {
+  const [loading, setLoading] = useState(true);
+  const [setting, setSetting] = useState<PersonalSpeakerSetting | null>(null);
   const [speakers, setSpeakers] = useState<VoicevoxSpeakerOption[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -32,6 +34,7 @@ function PersonalSpeakerSection({ guildId }: { guildId: string }) {
   const { playingId, playPreview } = usePreviewAudio();
 
   const load = useCallback(async () => {
+    setLoading(true);
     const [speakerRes, listRes] = await Promise.all([
       fetch(`/api/panel/speaker?guildId=${encodeURIComponent(guildId)}`),
       fetch(`/api/panel/speakers?guildId=${encodeURIComponent(guildId)}`),
@@ -45,6 +48,7 @@ function PersonalSpeakerSection({ guildId }: { guildId: string }) {
       const data = await listRes.json() as { speakers: VoicevoxSpeakerOption[] };
       setSpeakers(data.speakers);
     }
+    setLoading(false);
   }, [guildId]);
 
   useEffect(() => { void load(); }, [load]);
@@ -82,7 +86,15 @@ function PersonalSpeakerSection({ guildId }: { guildId: string }) {
     }
   }
 
-  if (setting === undefined) return null;
+  if (loading) {
+    return (
+      <div className="grid gap-2">
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-8 w-full" />
+      </div>
+    );
+  }
 
   const currentLabel = setting
     ? (speakers.find((s) => s.id === setting.speakerId)?.label ?? `話者 ${setting.speakerId}`)
@@ -140,7 +152,8 @@ function PersonalSpeakerSection({ guildId }: { guildId: string }) {
   );
 }
 
-function PersonalDictionarySection({ guildId }: { guildId: string }) {
+export function PersonalDictionarySection({ guildId }: { guildId: string }) {
+  const [loading, setLoading] = useState(true);
   const [entries, setEntries] = useState<PersonalDictEntry[]>([]);
   const [fromText, setFromText] = useState("");
   const [toText, setToText] = useState("");
@@ -148,10 +161,13 @@ function PersonalDictionarySection({ guildId }: { guildId: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    setLoading(true);
     const res = await fetch(`/api/panel/dictionary?guildId=${encodeURIComponent(guildId)}`);
-    if (!res.ok) return;
-    const data = await res.json() as { entries: PersonalDictEntry[] };
-    setEntries(data.entries);
+    if (res.ok) {
+      const data = await res.json() as { entries: PersonalDictEntry[] };
+      setEntries(data.entries);
+    }
+    setLoading(false);
   }, [guildId]);
 
   useEffect(() => { void load(); }, [load]);
@@ -182,6 +198,15 @@ function PersonalDictionarySection({ guildId }: { guildId: string }) {
       body: JSON.stringify({ guildId, fromText: from }),
     });
     await load();
+  }
+
+  if (loading) {
+    return (
+      <div className="grid gap-2">
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-16 w-full" />
+      </div>
+    );
   }
 
   return (
