@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import type { GuildLanguage } from "@discord-bot/shared";
-import { isGuildLanguage } from "@discord-bot/shared";
 import { toast } from "sonner";
 import { Save } from "lucide-react";
 import { fetchSettings, updateSettings, toSettingsError } from "../../../lib/settings-api";
@@ -78,7 +77,7 @@ export function LogsSettingsPanel({ guildId, loc, onUiLangChange }: LogsSettings
         onLogModeChange={setLogMode}
         onLanguageChange={setLanguage}
         onUiLangChange={(val) => {
-          if (isGuildLanguage(val)) onUiLangChange(val);
+          onUiLangChange(val as GuildLanguage);
         }}
       />
       <div className="flex justify-end">

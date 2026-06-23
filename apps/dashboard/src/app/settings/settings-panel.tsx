@@ -41,7 +41,7 @@ export function SettingsPanel({
   role,
 }: {
   guildId: string;
-  role?: "viewer" | "admin" | "owner" | null;
+  role: "viewer" | "admin" | "owner" | null;
 }) {
   const [settings, setSettings] = useState<SettingsResponse | null>(null);
   const [uiLang, setUiLang] = useState<GuildLanguage>("en");
@@ -57,7 +57,7 @@ export function SettingsPanel({
 
   useEffect(() => {
     const stored = localStorage.getItem(UI_LANG_KEY);
-    if (isGuildLanguage(stored ?? "")) setUiLang(stored as GuildLanguage);
+    if (stored !== null && isGuildLanguage(stored)) setUiLang(stored);
     else setUiLang(detectBrowserLanguage());
   }, []);
 
