@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 import { getDashboardSession } from "../../auth";
@@ -20,19 +20,18 @@ export default async function SettingsPage() {
   if (!guildId) redirect("/guild");
 
   const role = await getDashboardPageRole(guildId);
-  if (role !== "owner") notFound();
 
   return (
     <DashboardShell
       currentPath="/settings"
-      description="Access grants and management roles"
+      description="Server and personal settings"
       guildId={guildId}
       guildName={guildName}
       role={role}
       session={session}
-      title="Access"
+      title="Settings"
     >
-      <SettingsPanel guildId={guildId} />
+      <SettingsPanel guildId={guildId} role={role} />
     </DashboardShell>
   );
 }
