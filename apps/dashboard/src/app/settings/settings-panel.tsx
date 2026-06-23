@@ -38,10 +38,18 @@ const ALL_TABS: Tab[] = [
   { key: "access",       section: "server", minRole: "owner" },
 ];
 
+const TAB_LABELS: Record<string, string> = {
+  "tts-personal": "TTS",
+  tts: "TTS",
+  voice: "Voice",
+  recruitment: "Recruitment",
+  logs: "Logs",
+  access: "Access",
+};
+
 function tabLabel(key: string, isJa: boolean): string {
   if (key === "language") return isJa ? "表示言語" : "Language";
-  if (key === "tts-personal") return isJa ? "TTS個人設定" : "My TTS";
-  return key.charAt(0).toUpperCase() + key.slice(1);
+  return TAB_LABELS[key] ?? key;
 }
 
 export function SettingsPanel({
