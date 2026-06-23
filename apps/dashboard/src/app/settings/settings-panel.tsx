@@ -113,8 +113,12 @@ export function SettingsPanel({
                 ? "bg-[#404249] text-[#dbdee1]"
                 : "text-[#b5bac1] hover:bg-[#35373c] hover:text-[#dbdee1]"
             }`;
+          const sectionHeader = (label: string) => (
+            <p className="px-3 pb-1 pt-2 text-xs font-semibold text-[#80848e]">{label}</p>
+          );
           return (
             <>
+              {sectionHeader(isJa ? "個人設定" : "Personal")}
               {personalTabs.map((tab) => (
                 <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)} className={btnClass(tab.key)}>
                   {tabLabel(tab.key, isJa)}
@@ -122,7 +126,7 @@ export function SettingsPanel({
               ))}
               {serverTabs.length > 0 && (
                 <>
-                  <div className="my-2 border-t border-[#1e1f22]" />
+                  {sectionHeader(isJa ? "サーバー設定" : "Server")}
                   {serverTabs.map((tab) => (
                     <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)} className={btnClass(tab.key)}>
                       {tabLabel(tab.key, isJa)}
