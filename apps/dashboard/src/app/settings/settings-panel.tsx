@@ -24,20 +24,25 @@ const UI_LANG_KEY = "dashboard-ui-lang";
 
 interface Tab {
   key: string;
-  label: string;
   section: "personal" | "server";
   minRole?: "admin" | "owner";
 }
 
 const ALL_TABS: Tab[] = [
-  { key: "language",     label: "表示言語",     section: "personal" },
-  { key: "tts-personal", label: "TTS",          section: "personal" },
-  { key: "voice",        label: "Voice",        section: "server", minRole: "admin" },
-  { key: "tts",          label: "TTS",          section: "server", minRole: "admin" },
-  { key: "recruitment",  label: "Recruitment",  section: "server", minRole: "admin" },
-  { key: "logs",         label: "Logs",         section: "server", minRole: "admin" },
-  { key: "access",       label: "Access",       section: "server", minRole: "owner" },
+  { key: "language",     section: "personal" },
+  { key: "tts-personal", section: "personal" },
+  { key: "voice",        section: "server", minRole: "admin" },
+  { key: "tts",          section: "server", minRole: "admin" },
+  { key: "recruitment",  section: "server", minRole: "admin" },
+  { key: "logs",         section: "server", minRole: "admin" },
+  { key: "access",       section: "server", minRole: "owner" },
 ];
+
+function tabLabel(key: string, isJa: boolean): string {
+  if (key === "language") return isJa ? "表示言語" : "Language";
+  if (key === "tts-personal") return isJa ? "TTS個人設定" : "My TTS";
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
 
 export function SettingsPanel({
   guildId,
@@ -92,44 +97,39 @@ export function SettingsPanel({
     <section className="flex gap-6">
       {/* Sidebar nav */}
       <nav className="w-44 shrink-0">
-        <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">
-          個人設定
-        </p>
-        {personalTabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            type="button"
-            className={`w-full text-left px-3 py-1.5 mb-0.5 rounded text-sm font-medium transition-colors ${
-              activeTab === tab.key
+        {(() => {
+          const isJa = uiLang === "ja";
+          const btnClass = (key: string) =>
+            `w-full text-left px-3 py-1.5 mb-0.5 rounded text-sm font-medium transition-colors ${
+              activeTab === key
                 ? "bg-[#404249] text-[#dbdee1]"
                 : "text-[#b5bac1] hover:bg-[#35373c] hover:text-[#dbdee1]"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-        {serverTabs.length > 0 && (
-          <>
-            <p className="px-3 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">
-              サーバー設定
-            </p>
-            {serverTabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                type="button"
-                className={`w-full text-left px-3 py-1.5 mb-0.5 rounded text-sm font-medium transition-colors ${
-                  activeTab === tab.key
-                    ? "bg-[#404249] text-[#dbdee1]"
-                    : "text-[#b5bac1] hover:bg-[#35373c] hover:text-[#dbdee1]"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </>
-        )}
+            }`;
+          return (
+            <>
+              <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">
+                {isJa ? "個人設定" : "Personal"}
+              </p>
+              {personalTabs.map((tab) => (
+                <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)} className={btnClass(tab.key)}>
+                  {tabLabel(tab.key, isJa)}
+                </button>
+              ))}
+              {serverTabs.length > 0 && (
+                <>
+                  <p className="px-3 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">
+                    {isJa ? "サーバー設定" : "Server"}
+                  </p>
+                  {serverTabs.map((tab) => (
+                    <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)} className={btnClass(tab.key)}>
+                      {tabLabel(tab.key, isJa)}
+                    </button>
+                  ))}
+                </>
+              )}
+            </>
+          );
+        })()}
       </nav>
 
       {/* Tab content */}

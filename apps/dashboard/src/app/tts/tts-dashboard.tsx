@@ -14,9 +14,9 @@ import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
+import { ErrorAlert } from "../../components/error-alert";
 
 const UI_LANG_KEY = "dashboard-ui-lang";
-import { ErrorAlert } from "../../components/error-alert";
 import { LoadingSpinner } from "../../components/loading-spinner";
 import { useDashboardData } from "../../hooks/use-dashboard-data";
 import { DictionaryTable, type TtsDictionaryEntry } from "./components/DictionaryTable";
