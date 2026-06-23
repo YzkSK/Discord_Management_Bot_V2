@@ -84,70 +84,72 @@ export function SettingsPanel({
   }
 
   return (
-    <section className="max-w-3xl grid gap-4">
-      {/* Tab bar */}
-      <div className="flex gap-1 border-b border-[#1e1f22]">
+    <section className="flex gap-6">
+      {/* Sidebar nav */}
+      <nav className="w-44 shrink-0 pt-1">
         {visibleTabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2 text-sm font-medium transition-colors rounded-t-md ${
-              activeTab === tab.key
-                ? "border-b-2 border-[#5865f2] text-[#c9cdfb]"
-                : "text-[#b5bac1] hover:text-[#dbdee1]"
-            }`}
             type="button"
+            className={`w-full text-left px-3 py-1.5 mb-0.5 rounded text-sm font-medium transition-colors ${
+              activeTab === tab.key
+                ? "bg-[#404249] text-[#dbdee1]"
+                : "text-[#b5bac1] hover:bg-[#35373c] hover:text-[#dbdee1]"
+            }`}
           >
             {tab.label}
           </button>
         ))}
-      </div>
+      </nav>
 
       {/* Tab content */}
-      {activeTab === "personal" && (
-        <PersonalSettingsTab
-          guildId={guildId}
-          uiLang={uiLang}
-          onUiLangChange={setUiLang}
-        />
-      )}
-      {activeTab === "voice" && <VoiceSettingsPanel guildId={guildId} loc={loc} />}
-      {activeTab === "tts" && <TtsSettingsPanel guildId={guildId} loc={loc} />}
-      {activeTab === "recruitment" && <RecruitmentSettingsPanel guildId={guildId} loc={loc} />}
-      {activeTab === "logs" && (
-        <LogsSettingsPanel
-          guildId={guildId}
-          loc={loc}
-          onUiLangChange={setUiLang}
-        />
-      )}
-      {activeTab === "access" && (
-        <AccessGrantsTab
-          settings={settings}
-          accessGrants={access.accessGrants}
-          grantTargetType={access.grantTargetType}
-          grantTargetId={access.grantTargetId}
-          managementRoleIds={access.managementRoleIds}
-          savingGrant={access.savingGrant}
-          savingRoles={access.savingRoles}
-          deletingGrantKey={access.deletingGrantKey}
-          confirmRoleRemoval={access.confirmRoleRemoval}
-          loc={loc}
-          onGrantTargetTypeChange={access.setGrantTargetType}
-          onGrantTargetIdChange={access.setGrantTargetId}
-          onManagementRoleChange={(id, checked) => {
-            access.setManagementRoleIds((prev) =>
-              checked ? [...prev, id] : prev.filter((x) => x !== id)
-            );
-          }}
-          onSaveAccessGrant={() => void access.saveAccessGrant()}
-          onDeleteAccessGrant={(grant) => void access.deleteAccessGrant(grant)}
-          onUpdateAccessGrantRole={(grant, r) => void access.updateAccessGrantRole(grant, r)}
-          onRequestSaveManagementRoles={access.requestSaveManagementRoles}
-          onConfirmRoleRemoval={() => void access.doSaveManagementRoles()}
-          onCancelRoleRemoval={() => access.setConfirmRoleRemoval(false)}
-        />
-      )}
+      <div className="flex-1 min-w-0 grid gap-4">
+        {activeTab === "personal" && (
+          <PersonalSettingsTab
+            guildId={guildId}
+            uiLang={uiLang}
+            onUiLangChange={setUiLang}
+          />
+        )}
+        {activeTab === "voice" && <VoiceSettingsPanel guildId={guildId} loc={loc} />}
+        {activeTab === "tts" && <TtsSettingsPanel guildId={guildId} loc={loc} />}
+        {activeTab === "recruitment" && <RecruitmentSettingsPanel guildId={guildId} loc={loc} />}
+        {activeTab === "logs" && (
+          <LogsSettingsPanel
+            guildId={guildId}
+            loc={loc}
+            onUiLangChange={setUiLang}
+          />
+        )}
+        {activeTab === "access" && (
+          <AccessGrantsTab
+            settings={settings}
+            accessGrants={access.accessGrants}
+            grantTargetType={access.grantTargetType}
+            grantTargetId={access.grantTargetId}
+            managementRoleIds={access.managementRoleIds}
+            savingGrant={access.savingGrant}
+            savingRoles={access.savingRoles}
+            deletingGrantKey={access.deletingGrantKey}
+            confirmRoleRemoval={access.confirmRoleRemoval}
+            loc={loc}
+            onGrantTargetTypeChange={access.setGrantTargetType}
+            onGrantTargetIdChange={access.setGrantTargetId}
+            onManagementRoleChange={(id, checked) => {
+              access.setManagementRoleIds((prev) =>
+                checked ? [...prev, id] : prev.filter((x) => x !== id)
+              );
+            }}
+            onSaveAccessGrant={() => void access.saveAccessGrant()}
+            onDeleteAccessGrant={(grant) => void access.deleteAccessGrant(grant)}
+            onUpdateAccessGrantRole={(grant, r) => void access.updateAccessGrantRole(grant, r)}
+            onRequestSaveManagementRoles={access.requestSaveManagementRoles}
+            onConfirmRoleRemoval={() => void access.doSaveManagementRoles()}
+            onCancelRoleRemoval={() => access.setConfirmRoleRemoval(false)}
+          />
+        )}
+      </div>
     </section>
   );
 }

@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { isGuildLanguage } from "@discord-bot/shared";
 import type { GuildLanguage } from "@discord-bot/shared";
 import { Crown, Mic2, Timer, Users } from "lucide-react";
 import { UserMention } from "../../components/user-mention";
@@ -14,6 +15,8 @@ import {
 } from "recharts";
 
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
+
+const UI_LANG_KEY = "dashboard-ui-lang";
 import { LoadingSpinner } from "../../components/loading-spinner";
 
 const CLOCK_REFRESH_MS = 1_000;
@@ -70,7 +73,9 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
   useVoiceRealtime(guildId, stableReload);
 
   useEffect(() => {
-    setUiLang(detectBrowserLanguage());
+    const stored = localStorage.getItem(UI_LANG_KEY);
+    if (stored !== null && isGuildLanguage(stored)) setUiLang(stored);
+    else setUiLang(detectBrowserLanguage());
   }, []);
 
   useEffect(() => {

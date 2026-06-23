@@ -1,11 +1,11 @@
 ﻿"use client";
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { isGuildLanguage } from "@discord-bot/shared";
 import type { GuildLanguage } from "@discord-bot/shared";
 import {
   BookOpen,
   Mic2,
-  Radio,
   Settings,
   Volume2
 } from "lucide-react";
@@ -14,6 +14,8 @@ import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
+
+const UI_LANG_KEY = "dashboard-ui-lang";
 import { ErrorAlert } from "../../components/error-alert";
 import { LoadingSpinner } from "../../components/loading-spinner";
 import { useDashboardData } from "../../hooks/use-dashboard-data";
@@ -54,7 +56,9 @@ export function TtsDashboard({ guildId, role }: { guildId: string; role?: "viewe
   const [speakerMap, setSpeakerMap] = useState<Map<number, string>>(new Map());
 
   useEffect(() => {
-    setUiLang(detectBrowserLanguage());
+    const stored = localStorage.getItem(UI_LANG_KEY);
+    if (stored !== null && isGuildLanguage(stored)) setUiLang(stored);
+    else setUiLang(detectBrowserLanguage());
     void fetch(`/api/panel/speakers?guildId=${encodeURIComponent(guildId)}`)
       .then((r) => r.ok ? r.json() as Promise<{ speakers: { id: number; label: string }[] }> : Promise.resolve({ speakers: [] }))
       .then(({ speakers }) => setSpeakerMap(new Map(speakers.map((s) => [s.id, s.label]))));
@@ -70,16 +74,7 @@ export function TtsDashboard({ guildId, role }: { guildId: string; role?: "viewe
 
   return (
     <section className="grid max-w-6xl gap-4">
-      <div className="grid gap-3 md:grid-cols-4">
-        <TtsMetric
-          icon={<Radio className="h-4 w-4 text-[#c9cdfb]" />}
-          label={loc.ttsStatus}
-          value={
-            data.isConfigured
-              ? loc.ttsConfiguredStatus
-              : loc.ttsNotConfiguredStatus
-          }
-        />
+      <div className="grid gap-3 md:grid-cols-3">
         <TtsMetric
           icon={<Mic2 className="h-4 w-4 text-[#c9cdfb]" />}
           label={loc.ttsSpeakerDefault}
@@ -115,7 +110,7 @@ export function TtsDashboard({ guildId, role }: { guildId: string; role?: "viewe
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Radio className="h-4 w-4 text-[#c9cdfb]" />
+                  <Settings className="h-4 w-4 text-[#c9cdfb]" />
                   {loc.ttsSettings}
                 </CardTitle>
               </CardHeader>

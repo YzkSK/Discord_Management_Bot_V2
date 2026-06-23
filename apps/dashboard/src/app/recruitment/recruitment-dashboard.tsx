@@ -1,10 +1,13 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { isGuildLanguage } from "@discord-bot/shared";
 import type { GuildLanguage } from "@discord-bot/shared";
 import { Plus } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
+
+const UI_LANG_KEY = "dashboard-ui-lang";
 import { formatRelativeTime } from "../../lib/event-display";
 import { useDeadlineCountdown } from "../../hooks/use-deadline-countdown";
 import {
@@ -414,7 +417,9 @@ export function RecruitmentDashboard({
   );
 
   useEffect(() => {
-    setUiLang(detectBrowserLanguage());
+    const stored = localStorage.getItem(UI_LANG_KEY);
+    if (stored !== null && isGuildLanguage(stored)) setUiLang(stored);
+    else setUiLang(detectBrowserLanguage());
   }, []);
 
   const isViewer = role === "viewer";

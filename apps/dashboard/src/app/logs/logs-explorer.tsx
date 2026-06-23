@@ -1,11 +1,14 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { isGuildLanguage } from "@discord-bot/shared";
 import type { GuildLanguage } from "@discord-bot/shared";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { LoadingSpinner } from "../../components/loading-spinner";
 
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
+
+const UI_LANG_KEY = "dashboard-ui-lang";
 
 const MAX_PAYLOAD_FIELDS_DISPLAYED = 6;
 import {
@@ -107,7 +110,9 @@ export function LogsExplorer() {
   const canViewRaw = canViewRawLogPayload(accessRole);
 
   useEffect(() => {
-    setUiLang(detectBrowserLanguage());
+    const stored = localStorage.getItem(UI_LANG_KEY);
+    if (stored !== null && isGuildLanguage(stored)) setUiLang(stored);
+    else setUiLang(detectBrowserLanguage());
   }, []);
 
   useEffect(() => {
