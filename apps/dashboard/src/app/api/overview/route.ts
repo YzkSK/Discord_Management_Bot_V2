@@ -10,6 +10,18 @@ import { authorizeDashboardApi } from "../../../dashboard-auth";
 
 export const dynamic = "force-dynamic";
 
+function todayStart(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function todayEnd(): Date {
+  const d = new Date();
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
 export async function GET(request: NextRequest) {
   const raw = request.nextUrl.searchParams.get("guildId")?.trim();
   const guildId = raw || undefined;
@@ -39,7 +51,9 @@ export async function GET(request: NextRequest) {
       }),
       listLogEvents(dbConnection.db, {
         guildId: authorization.guild.id,
-        limit: 50
+        since: todayStart(),
+        before: todayEnd(),
+        limit: 1000
       })
     ]);
 
@@ -47,6 +61,7 @@ export async function GET(request: NextRequest) {
       sessions: voiceState.sessions.map((s) => ({
         id: s.id,
         channelId: s.channelId,
+        channelName: s.channelName ?? null,
         memberCount: s.memberCount,
         startedAt: s.startedAt.toISOString(),
         status: s.status
