@@ -3,32 +3,32 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Save } from "lucide-react";
-import { fetchSettings, toSettingsError } from "../../../lib/settings-api";
+import { fetchSettings, updateBotLanguage, toSettingsError } from "../../../lib/settings-api";
 import { Button } from "../../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import { Select } from "../../../components/ui/select";
 import { Skeleton } from "../../../components/ui/skeleton";
-import { LogsSettingsTab } from "./LogsSettingsTab";
 import type { DashboardLoc } from "./shared";
 
-interface LogsSettingsPanelProps {
+interface BotLanguageTabProps {
   guildId: string;
   loc: DashboardLoc;
 }
 
-export function LogsSettingsPanel({ guildId, loc }: LogsSettingsPanelProps) {
-  const [logMode, setLogMode] = useState("full");
+export function BotLanguageTab({ guildId, loc }: BotLanguageTabProps) {
+  const [language, setLanguage] = useState("en");
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const logModeOptions = [
-    { label: loc.logModeFull, value: "full" },
-    { label: loc.logModeMetadataOnly, value: "metadata_only" },
-    { label: loc.logModeDisabled, value: "disabled" },
+  const languageOptions = [
+    { label: loc.languageEn, value: "en" },
+    { label: loc.languageJa, value: "ja" },
   ];
 
   useEffect(() => {
     fetchSettings(guildId)
       .then((s) => {
-        setLogMode(s.logMode);
+        setLanguage(s.language);
         setLoaded(true);
       })
       .catch((e: unknown) => toast.error(toSettingsError(e)));
@@ -37,14 +37,8 @@ export function LogsSettingsPanel({ guildId, loc }: LogsSettingsPanelProps) {
   async function save() {
     setSaving(true);
     try {
-      const r = await fetch("/api/settings", {
-        body: JSON.stringify({ guildId, section: "logs", values: { logMode } }),
-        headers: { "content-type": "application/json" },
-        method: "PATCH",
-      });
-      if (!r.ok) throw new Error(`Failed to save settings (${r.status})`);
-      const updated = await r.json() as { logMode: string };
-      setLogMode(updated.logMode);
+      const updated = await updateBotLanguage(guildId, language);
+      setLanguage(updated.language);
       toast.success(loc.settingsSaved);
     } catch (e) {
       toast.error(toSettingsError(e));
@@ -64,12 +58,21 @@ export function LogsSettingsPanel({ guildId, loc }: LogsSettingsPanelProps) {
 
   return (
     <div className="grid gap-4">
-      <LogsSettingsTab
-        logMode={logMode}
-        logModeOptions={logModeOptions}
-        loc={loc}
-        onLogModeChange={setLogMode}
-      />
+      <Card>
+        <CardHeader>
+          <CardTitle>{loc.language}</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3">
+          <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#b5bac1]">
+            {loc.languageEn} / {loc.languageJa}
+            <Select value={language} onChange={(e) => setLanguage(e.target.value)}>
+              {languageOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </Select>
+          </label>
+        </CardContent>
+      </Card>
       <div className="flex justify-end">
         <Button disabled={saving} onClick={() => void save()} size="sm" type="button">
           <Save className="h-3.5 w-3.5" />

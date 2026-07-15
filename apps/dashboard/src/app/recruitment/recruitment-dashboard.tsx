@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { isGuildLanguage } from "@discord-bot/shared";
@@ -21,6 +21,7 @@ import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { SettingsModal } from "../../components/settings-modal";
 
+type Loc = ReturnType<typeof getDashboardLocale>;
 type RecruitmentStatus = "open" | "full" | "closed";
 
 interface RecruitmentItem {
@@ -52,12 +53,6 @@ interface RecruitmentResponse {
   totalCount: number;
 }
 
-const STATUS_LABELS: Record<RecruitmentStatus, string> = {
-  open: "募集中",
-  full: "満員",
-  closed: "締切済み",
-};
-
 const STATUS_COLORS: Record<RecruitmentStatus, string> = {
   open: "var(--chart-indigo)",
   full: "var(--chart-amber)",
@@ -86,7 +81,6 @@ const TITLE_EMOJI: Record<string, string> = {
   レーシング: "🏎️",
 };
 
-
 const STATUS_BADGE: Record<RecruitmentStatus, "info" | "outline" | "success"> = {
   open: "info",
   full: "outline",
@@ -97,7 +91,7 @@ function titleEmoji(title: string): string {
   return TITLE_EMOJI[title] ?? "🎮";
 }
 
-function DeadlineText({ deadlineAt }: { deadlineAt: string | null }) {
+function DeadlineText({ deadlineAt, loc }: { deadlineAt: string | null; loc: Loc }) {
   const countdown = useDeadlineCountdown(deadlineAt);
 
   if (!countdown || !deadlineAt) return null;
@@ -105,17 +99,17 @@ function DeadlineText({ deadlineAt }: { deadlineAt: string | null }) {
   const { msLeft } = countdown;
 
   if (msLeft <= 0) {
-    return <span className="text-xs text-red-400">締め切り済み</span>;
+    return <span className="text-xs text-red-400">{loc.recruitmentDeadlinePast}</span>;
   }
 
   if (msLeft > COUNTDOWN_THRESHOLD_24H_MS) {
-    const date = new Date(deadlineAt).toLocaleString("ja-JP", {
+    const date = new Date(deadlineAt).toLocaleString(loc.dateLocale, {
       month: "numeric",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit"
     });
-    return <span className="text-xs text-[#b5bac1]">締め切り：{date}</span>;
+    return <span className="text-xs text-[#b5bac1]">{loc.recruitmentDeadlineDate({ date })}</span>;
   }
 
   if (msLeft > COUNTDOWN_THRESHOLD_1H_MS) {
@@ -123,14 +117,14 @@ function DeadlineText({ deadlineAt }: { deadlineAt: string | null }) {
     const minutes = Math.floor((msLeft % COUNTDOWN_THRESHOLD_1H_MS) / 60_000);
     return (
       <span className="text-xs text-amber-400">
-        締め切りまで {hours}時間{minutes}分
+        {loc.recruitmentDeadlineHoursMinutes({ hours, minutes })}
       </span>
     );
   }
 
   const minutes = Math.max(1, Math.floor(msLeft / 60_000));
   return (
-    <span className="text-xs text-red-400">締め切りまで {minutes}分</span>
+    <span className="text-xs text-red-400">{loc.recruitmentDeadlineMinutes({ minutes })}</span>
   );
 }
 
@@ -138,10 +132,12 @@ function RecruitmentCard({
   r,
   closingId,
   onAction,
+  loc,
 }: {
   r: RecruitmentItem;
   closingId: string | null;
   onAction: (id: string, action: "close" | "reopen") => void;
+  loc: Loc;
 }) {
   const borderClass = STATUS_BORDER[r.status];
   const isClosing = closingId === r.id;
@@ -155,16 +151,16 @@ function RecruitmentCard({
             <p className="mt-0.5 line-clamp-2 text-xs text-[#b5bac1]">{r.content}</p>
           )}
           <p className="mt-0.5 text-xs text-[#80848e]">
-            {formatRelativeTime(new Date(r.createdAt))} 作成
+            {loc.recruitmentCreatedAt({ time: formatRelativeTime(new Date(r.createdAt)) })}
           </p>
           {r.status !== "closed" && (
             <div className="mt-0.5">
-              <DeadlineText deadlineAt={r.deadlineAt} />
+              <DeadlineText deadlineAt={r.deadlineAt} loc={loc} />
             </div>
           )}
         </div>
       </div>
-      <CapacityBar current={r.activeParticipantCount} max={r.capacity} />
+      <CapacityBar current={r.activeParticipantCount} max={r.capacity} loc={loc} />
       <div className="mt-2 flex justify-end">
         {r.status === "closed" ? (
           <Button
@@ -173,7 +169,7 @@ function RecruitmentCard({
             disabled={isClosing}
             onClick={() => onAction(r.id, "reopen")}
           >
-            {isClosing ? "処理中..." : "再オープン"}
+            {isClosing ? loc.recruitmentProcessing : loc.recruitmentReopen}
           </Button>
         ) : (
           <Button
@@ -183,7 +179,7 @@ function RecruitmentCard({
             className="text-red-400 hover:text-red-300"
             onClick={() => onAction(r.id, "close")}
           >
-            {isClosing ? "処理中..." : "締め切る"}
+            {isClosing ? loc.recruitmentProcessing : loc.recruitmentClose}
           </Button>
         )}
       </div>
@@ -195,10 +191,14 @@ function MyRecruitmentRow({
   r,
   closingId,
   onAction,
+  statusLabels,
+  loc,
 }: {
   r: RecruitmentItem;
   closingId: string | null;
   onAction: (id: string, action: "close" | "reopen") => void;
+  statusLabels: Record<RecruitmentStatus, string>;
+  loc: Loc;
 }) {
   const isClosing = closingId === r.id;
   return (
@@ -207,7 +207,7 @@ function MyRecruitmentRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="text-sm font-medium text-[#dbdee1]">{r.genre}</p>
-          <Badge variant={STATUS_BADGE[r.status]}>{STATUS_LABELS[r.status]}</Badge>
+          <Badge variant={STATUS_BADGE[r.status]}>{statusLabels[r.status]}</Badge>
         </div>
         {r.content && (
           <p className="mt-0.5 truncate text-xs text-[#b5bac1]">{r.content}</p>
@@ -215,9 +215,9 @@ function MyRecruitmentRow({
       </div>
       <div className="shrink-0 text-right">
         <p className="text-xs text-[#dbdee1]">
-          {r.activeParticipantCount}/{r.capacity}人
+          {r.activeParticipantCount}/{r.capacity}{loc.personUnit}
         </p>
-        {r.status !== "closed" && <DeadlineText deadlineAt={r.deadlineAt} />}
+        {r.status !== "closed" && <DeadlineText deadlineAt={r.deadlineAt} loc={loc} />}
       </div>
       {r.status === "closed" ? (
         <Button
@@ -226,7 +226,7 @@ function MyRecruitmentRow({
           disabled={isClosing}
           onClick={() => onAction(r.id, "reopen")}
         >
-          {isClosing ? "処理中..." : "再オープン"}
+          {isClosing ? loc.recruitmentProcessing : loc.recruitmentReopen}
         </Button>
       ) : (
         <Button
@@ -236,7 +236,7 @@ function MyRecruitmentRow({
           className="text-red-400 hover:text-red-300"
           onClick={() => onAction(r.id, "close")}
         >
-          {isClosing ? "処理中..." : "締め切る"}
+          {isClosing ? loc.recruitmentProcessing : loc.recruitmentClose}
         </Button>
       )}
     </div>
@@ -246,17 +246,19 @@ function MyRecruitmentRow({
 function CapacityBar({
   current,
   max,
+  loc,
 }: {
   current: number;
   max: number;
+  loc: Loc;
 }) {
   const pct = max > 0 ? Math.min(100, Math.round((current / max) * 100)) : 0;
   return (
     <div className="mt-2">
       <div className="mb-1 flex justify-between text-xs text-[#b5bac1]">
-        <span>定員</span>
+        <span>{loc.capacity}</span>
         <span>
-          {current}/{max}人
+          {current}/{max}{loc.personUnit}
         </span>
       </div>
       <div className="h-1.5 w-full rounded-md bg-[#383a40]">
@@ -272,9 +274,11 @@ function CapacityBar({
 function CreateRecruitmentForm({
   guildId,
   onSuccess,
+  loc,
 }: {
   guildId: string;
   onSuccess: () => void;
+  loc: Loc;
 }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -296,7 +300,7 @@ function CreateRecruitmentForm({
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({} as { error?: string }));
-        setFormError(body.error ?? "作成に失敗しました");
+        setFormError(body.error ?? loc.panelCreationFailed);
         return;
       }
       setOpen(false);
@@ -307,7 +311,7 @@ function CreateRecruitmentForm({
       onSuccess();
     } catch (e: unknown) {
       console.error("recruitment-dashboard: create failed", e);
-      setFormError("作成に失敗しました");
+      setFormError(loc.panelCreationFailed);
     } finally {
       setSubmitting(false);
     }
@@ -317,28 +321,28 @@ function CreateRecruitmentForm({
     <>
       <Button size="sm" type="button" onClick={() => setOpen(true)}>
         <Plus className="h-3.5 w-3.5" />
-        募集を作成
+        {loc.panelCreateButton}
       </Button>
 
       {open && (
         <SettingsModal onClose={() => setOpen(false)}>
-          <p className="mb-4 text-sm font-semibold text-[#f2f3f5]">新しい募集</p>
+          <p className="mb-4 text-sm font-semibold text-[#f2f3f5]">{loc.recruitmentNew}</p>
           <form className="grid gap-3" onSubmit={(e) => void handleSubmit(e)}>
             <label className="grid gap-1">
-              <span className="text-xs text-[#b5bac1]">タイトル</span>
+              <span className="text-xs text-[#b5bac1]">{loc.panelTitle}</span>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
                 maxLength={50}
-                placeholder="例：APEX ランク一緒に"
+                placeholder={loc.recruitmentExampleTitle}
                 className="rounded-md border border-[#3f4147] bg-[#1e1f22] px-3 py-1.5 text-sm text-[#dbdee1] placeholder:text-[#80848e] focus:outline-none focus:ring-1 focus:ring-[#5865f2]/50"
               />
             </label>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="grid gap-1">
-                <span className="text-xs text-[#b5bac1]">定員</span>
+                <span className="text-xs text-[#b5bac1]">{loc.capacity}</span>
                 <input
                   type="number"
                   min={1}
@@ -349,27 +353,27 @@ function CreateRecruitmentForm({
                 />
               </label>
               <label className="grid gap-1">
-                <span className="text-xs text-[#b5bac1]">締め切り</span>
+                <span className="text-xs text-[#b5bac1]">{loc.recruitmentDeadlineSimple}</span>
                 <select
                   value={deadlineDays}
                   onChange={(e) => setDeadlineDays(Number(e.target.value))}
                   className="rounded-md border border-[#3f4147] bg-[#1e1f22] px-3 py-1.5 text-sm text-[#dbdee1] focus:outline-none focus:ring-1 focus:ring-[#5865f2]/50"
                 >
-                  <option value={1}>1日後</option>
-                  <option value={3}>3日後</option>
-                  <option value={7}>7日後</option>
+                  <option value={1}>{loc.recruitmentDayAfter({ days: 1 })}</option>
+                  <option value={3}>{loc.recruitmentDayAfter({ days: 3 })}</option>
+                  <option value={7}>{loc.recruitmentDayAfter({ days: 7 })}</option>
                 </select>
               </label>
             </div>
             <label className="grid gap-1">
-              <span className="text-xs text-[#b5bac1]">募集内容</span>
+              <span className="text-xs text-[#b5bac1]">{loc.recruitmentContentLabel}</span>
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 required
                 maxLength={200}
                 rows={3}
-                placeholder="募集の詳細を入力してください"
+                placeholder={loc.recruitmentDetailPlaceholder}
                 className="rounded-md border border-[#3f4147] bg-[#1e1f22] px-3 py-2 text-sm text-[#dbdee1] placeholder:text-[#80848e] focus:outline-none focus:ring-1 focus:ring-[#5865f2]/50 resize-none"
               />
               <span className="text-right text-xs text-[#80848e]">{content.length}/200</span>
@@ -379,10 +383,10 @@ function CreateRecruitmentForm({
             )}
             <div className="flex justify-end gap-2">
               <Button size="sm" type="button" variant="ghost" onClick={() => setOpen(false)}>
-                キャンセル
+                {loc.cancel}
               </Button>
               <Button size="sm" type="submit" disabled={submitting || !title.trim() || !content.trim()}>
-                {submitting ? "作成中..." : "作成"}
+                {submitting ? loc.panelCreating : loc.create}
               </Button>
             </div>
           </form>
@@ -427,6 +431,12 @@ export function RecruitmentDashboard({
   const [closingId, setClosingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  const statusLabels: Record<RecruitmentStatus, string> = useMemo(() => ({
+    open: loc.recruitmentOpen,
+    full: loc.recruitmentFull,
+    closed: loc.recruitmentClosed,
+  }), [loc]);
+
   async function handleAction(id: string, action: "close" | "reopen") {
     setClosingId(id);
     setActionError(null);
@@ -438,13 +448,13 @@ export function RecruitmentDashboard({
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({} as { error?: string }));
-        setActionError(body.error ?? "操作に失敗しました");
+        setActionError(body.error ?? loc.recruitmentActionFailed);
         return;
       }
       reload();
     } catch (e: unknown) {
       console.error("recruitment-dashboard: action failed", e);
-      setActionError("操作に失敗しました");
+      setActionError(loc.recruitmentActionFailed);
     } finally {
       setClosingId(null);
     }
@@ -472,17 +482,17 @@ export function RecruitmentDashboard({
     if (!data) return [];
     return (["open", "full", "closed"] as const)
       .map((s) => ({
-        name: STATUS_LABELS[s],
+        name: statusLabels[s],
         value: grouped[s].length,
         color: STATUS_COLORS[s],
       }))
       .filter((d) => d.value > 0);
-  }, [data, grouped]);
+  }, [data, grouped, statusLabels]);
 
   if (loading) return <LoadingSpinner />;
 
   if (!data) {
-    return <ErrorAlert message={error ?? loc.recruitmentFailedToLoad} onRetry={reload} />;
+    return <ErrorAlert message={error ?? loc.recruitmentFailedToLoad} onRetry={reload} retryLabel={loc.retry} />;
   }
 
   if (isViewer) {
@@ -492,13 +502,13 @@ export function RecruitmentDashboard({
           <ErrorAlert message={actionError} onRetry={() => setActionError(null)} />
         )}
         <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-[#dbdee1]">自分の募集</p>
-          <CreateRecruitmentForm guildId={guildId} onSuccess={reload} />
+          <p className="text-sm font-semibold text-[#dbdee1]">{loc.recruitmentMyPosts}</p>
+          <CreateRecruitmentForm guildId={guildId} onSuccess={reload} loc={loc} />
         </div>
         {myRecruitments.length === 0 ? (
           <div className="rounded-lg border border-dashed border-[#3f4147] py-12 text-center">
-            <p className="text-sm text-[#80848e]">募集がありません</p>
-            <p className="mt-1 text-xs text-[#80848e]">「募集を作成」から新しい募集を投稿できます</p>
+            <p className="text-sm text-[#80848e]">{loc.recruitmentNoPosts}</p>
+            <p className="mt-1 text-xs text-[#80848e]">{loc.recruitmentCreateHint}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-2">
@@ -508,6 +518,8 @@ export function RecruitmentDashboard({
                 r={r}
                 closingId={closingId}
                 onAction={(id, action) => void handleAction(id, action)}
+                statusLabels={statusLabels}
+                loc={loc}
               />
             ))}
           </div>
@@ -523,7 +535,7 @@ export function RecruitmentDashboard({
       )}
       <div className="flex items-center justify-between">
         <span />
-        <CreateRecruitmentForm guildId={guildId} onSuccess={reload} />
+        <CreateRecruitmentForm guildId={guildId} onSuccess={reload} loc={loc} />
       </div>
 
       {data.totalCount > 0 && (
@@ -569,7 +581,7 @@ export function RecruitmentDashboard({
             <div className="mb-2 flex items-center gap-2">
               <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} />
               <h3 className="text-sm font-medium text-[#b5bac1]">
-                {STATUS_LABELS[status]}
+                {statusLabels[status]}
               </h3>
               <span className="ml-auto rounded-md bg-[#383a40] px-2 py-0.5 text-xs text-[#b5bac1]">
                 {grouped[status].length}
@@ -579,7 +591,7 @@ export function RecruitmentDashboard({
             <div className="flex flex-col gap-2">
               {grouped[status].length === 0 ? (
                 <div className="rounded-xl border border-dashed border-[#1e1f22]/60 py-6 text-center text-xs text-slate-700">
-                  なし
+                  {loc.recruitmentNone}
                 </div>
               ) : (
                 grouped[status].map((r) => (
@@ -588,6 +600,7 @@ export function RecruitmentDashboard({
                     r={r}
                     closingId={closingId}
                     onAction={(id, action) => void handleAction(id, action)}
+                    loc={loc}
                   />
                 ))
               )}

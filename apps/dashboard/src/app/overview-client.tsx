@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -20,6 +20,8 @@ import {
   Users,
   Volume2,
 } from "lucide-react";
+import type { GuildLanguage } from "@discord-bot/shared";
+import { isGuildLanguage } from "@discord-bot/shared";
 
 import {
   eventColorClasses,
@@ -32,6 +34,9 @@ import {
 import { formatEventDescriptionJSX } from "../lib/format-event-jsx";
 import { LoadingSpinner } from "../components/loading-spinner";
 import { roleRank } from "../lib/roles";
+import { getDashboardLocale, detectBrowserLanguage } from "../lib/locale";
+
+const UI_LANG_KEY = "dashboard-ui-lang";
 
 interface VoiceSession {
   channelId: string;
@@ -62,52 +67,21 @@ interface OverviewClientProps {
   role?: "viewer" | "admin" | "owner" | null;
 }
 
-const kpiDefs = [
-  {
-    label: "アクティブ VC",
-    key: "activeVcCount",
-    icon: Mic2,
-    color: "text-[#5865f2]",
-    bg: "bg-[#5865f2]/15",
-  },
-  {
-    label: "今日のイベント",
-    key: "todayCount",
-    icon: Activity,
-    color: "text-[#0ea5e9]",
-    bg: "bg-[#0ea5e9]/10",
-  },
-  {
-    label: "進行中の募集",
-    key: "openRecruitCount",
-    icon: Users,
-    color: "text-[#23a55a]",
-    bg: "bg-[#23a55a]/10",
-  },
-  {
-    label: "TTS セッション",
-    key: "ttsTodayCount",
-    icon: Volume2,
-    color: "text-[#8b5cf6]",
-    bg: "bg-[#8b5cf6]/10",
-  },
-] as const;
-
-
-const ALL_QUICK_LINKS = [
-  { label: "Voice", href: "/voice", icon: Headphones, desc: "通話状況", minRole: "admin" as const },
-  { label: "Recruitment", href: "/recruitment", icon: ClipboardList, desc: "募集管理", minRole: undefined },
-  { label: "TTS", href: "/tts", icon: Mic2, desc: "音声読み上げ", minRole: undefined },
-  { label: "Logs", href: "/logs", icon: ScrollText, desc: "イベントログ", minRole: "admin" as const },
-  { label: "Access", href: "/settings", icon: KeyRound, desc: "アクセス管理", minRole: "owner" as const },
-];
-
 export function OverviewClient({ guildId, role }: OverviewClientProps) {
   const [sessions, setSessions] = useState<VoiceSession[]>([]);
   const [recruitments, setRecruitments] = useState<Recruitment[]>([]);
   const [recentLogs, setRecentLogs] = useState<LogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [uiLang, setUiLang] = useState<GuildLanguage>("en");
+
+  useEffect(() => {
+    const stored = localStorage.getItem(UI_LANG_KEY);
+    if (stored !== null && isGuildLanguage(stored)) setUiLang(stored);
+    else setUiLang(detectBrowserLanguage());
+  }, []);
+
+  const loc = getDashboardLocale(uiLang);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -163,17 +137,32 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
     return Object.entries(days).map(([date, count]) => ({ date, count }));
   }, [recentLogs]);
 
+  const kpiDefs = [
+    { label: loc.overviewActiveVc, key: "activeVcCount", icon: Mic2, color: "text-[#5865f2]", bg: "bg-[#5865f2]/15" },
+    { label: loc.overviewTodayEvents, key: "todayCount", icon: Activity, color: "text-[#0ea5e9]", bg: "bg-[#0ea5e9]/10" },
+    { label: loc.overviewOpenRecruitments, key: "openRecruitCount", icon: Users, color: "text-[#23a55a]", bg: "bg-[#23a55a]/10" },
+    { label: loc.overviewTtsTodayCount, key: "ttsTodayCount", icon: Volume2, color: "text-[#8b5cf6]", bg: "bg-[#8b5cf6]/10" },
+  ] as const;
+
+  const ALL_QUICK_LINKS = [
+    { label: "Voice", href: "/voice", icon: Headphones, desc: loc.overviewVoiceDesc, minRole: "admin" as const },
+    { label: "Recruitment", href: "/recruitment", icon: ClipboardList, desc: loc.overviewRecruitmentDesc, minRole: undefined },
+    { label: "TTS", href: "/tts", icon: Mic2, desc: loc.overviewTtsDesc, minRole: undefined },
+    { label: "Logs", href: "/logs", icon: ScrollText, desc: loc.overviewLogsDesc, minRole: "admin" as const },
+    { label: "Access", href: "/settings", icon: KeyRound, desc: loc.overviewAccessDesc, minRole: "owner" as const },
+  ];
+
   if (loading) return <LoadingSpinner />;
 
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-24">
-        <p className="text-sm text-[#b5bac1]">データの取得に失敗しました</p>
+        <p className="text-sm text-[#b5bac1]">{loc.overviewFailedToLoad}</p>
         <button
           onClick={() => void load()}
           className="rounded-md bg-[#383a40] px-4 py-2 text-sm text-[#dbdee1] hover:bg-[#404249] transition-colors"
         >
-          再試行
+          {loc.overviewRetry}
         </button>
       </div>
     );
@@ -203,7 +192,7 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
           {kpiDefs.filter((kpi) => VIEWER_KPI_KEYS.has(kpi.key)).map((kpi) => {
             const Icon = kpi.icon;
             return (
-              <div key={kpi.label} className="rounded-lg bg-[#383a40] p-4">
+              <div key={kpi.key} className="rounded-lg bg-[#383a40] p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-medium text-[#b5bac1]">{kpi.label}</p>
                   <span className={`flex h-7 w-7 items-center justify-center rounded-md ${kpi.bg}`}>
@@ -244,7 +233,7 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
         {kpiDefs.map((kpi) => {
           const Icon = kpi.icon;
           return (
-            <div key={kpi.label} className="rounded-lg bg-[#383a40] p-4">
+            <div key={kpi.key} className="rounded-lg bg-[#383a40] p-4">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-[#b5bac1]">{kpi.label}</p>
                 <span className={`flex h-7 w-7 items-center justify-center rounded-md ${kpi.bg}`}>
@@ -263,7 +252,7 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
         <div className="flex flex-col gap-5 lg:col-span-3">
           {/* Activity chart */}
           <div className="rounded-lg bg-[#383a40] p-4">
-            <p className="mb-4 text-sm font-semibold text-[#dbdee1]">7日間のアクティビティ</p>
+            <p className="mb-4 text-sm font-semibold text-[#dbdee1]">{loc.overviewActivityChart}</p>
             <ResponsiveContainer width="100%" height={140}>
               <AreaChart data={sevenDayData}>
                 <defs>
@@ -296,7 +285,7 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
                 <Area
                   type="monotone"
                   dataKey="count"
-                  name="イベント"
+                  name={loc.overviewTodayEvents}
                   stroke="#5865f2"
                   fill="url(#areaGrad)"
                   strokeWidth={2}
@@ -314,7 +303,7 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-[#23a55a]" />
                 </span>
                 <p className="text-sm font-semibold text-[#dbdee1]">
-                  アクティブ通話 ({activeSessions.length})
+                  {loc.overviewActiveCalls} ({activeSessions.length})
                 </p>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -328,7 +317,7 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
                       <p className="truncate text-xs font-medium text-[#dbdee1]">
                         {s.channelName ?? `#${s.channelId.slice(0, 8)}…`}
                       </p>
-                      <p className="text-[10px] text-[#b5bac1]">{s.memberCount}人</p>
+                      <p className="text-[10px] text-[#b5bac1]">{loc.overviewMemberCount({ count: s.memberCount })}</p>
                     </div>
                   </div>
                 ))}
@@ -361,18 +350,18 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
         <div className="lg:col-span-2">
           <div className="sticky top-[57px] rounded-lg bg-[#383a40] overflow-hidden">
             <div className="flex items-center justify-between border-b border-[#1e1f22] px-4 py-3">
-              <p className="text-sm font-semibold text-[#dbdee1]">最近のアクティビティ</p>
+              <p className="text-sm font-semibold text-[#dbdee1]">{loc.overviewRecentActivity}</p>
               <a
                 href="/logs"
                 className="flex items-center gap-1 text-xs text-[#b5bac1] hover:text-[#5865f2] transition-colors"
               >
-                すべて見る
+                {loc.overviewViewAll}
                 <ArrowRight className="h-3 w-3" />
               </a>
             </div>
             {recentLogs.length === 0 ? (
               <div className="flex items-center justify-center py-16 text-sm text-[#80848e]">
-                イベントがありません
+                {loc.overviewNoEvents}
               </div>
             ) : (
               <ul className="max-h-[300px] divide-y divide-[#1e1f22]/60 overflow-y-auto">
@@ -392,11 +381,12 @@ export function OverviewClient({ guildId, role }: OverviewClientProps) {
                             channelName: extractChannelName(log.payload),
                             voiceStateChanges: extractVoiceStateChanges(log.payload),
                           },
-                          guildId
+                          guildId,
+                          uiLang,
                         )}
                       </p>
                       <span className="shrink-0 text-[10px] text-[#80848e] mt-0.5 whitespace-nowrap">
-                        {formatRelativeTime(new Date(log.receivedAt))}
+                        {formatRelativeTime(new Date(log.receivedAt), uiLang)}
                       </span>
                     </li>
                   );

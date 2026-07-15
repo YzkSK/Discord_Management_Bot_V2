@@ -22,6 +22,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { isGuildLanguage } from "@discord-bot/shared";
+import type { GuildLanguage } from "@discord-bot/shared";
+import { detectBrowserLanguage, getDashboardLocale } from "../lib/locale";
+
+const UI_LANG_KEY = "dashboard-ui-lang";
 
 import { AuthStatus } from "./auth-status";
 import { getDashboardNavGroups } from "./dashboard-ui";
@@ -65,11 +70,17 @@ export function DashboardShell({
 }: DashboardShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [uiLang, setUiLang] = useState<GuildLanguage>("en");
 
   useEffect(() => {
     const stored = localStorage.getItem(COLLAPSED_KEY);
     if (stored === "true") setCollapsed(true);
+    const lang = localStorage.getItem(UI_LANG_KEY);
+    if (lang !== null && isGuildLanguage(lang)) setUiLang(lang);
+    else setUiLang(detectBrowserLanguage());
   }, []);
+
+  const loc = getDashboardLocale(uiLang);
 
   function toggleCollapsed() {
     setCollapsed((prev) => {
@@ -103,12 +114,12 @@ export function DashboardShell({
                 <button
                   onClick={toggleCollapsed}
                   className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#5865f2]/10 text-[#5865f2] hover:bg-[#5865f2]/20 transition-colors"
-                  aria-label="サイドバーを展開"
+                  aria-label={loc.shellExpandSidebar}
                 >
                   <PanelLeftOpen className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right">メニューを展開</TooltipContent>
+              <TooltipContent side="right">{loc.shellExpandMenu}</TooltipContent>
             </Tooltip>
           ) : (
             <>
@@ -123,7 +134,7 @@ export function DashboardShell({
                 <button
                   className="rounded-md p-1.5 text-[#b5bac1] hover:text-[#dbdee1] transition-colors"
                   onClick={() => setMobileOpen(false)}
-                  aria-label="閉じる"
+                  aria-label={loc.shellClose}
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -131,7 +142,7 @@ export function DashboardShell({
                 <button
                   onClick={toggleCollapsed}
                   className="rounded-md p-1.5 text-[#b5bac1] hover:bg-[#383a40] hover:text-[#dbdee1] transition-colors"
-                  aria-label="サイドバーを折りたたむ"
+                  aria-label={loc.shellCollapseSidebar}
                 >
                   <PanelLeftClose className="h-4 w-4" />
                 </button>
@@ -143,13 +154,13 @@ export function DashboardShell({
         {/* Guild chip */}
         {!isCollapsed || isMobile ? (
           <div className="mx-3 mt-3 rounded-lg bg-[#1e1f22] px-3 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">サーバー</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#80848e]">{loc.shellServer}</p>
             <div className="mt-0.5 flex items-center justify-between gap-2">
               <p className="truncate text-sm font-semibold text-[#dbdee1]" title={guildName ?? guildId}>
                 {guildName ?? guildId}
               </p>
               <a className="shrink-0 text-xs text-[#b5bac1] hover:text-[#5865f2] transition-colors" href="/guild">
-                変更
+                {loc.shellChangeServer}
               </a>
             </div>
           </div>
@@ -160,7 +171,7 @@ export function DashboardShell({
                 <a
                   href="/guild"
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-[#b5bac1] hover:bg-[#383a40] hover:text-[#dbdee1] transition-colors"
-                  aria-label="サーバーを変更"
+                  aria-label={loc.shellChangeServerAria}
                 >
                   <Settings className="h-3.5 w-3.5" />
                 </a>
@@ -264,7 +275,7 @@ export function DashboardShell({
               <button
                 className="rounded-md p-1.5 text-[#b5bac1] hover:bg-[#383a40] hover:text-[#dbdee1] transition-colors lg:hidden"
                 onClick={() => setMobileOpen(true)}
-                aria-label="メニューを開く"
+                aria-label={loc.shellOpenMenu}
               >
                 <Menu className="h-5 w-5" />
               </button>

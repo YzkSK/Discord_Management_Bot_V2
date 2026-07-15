@@ -56,12 +56,12 @@ export function DictionaryTable({
           type="search"
           value={query}
           onChange={(e) => handleQuery(e.target.value)}
-          placeholder="変換前・変換後で検索..."
+          placeholder={loc.ttsSearchPlaceholder}
           className="w-full rounded-md border border-[#3f4147] bg-[#383a40] px-3 py-1.5 text-sm text-[#f2f3f5] placeholder-[#4e5058] focus:border-[#5865f2] focus:outline-none"
         />
         {query && (
           <span className="shrink-0 text-xs text-[#b5bac1]">
-            {filtered.length} / {entries.length} 件
+            {loc.ttsResultCount({ shown: filtered.length, total: entries.length })}
           </span>
         )}
       </div>
@@ -81,7 +81,7 @@ export function DictionaryTable({
             {visible.length === 0 ? (
               <TableRow>
                 <TableCell className="py-8 text-center text-[#80848e]" colSpan={5}>
-                  {query ? "検索結果がありません" : `${loc.ttsDictionaryEntries}: 0`}
+                  {query ? loc.ttsNoSearchResults : `${loc.ttsDictionaryEntries}: 0`}
                 </TableCell>
               </TableRow>
             ) : visible.map((entry) => (
@@ -110,7 +110,7 @@ export function DictionaryTable({
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
           <span className="text-xs text-[#b5bac1]">
-            {safePage + 1} / {totalPages} ページ
+            {loc.ttsPageInfo({ page: safePage + 1, total: totalPages })}
           </span>
           <div className="flex gap-1">
             <Button
@@ -120,7 +120,7 @@ export function DictionaryTable({
               onClick={() => setPage(safePage - 1)}
               type="button"
             >
-              ‹ 前
+              {loc.ttsPrevPage}
             </Button>
             <Button
               size="sm"
@@ -129,7 +129,7 @@ export function DictionaryTable({
               onClick={() => setPage(safePage + 1)}
               type="button"
             >
-              次 ›
+              {loc.ttsNextPage}
             </Button>
           </div>
         </div>

@@ -33,7 +33,7 @@ export function RecruitmentSettingsPanel({ guildId, loc }: RecruitmentSettingsPa
     try {
       const updated = await updateRecruitmentSettings(guildId, { channelId: channelId || null });
       setSettings(updated);
-      toast.success("募集設定を保存しました。");
+      toast.success(loc.settingsSaved);
     } catch (e) {
       toast.error(toSettingsError(e));
     } finally {

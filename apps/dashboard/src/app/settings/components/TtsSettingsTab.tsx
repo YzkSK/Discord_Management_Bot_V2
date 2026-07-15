@@ -11,7 +11,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import {
   ChannelSelect,
-  FeatureStatus,
   ttsDictionaryKey,
   type DashboardLoc,
   type SettingsResponse,
@@ -92,18 +91,13 @@ export function TtsSettingsTab({
         <CardTitle>{loc.ttsSettings}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3">
-        <FeatureStatus
-          configured={settings.features.tts.configured}
-          label={loc.ttsSettings}
-          loc={loc}
-        />
         <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#b5bac1]">
           {loc.ttsTextChannelId}
           <ChannelSelect
             value={ttsTextChannelId}
             onChange={onTtsTextChannelIdChange}
             channels={settings.availableTextChannels ?? []}
-            placeholder="TTSチャンネルを選択"
+            placeholder={loc.ttsTextChannelPlaceholder}
           />
         </label>
 

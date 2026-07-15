@@ -3,7 +3,12 @@
 import * as Popover from "@radix-ui/react-popover";
 import { Copy } from "lucide-react";
 import { useEffect, useState } from "react";
+import { isGuildLanguage } from "@discord-bot/shared";
+import type { GuildLanguage } from "@discord-bot/shared";
+import { detectBrowserLanguage, getDashboardLocale } from "../lib/locale";
 import { fetchCachedDiscordChannel, type CachedDiscordChannel } from "./channel-cache";
+
+const UI_LANG_KEY = "dashboard-ui-lang";
 
 interface ChannelMentionProps {
   channelId: string;
@@ -21,7 +26,15 @@ export function ChannelMention({ channelId, channelName, guildId }: ChannelMenti
   const [loadingPopover, setLoadingPopover] = useState(false);
   const [error, setError] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [uiLang, setUiLang] = useState<GuildLanguage>("en");
 
+  useEffect(() => {
+    const lang = localStorage.getItem(UI_LANG_KEY);
+    if (lang !== null && isGuildLanguage(lang)) setUiLang(lang);
+    else setUiLang(detectBrowserLanguage());
+  }, []);
+
+  const loc = getDashboardLocale(uiLang);
   const knownName = channelName && !looksLikeId(channelName) ? channelName : null;
 
   useEffect(() => {
@@ -73,10 +86,10 @@ export function ChannelMention({ channelId, channelName, guildId }: ChannelMenti
           onClick={(e) => e.stopPropagation()}
         >
           {loadingPopover && (
-            <p className="text-xs text-[#b5bac1]">読み込み中...</p>
+            <p className="text-xs text-[#b5bac1]">{loc.ttsLoading}</p>
           )}
           {error && !loadingPopover && (
-            <p className="text-xs text-[#b5bac1]">情報を取得できませんでした</p>
+            <p className="text-xs text-[#b5bac1]">{loc.panelDataLoadFailed}</p>
           )}
           {channel && !loadingPopover && (
             <div>
@@ -91,13 +104,13 @@ export function ChannelMention({ channelId, channelName, guildId }: ChannelMenti
                   type="button"
                   onClick={handleCopy}
                   className="shrink-0 text-[#b5bac1] hover:text-[#dbdee1]"
-                  aria-label="IDをコピー"
+                  aria-label={loc.copyId}
                 >
                   <Copy className="h-3 w-3" />
                 </button>
               </div>
               {copied && (
-                <p className="mt-0.5 text-xs text-emerald-400">コピーしました</p>
+                <p className="mt-0.5 text-xs text-emerald-400">{loc.copied}</p>
               )}
             </div>
           )}

@@ -67,7 +67,7 @@ export function TtsDashboard({ guildId, role }: { guildId: string; role?: "viewe
   if (loading) return <LoadingSpinner />;
 
   if (!data) {
-    return <ErrorAlert message={error ?? loc.failedToLoadSettings} onRetry={refresh} />;
+    return <ErrorAlert message={error ?? loc.failedToLoadSettings} onRetry={refresh} retryLabel={loc.retry} />;
   }
 
   const isAdmin = role === "admin" || role === "owner";
@@ -94,18 +94,18 @@ export function TtsDashboard({ guildId, role }: { guildId: string; role?: "viewe
         />
       </div>
 
-      {/* 個人設定セクション */}
+      {/* Personal settings section */}
       <div>
         {isAdmin && (
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#80848e]">個人設定</p>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#80848e]">{loc.ttsPersonalSection}</p>
         )}
         <TtsUserPersonalCard guildId={guildId} guildDefaultSpeakerId={data.guildDefaultSpeaker?.speakerId ?? null} />
       </div>
 
-      {/* サーバー設定セクション（admin/owner のみ） */}
+      {/* Server settings section (admin/owner only) */}
       {isAdmin && (
         <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#80848e]">サーバー設定</p>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#80848e]">{loc.serverSettings}</p>
           <div className="grid gap-4 xl:grid-cols-[.85fr_1.15fr]">
             <Card>
               <CardHeader>
@@ -126,7 +126,7 @@ export function TtsDashboard({ guildId, role }: { guildId: string; role?: "viewe
                     : "-"}
                 />
                 {data.guildDefaultSpeaker && (
-                  <GuildDefaultSpeakerPreview speakerId={data.guildDefaultSpeaker.speakerId} />
+                  <GuildDefaultSpeakerPreview speakerId={data.guildDefaultSpeaker.speakerId} loc={loc} />
                 )}
                 <KeyValue
                   label={loc.ttsEnabledDictionaryEntries}
@@ -149,8 +149,8 @@ export function TtsDashboard({ guildId, role }: { guildId: string; role?: "viewe
               <CardContent className="grid gap-4">
                 <DictionaryTable entries={data.dictionaryEntries} loc={loc} />
                 <div className="border-t border-[#1e1f22] pt-4">
-                  <p className="mb-2 text-xs font-medium text-[#b5bac1]">新しい単語を登録（サーバー辞書）</p>
-                  <DictionaryAddForm guildId={guildId} onSuccess={refresh} />
+                  <p className="mb-2 text-xs font-medium text-[#b5bac1]">{loc.ttsRegisterServerDict}</p>
+                  <DictionaryAddForm guildId={guildId} onSuccess={refresh} loc={loc} />
                 </div>
               </CardContent>
             </Card>
@@ -248,7 +248,7 @@ function KeyValue({ label, value }: { label: string; value: string }) {
   );
 }
 
-function GuildDefaultSpeakerPreview({ speakerId }: { speakerId: number }) {
+function GuildDefaultSpeakerPreview({ speakerId, loc }: { speakerId: number; loc: ReturnType<typeof getDashboardLocale> }) {
   const { playingId, playPreview } = usePreviewAudio();
   const playing = playingId === speakerId;
 
@@ -261,7 +261,7 @@ function GuildDefaultSpeakerPreview({ speakerId }: { speakerId: number }) {
       type="button"
       variant="outline"
     >
-      {playing ? "再生中..." : "サーバーデフォルト話者を試聴"}
+      {playing ? loc.ttsPlayingPreview : loc.ttsPreviewDefault}
     </Button>
   );
 }
@@ -269,10 +269,12 @@ function GuildDefaultSpeakerPreview({ speakerId }: { speakerId: number }) {
 
 function DictionaryAddForm({
   guildId,
-  onSuccess
+  onSuccess,
+  loc,
 }: {
   guildId: string;
   onSuccess: () => void;
+  loc: ReturnType<typeof getDashboardLocale>;
 }) {
   const [fromText, setFromText] = useState("");
   const [toText, setToText] = useState("");
@@ -306,7 +308,7 @@ function DictionaryAddForm({
           console.error("Failed to parse error response", e);
           return {} as { error?: string };
         });
-        setFormError(body.error ?? "登録に失敗しました");
+        setFormError(body.error ?? loc.ttsRegisterFailed);
         return;
       }
 
@@ -315,7 +317,7 @@ function DictionaryAddForm({
       onSuccess();
     } catch (e: unknown) {
       console.error("Dictionary add failed", e);
-      setFormError("登録に失敗しました");
+      setFormError(loc.ttsRegisterFailed);
     } finally {
       setSubmitting(false);
     }
@@ -326,13 +328,13 @@ function DictionaryAddForm({
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="grid gap-1">
           <label className="text-xs text-[#b5bac1]" htmlFor="fromText">
-            変換前
+            {loc.panelBeforeConversion}
           </label>
           <input
             className="rounded-md border border-[#3f4147] bg-[#2b2d31] px-3 py-1.5 text-sm text-[#f2f3f5] placeholder:text-[#80848e] focus:outline-none focus:ring-1 focus:ring-[#3f4147]"
             id="fromText"
             onChange={(e) => setFromText(e.target.value)}
-            placeholder="例: Discord"
+            placeholder={loc.ttsExampleBeforeServer}
             required
             type="text"
             value={fromText}
@@ -340,13 +342,13 @@ function DictionaryAddForm({
         </div>
         <div className="grid gap-1">
           <label className="text-xs text-[#b5bac1]" htmlFor="toText">
-            変換後
+            {loc.panelAfterConversion}
           </label>
           <input
             className="rounded-md border border-[#3f4147] bg-[#2b2d31] px-3 py-1.5 text-sm text-[#f2f3f5] placeholder:text-[#80848e] focus:outline-none focus:ring-1 focus:ring-[#3f4147]"
             id="toText"
             onChange={(e) => setToText(e.target.value)}
-            placeholder="例: ディスコード"
+            placeholder={loc.ttsExampleAfterServer}
             required
             type="text"
             value={toText}
@@ -359,7 +361,7 @@ function DictionaryAddForm({
           size="sm"
           type="submit"
         >
-          {submitting ? "登録中..." : "登録"}
+          {submitting ? loc.panelRegistering : loc.ttsRegister}
         </Button>
       </div>
       {formError && (

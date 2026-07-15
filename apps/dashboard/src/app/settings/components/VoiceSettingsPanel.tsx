@@ -35,7 +35,7 @@ export function VoiceSettingsPanel({ guildId, loc }: VoiceSettingsPanelProps) {
     try {
       const updated = await updateTempVcSettings(guildId, createChannelId, categoryId);
       setSettings(updated);
-      toast.success("Voice設定を保存しました。");
+      toast.success(loc.settingsSaved);
     } catch (e) {
       toast.error(toSettingsError(e));
     } finally {

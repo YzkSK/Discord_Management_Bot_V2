@@ -7,6 +7,7 @@ import { getDashboardLocale, detectBrowserLanguage } from "../../lib/locale";
 import { fetchSettings, toSettingsError } from "../../lib/settings-api";
 import { canSeeItem } from "../../lib/roles";
 import { AccessGrantsTab } from "./components/AccessGrantsTab";
+import { BotLanguageTab } from "./components/BotLanguageTab";
 import { LanguageTab } from "./components/LanguageTab";
 import { TtsPersonalTab } from "./components/TtsPersonalTab";
 import { VoiceSettingsPanel } from "./components/VoiceSettingsPanel";
@@ -31,6 +32,7 @@ interface Tab {
 const ALL_TABS: Tab[] = [
   { key: "language",     section: "personal" },
   { key: "tts-personal", section: "personal" },
+  { key: "bot-language", section: "server", minRole: "admin" },
   { key: "voice",        section: "server", minRole: "admin" },
   { key: "tts",          section: "server", minRole: "admin" },
   { key: "recruitment",  section: "server", minRole: "admin" },
@@ -40,6 +42,7 @@ const ALL_TABS: Tab[] = [
 
 const TAB_LABELS: Record<string, string> = {
   "tts-personal": "TTS",
+  "bot-language": "Bot Language",
   tts: "TTS",
   voice: "Voice",
   recruitment: "Recruitment",
@@ -49,6 +52,7 @@ const TAB_LABELS: Record<string, string> = {
 
 function tabLabel(key: string, isJa: boolean): string {
   if (key === "language") return isJa ? "表示言語" : "Language";
+  if (key === "bot-language") return isJa ? "Bot 言語" : "Bot Language";
   return TAB_LABELS[key] ?? key;
 }
 
@@ -98,7 +102,7 @@ export function SettingsPanel({
   if (loading) return <LoadingSpinner />;
 
   if (!settings) {
-    return <ErrorAlert message={loadError ?? loc.failedToLoadSettings} onRetry={load} />;
+    return <ErrorAlert message={loadError ?? loc.failedToLoadSettings} onRetry={load} retryLabel={loc.retry} />;
   }
 
   return (
@@ -140,11 +144,12 @@ export function SettingsPanel({
       </nav>
 
       {/* Tab content */}
-      <div className="flex-1 min-w-0 grid gap-4">
+      <div className="flex-1 min-w-0 grid gap-4 content-start">
         {activeTab === "language" && (
           <LanguageTab uiLang={uiLang} onUiLangChange={setUiLang} />
         )}
         {activeTab === "tts-personal" && <TtsPersonalTab guildId={guildId} />}
+        {activeTab === "bot-language" && <BotLanguageTab guildId={guildId} loc={loc} />}
         {activeTab === "voice" && <VoiceSettingsPanel guildId={guildId} loc={loc} />}
         {activeTab === "tts" && <TtsSettingsPanel guildId={guildId} loc={loc} />}
         {activeTab === "recruitment" && <RecruitmentSettingsPanel guildId={guildId} loc={loc} />}
@@ -152,7 +157,6 @@ export function SettingsPanel({
           <LogsSettingsPanel
             guildId={guildId}
             loc={loc}
-            onUiLangChange={setUiLang}
           />
         )}
         {activeTab === "access" && (

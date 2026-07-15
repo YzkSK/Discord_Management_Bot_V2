@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { BookOpen, Volume2 } from "lucide-react";
+import { isGuildLanguage } from "@discord-bot/shared";
+import type { GuildLanguage } from "@discord-bot/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import { detectBrowserLanguage, getDashboardLocale } from "../../../lib/locale";
+
+const UI_LANG_KEY = "dashboard-ui-lang";
 
 interface PersonalSpeakerSetting {
   speakerId: number;
@@ -26,6 +31,15 @@ export function TtsUserPersonalCard({
   const [speaker, setSpeaker] = useState<PersonalSpeakerSetting | null | undefined>(undefined);
   const [dictEntries, setDictEntries] = useState<PersonalDictEntry[] | undefined>(undefined);
   const [speakerMap, setSpeakerMap] = useState<Map<number, string>>(new Map());
+  const [uiLang, setUiLang] = useState<GuildLanguage>("en");
+
+  useEffect(() => {
+    const stored = localStorage.getItem(UI_LANG_KEY);
+    if (stored !== null && isGuildLanguage(stored)) setUiLang(stored);
+    else setUiLang(detectBrowserLanguage());
+  }, []);
+
+  const loc = getDashboardLocale(uiLang);
 
   const load = useCallback(async () => {
     const [speakerRes, dictRes, listRes] = await Promise.all([
@@ -64,31 +78,30 @@ export function TtsUserPersonalCard({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Volume2 className="h-4 w-4 text-[#c9cdfb]" />
-            個人話者設定
+            {loc.ttsPersonalSpeakerTitle}
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2">
           {speaker === undefined ? (
-            <p className="text-xs text-[#80848e]">読み込み中...</p>
+            <p className="text-xs text-[#80848e]">{loc.ttsLoading}</p>
           ) : (
             <>
               <div className="flex items-center justify-between rounded-md bg-[#2b2d31] px-3 py-2">
-                <span className="text-xs text-[#b5bac1]">話者</span>
+                <span className="text-xs text-[#b5bac1]">{loc.ttsSpeakerLabel}</span>
                 <span className="text-sm font-semibold text-[#f2f3f5]">
                   {effectiveSpeakerLabel ?? "-"}
                 </span>
               </div>
               {speaker ? (
-                <p className="text-[10px] text-[#5865f2]">個人設定が適用されています</p>
+                <p className="text-[10px] text-[#5865f2]">{loc.ttsPersonalApplied}</p>
               ) : (
                 <p className="text-[10px] text-[#80848e]">
-                  サーバーデフォルト
-                  {defaultSpeakerLabel ? `（${defaultSpeakerLabel}）` : "（未設定）"}
-                  を使用
+                  {loc.panelServerDefault}
+                  {defaultSpeakerLabel ? `（${defaultSpeakerLabel}）` : loc.ttsNotSetParens}
                 </p>
               )}
               <p className="text-[10px] text-[#80848e]">
-                ヘッダーの「個人設定」から変更できます
+                {loc.ttsChangeViaHeader}
               </p>
             </>
           )}
@@ -99,17 +112,17 @@ export function TtsUserPersonalCard({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BookOpen className="h-4 w-4 text-[#c9cdfb]" />
-            個人辞書
+            {loc.ttsPersonalDictTitle}
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2">
           {dictEntries === undefined ? (
-            <p className="text-xs text-[#80848e]">読み込み中...</p>
+            <p className="text-xs text-[#80848e]">{loc.ttsLoading}</p>
           ) : dictEntries.length === 0 ? (
             <>
-              <p className="text-xs text-[#80848e]">個人辞書エントリがありません</p>
+              <p className="text-xs text-[#80848e]">{loc.ttsNoDictEntries}</p>
               <p className="text-[10px] text-[#80848e]">
-                ヘッダーの「個人設定」から登録できます
+                {loc.ttsRegisterViaHeader}
               </p>
             </>
           ) : (
@@ -123,7 +136,7 @@ export function TtsUserPersonalCard({
               ))}
               {dictEntries.length > 6 && (
                 <p className="px-3 py-1.5 text-[10px] text-[#80848e]">
-                  他 {dictEntries.length - 6} 件...
+                  {loc.ttsMoreEntries({ count: dictEntries.length - 6 })}
                 </p>
               )}
             </div>

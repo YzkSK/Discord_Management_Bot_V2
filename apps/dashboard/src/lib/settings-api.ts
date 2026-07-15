@@ -71,6 +71,19 @@ export async function updateRecruitmentSettings(
   return (await r.json()) as SettingsResponse;
 }
 
+export async function updateBotLanguage(
+  guildId: string,
+  language: string
+): Promise<SettingsResponse> {
+  const r = await fetch("/api/settings", {
+    body: JSON.stringify({ guildId, section: "logs", values: { language } }),
+    headers: { "content-type": "application/json" },
+    method: "PATCH",
+  });
+  if (!r.ok) throw new Error(`Failed to save language settings (${r.status})`);
+  return (await r.json()) as SettingsResponse;
+}
+
 export function toSettingsError(e: unknown): string {
   return e instanceof Error ? e.message : "Settings request failed";
 }

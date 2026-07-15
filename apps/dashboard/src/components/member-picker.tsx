@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { isGuildLanguage } from "@discord-bot/shared";
+import type { GuildLanguage } from "@discord-bot/shared";
+import { detectBrowserLanguage, getDashboardLocale } from "../lib/locale";
 import { cn } from "../lib/utils";
+
+const UI_LANG_KEY = "dashboard-ui-lang";
 
 interface Member {
   id: string;
@@ -23,8 +28,17 @@ export function MemberPicker({ guildId, value, onChange, placeholder }: MemberPi
   const [selected, setSelected] = useState<Member | null>(null);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [uiLang, setUiLang] = useState<GuildLanguage>("en");
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const lang = localStorage.getItem(UI_LANG_KEY);
+    if (lang !== null && isGuildLanguage(lang)) setUiLang(lang);
+    else setUiLang(detectBrowserLanguage());
+  }, []);
+
+  const loc = getDashboardLocale(uiLang);
 
   // Clear selection when value is reset externally
   useEffect(() => {
@@ -85,7 +99,7 @@ export function MemberPicker({ guildId, value, onChange, placeholder }: MemberPi
               type="button"
               onClick={() => { setSelected(null); onChange(""); setQuery(""); }}
               className="shrink-0 text-[#80848e] hover:text-[#dbdee1]"
-              aria-label="選択を解除"
+              aria-label={loc.clearSelection}
             >
               ×
             </button>
@@ -96,7 +110,7 @@ export function MemberPicker({ guildId, value, onChange, placeholder }: MemberPi
             value={query}
             onChange={(e) => handleInput(e.target.value)}
             onFocus={() => query && setOpen(true)}
-            placeholder={placeholder ?? "名前で検索..."}
+            placeholder={placeholder ?? loc.searchByName}
           />
         )}
       </div>
@@ -104,7 +118,7 @@ export function MemberPicker({ guildId, value, onChange, placeholder }: MemberPi
       {open && (results.length > 0 || loading) && (
         <div className="absolute z-50 mt-1 w-full rounded-md border border-[#3f4147] bg-[#2b2d31] py-1 shadow-xl">
           {loading ? (
-            <div className="px-3 py-2 text-xs text-[#80848e]">検索中...</div>
+            <div className="px-3 py-2 text-xs text-[#80848e]">{loc.searching}</div>
           ) : results.map((m) => (
             <button
               key={m.id}
