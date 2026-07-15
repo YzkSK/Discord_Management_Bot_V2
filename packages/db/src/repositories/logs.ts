@@ -1,5 +1,5 @@
 import type { DbClient } from "../client.js";
-import { and, desc, eq, getTableColumns, ilike, like, lte, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, gte, ilike, like, lte, or, sql, type SQL } from "drizzle-orm";
 import { discordChannels, logs } from "../schema/index.js";
 import { clampLimit } from "./pagination.js";
 
@@ -22,6 +22,7 @@ export interface ListLogEventsInput {
   channelId?: string;
   messageId?: string;
   search?: string;
+  since?: Date;
   before?: Date;
   limit?: number;
 }
@@ -140,6 +141,10 @@ function buildLogFilters(input: ListLogEventsInput): SQL[] {
     );
   }
 
+  if (input.since) {
+    filters.push(gte(logs.receivedAt, input.since));
+  }
+
   if (input.before) {
     filters.push(lte(logs.receivedAt, input.before));
   }
@@ -148,4 +153,4 @@ function buildLogFilters(input: ListLogEventsInput): SQL[] {
 }
 
 const DEFAULT_LOGS_LIMIT = 50;
-const MAX_LOGS_LIMIT = 100;
+const MAX_LOGS_LIMIT = 1000;

@@ -49,6 +49,26 @@ describe("formatEventDescription", () => {
   });
 });
 
+describe("formatEventDescription en", () => {
+  it("voice.session.join en → joined", () => {
+    const result = formatEventDescription("voice.session.join", { actorName: "Yuzuki", channelName: "general" }, "en");
+    assert.ok(result.includes("@Yuzuki"), `expected actor, got: ${result}`);
+    assert.ok(result.includes("#general"), `expected channel, got: ${result}`);
+    assert.ok(result.includes("joined"), `expected joined, got: ${result}`);
+  });
+
+  it("member.kick en → kicked", () => {
+    const result = formatEventDescription("member.kick", { actorName: "Admin", targetName: "BadUser" }, "en");
+    assert.ok(result.includes("kicked"), `expected kicked, got: ${result}`);
+    assert.ok(result.includes("@Admin"), `expected actor, got: ${result}`);
+    assert.ok(result.includes("@BadUser"), `expected target, got: ${result}`);
+  });
+
+  it("未知イベントは eventName をそのまま返す (en)", () => {
+    assert.equal(formatEventDescription("unknown.event", {}, "en"), "unknown.event");
+  });
+});
+
 describe("getEventColor", () => {
   it("voice 系は purple", () => {
     assert.equal(getEventColor("voice.session.join"), "purple");
@@ -106,6 +126,25 @@ describe("formatRelativeTime boundaries", () => {
   it("86400秒 → 1日前", () => {
     const d = new Date(Date.now() - 86400 * 1000);
     assert.equal(formatRelativeTime(d), "1日前");
+  });
+});
+
+describe("formatRelativeTime en", () => {
+  it("1m ago", () => {
+    const d = new Date(Date.now() - 60 * 1000);
+    assert.equal(formatRelativeTime(d, "en"), "1m ago");
+  });
+  it("2h ago", () => {
+    const d = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    assert.equal(formatRelativeTime(d, "en"), "2h ago");
+  });
+  it("30s ago", () => {
+    const d = new Date(Date.now() - 30 * 1000);
+    assert.equal(formatRelativeTime(d, "en"), "30s ago");
+  });
+  it("1d ago", () => {
+    const d = new Date(Date.now() - 86400 * 1000);
+    assert.equal(formatRelativeTime(d, "en"), "1d ago");
   });
 });
 

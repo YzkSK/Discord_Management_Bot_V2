@@ -5,7 +5,7 @@ import {
 } from "@discord-bot/db";
 import { AuditLogEvent, Events, type Client, type VoiceState } from "discord.js";
 import { lookupAuditLog } from "../audit-log.js";
-import { createVoiceEvent, type WriteEventFn } from "./payloads.js";
+import { createVoiceEvent, diffRecord, voiceStatePayload, type WriteEventFn } from "./payloads.js";
 
 const GUILD_CONFIG_CACHE_TTL_MS = 60_000;
 const GUILD_CONFIG_CACHE_MAX_SIZE = 200;
@@ -72,6 +72,11 @@ async function writeVoiceStateEvent(
   db: DbClient
 ) {
   const eventName = resolveVoiceStateLogEventName(oldState, newState);
+
+  if (eventName === "voice.state.update") {
+    const changes = diffRecord(voiceStatePayload(oldState), voiceStatePayload(newState));
+    if (Object.keys(changes).length === 0) return;
+  }
 
   if (
     shouldSkipVoiceStateLog({

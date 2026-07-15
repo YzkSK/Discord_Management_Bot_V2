@@ -98,7 +98,7 @@ export async function sendEventToConfiguredLogChannel(
 
   await channel.send({
     ...createComponentsV2TextMessage({
-      title: formatLogEventTitle(event.eventName, loc),
+      title: computeEventTitle(event, loc),
       lines: formatLogEventLines(event, loc),
       accentColor: getEventAccentColor(event.eventName),
       ...(mediaUrls.length > 0 ? { mediaUrls } : {})
@@ -119,6 +119,34 @@ export function findMarkedLogChannel(guild: Guild) {
 
 export function formatLogEventTitle(eventName: string, loc: Locale) {
   return loc.logEventTitle({ eventName });
+}
+
+function computeEventTitle(event: NormalizedEvent, loc: Locale): string {
+  const genericTitle = loc.logEventTitle({ eventName: event.eventName });
+
+  if (event.eventName === "voice.state.update") {
+    const changes = event.payload.changes;
+    if (isObj(changes)) {
+      const detail = loc.logVoiceStateChanges(changes);
+      if (detail) return `🎤 ${detail}`;
+    }
+    return genericTitle;
+  }
+
+  if (event.eventName.endsWith(".update") && isObj(event.payload.changes)) {
+    const labels = Object.keys(event.payload.changes)
+      .map(f => loc.logFieldLabel(f))
+      .filter((l): l is string => l !== null);
+    if (labels.length >= 1 && labels.length <= 2) {
+      const summary = loc.logChangedFields(labels);
+      if (summary) {
+        const emoji = Array.from(genericTitle)[0] ?? "";
+        return `${emoji} ${summary}`;
+      }
+    }
+  }
+
+  return genericTitle;
 }
 
 export function formatLogEventLines(event: NormalizedEvent, loc: Locale) {

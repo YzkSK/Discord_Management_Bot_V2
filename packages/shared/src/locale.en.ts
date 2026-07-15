@@ -190,6 +190,23 @@ export const en: Locale = {
       "dashboard.login": "🔑 Dashboard Login",
       "dashboard.logout": "🔑 Dashboard Logout",
       "config.updated": "⚙️ Config Updated",
+      "audit_log.entry": "📋 Audit Log Entry",
+      "automod.rule.create": "🛡️ AutoMod Rule Created",
+      "automod.rule.update": "🛡️ AutoMod Rule Updated",
+      "automod.rule.delete": "🛡️ AutoMod Rule Deleted",
+      "automod.action": "🛡️ AutoMod Action",
+      "event.create": "📅 Scheduled Event Created",
+      "event.update": "📅 Scheduled Event Updated",
+      "event.delete": "📅 Scheduled Event Deleted",
+      "event.user.add": "📅 Scheduled Event Joined",
+      "event.user.remove": "📅 Scheduled Event Left",
+      "stage.create": "🎙️ Stage Created",
+      "stage.update": "🎙️ Stage Updated",
+      "stage.delete": "🎙️ Stage Deleted",
+      "integration.update": "🔌 Integration Updated",
+      "message.poll.vote": "📊 Poll Vote",
+      "message.poll.unvote": "📊 Poll Vote Removed",
+      "recruitment.expired": "🎮 Recruitment Expired",
     };
     return titles[eventName] ?? `📋 ${eventName}`;
   },
@@ -206,8 +223,38 @@ export const en: Locale = {
     topic: "Topic",
     color: "Color",
     ownerId: "Owner",
+    type: "Type",
+    position: "Position",
+    rateLimitPerUser: "Slow mode",
+    hoist: "Separate",
+    mentionable: "Mentionable",
   } as Record<string, string>)[field] ?? null,
   logChangeField: ({ label, before, after }) => `${label}: ${before} → ${after}`,
+  logVoiceStateChanges: (changes) => {
+    const labels: Record<string, [string, string]> = {
+      selfMute:                ["Muted mic",               "Unmuted mic"],
+      selfDeaf:                ["Deafened",                "Undeafened"],
+      selfVideo:               ["Started camera",          "Stopped camera"],
+      streaming:               ["Started stream",          "Stopped stream"],
+      serverMute:              ["Server muted",            "Server unmuted"],
+      serverDeaf:              ["Server deafened",         "Server undeafened"],
+      suppress:                ["Stage: no speak perm",    "Stage: speak perm granted"],
+      requestToSpeakTimestamp: ["Requested to speak",      "Cancelled speak request"],
+    };
+    const parts = Object.entries(changes)
+      .map(([key, val]) => {
+        const kl = labels[key];
+        if (!kl) return null;
+        const after = typeof val === "object" && val !== null
+          ? (val as Record<string, unknown>).after
+          : null;
+        return after ? kl[0] : kl[1];
+      })
+      .filter((s): s is string => s !== null);
+    return parts.length > 0 ? parts.join(", ") : null;
+  },
+  logChangedFields: (labels) =>
+    labels.length > 0 ? "Changed: " + labels.join(", ") : null,
   logContentChange: ({ before, after }) => `Content: ${before} → ${after}`,
   commandSuccess: ({ operation }) => `✅ ${operation} completed`,
   commandError: ({ reason }) => `❌ ${reason}`,

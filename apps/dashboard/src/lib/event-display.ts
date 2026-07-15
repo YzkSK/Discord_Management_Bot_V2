@@ -94,29 +94,46 @@ const auditLogDescriptions: Partial<Record<number, (v: EventVars) => string>> = 
   145: (v) => `${target(v)} のコミュニケーションを無効化`,
 };
 
-const voiceStateChangeLabels: Record<string, [string, string]> = {
-  selfMute:                 ["マイクをミュート",         "マイクのミュートを解除"],
-  selfDeaf:                 ["スピーカーをミュート",     "スピーカーのミュートを解除"],
-  selfVideo:                ["カメラ開始",               "カメラ停止"],
-  streaming:                ["配信開始",                 "配信停止"],
-  serverMute:               ["サーバーミュートを適用",   "サーバーミュートを解除"],
-  serverDeaf:               ["サーバー側でスピーカーミュートを適用", "サーバー側でスピーカーミュートを解除"],
-  suppress:                 ["ステージ発言権なし",       "ステージ発言権あり"],
-  requestToSpeakTimestamp:  ["発言リクエスト",           "発言リクエスト取消"],
+type Lang = "en" | "ja";
+
+const voiceStateChangeLabels: Record<Lang, Record<string, [string, string]>> = {
+  ja: {
+    selfMute:                ["マイクをミュート",         "マイクのミュートを解除"],
+    selfDeaf:                ["スピーカーをミュート",     "スピーカーのミュートを解除"],
+    selfVideo:               ["カメラ開始",               "カメラ停止"],
+    streaming:               ["配信開始",                 "配信停止"],
+    serverMute:              ["サーバーミュートを適用",   "サーバーミュートを解除"],
+    serverDeaf:              ["サーバー側でスピーカーミュートを適用", "サーバー側でスピーカーミュートを解除"],
+    suppress:                ["ステージ発言権なし",       "ステージ発言権あり"],
+    requestToSpeakTimestamp: ["発言リクエスト",           "発言リクエスト取消"],
+  },
+  en: {
+    selfMute:                ["Muted mic",               "Unmuted mic"],
+    selfDeaf:                ["Deafened",                "Undeafened"],
+    selfVideo:               ["Started camera",          "Stopped camera"],
+    streaming:               ["Started stream",          "Stopped stream"],
+    serverMute:              ["Server muted",            "Server unmuted"],
+    serverDeaf:              ["Server deafened",         "Server undeafened"],
+    suppress:                ["Stage: no speak perm",    "Stage: speak perm granted"],
+    requestToSpeakTimestamp: ["Requested to speak",      "Cancelled speak request"],
+  },
 };
 
 function formatVoiceStateChanges(
-  changes: Record<string, { before: unknown; after: unknown }> | null | undefined
+  changes: Record<string, { before: unknown; after: unknown }> | null | undefined,
+  lang: Lang = "ja",
 ): string | null {
   if (!changes) return null;
+  const labels = voiceStateChangeLabels[lang];
   const parts = Object.entries(changes)
     .map(([key, { after }]) => {
-      const labels = voiceStateChangeLabels[key];
-      if (!labels) return null;
-      return after ? labels[0] : labels[1];
+      const kl = labels[key];
+      if (!kl) return null;
+      return after ? kl[0] : kl[1];
     })
     .filter((s): s is string => s !== null);
-  return parts.length > 0 ? parts.join("・") : null;
+  const sep = lang === "ja" ? "・" : ", ";
+  return parts.length > 0 ? parts.join(sep) : null;
 }
 
 function actor(v: EventVars, fallback = "不明"): string {
@@ -131,21 +148,19 @@ function ch(v: EventVars): string {
   return "";
 }
 
-function target(v: EventVars): string {
+function target(v: EventVars, fallback = "ユーザー"): string {
   if (v.targetName) return `@${v.targetName}`;
   if (v.targetId) return `@${v.targetId.slice(0, 8)}…`;
-  return "ユーザー";
+  return fallback;
 }
 
-const eventDescriptions: Record<string, (v: EventVars) => string> = {
-  // メッセージ
+const eventDescriptionsJa: Record<string, (v: EventVars) => string> = {
   "message.create": (v) => `✉️ ${actor(v)} が${ch(v) ? `${ch(v)} に` : ""}メッセージを送信`,
   "message.update": (v) => `✏️ ${ch(v) ? `${ch(v)} の` : ""}メッセージを編集`,
   "message.delete": (v) => `🗑️ ${ch(v) ? `${ch(v)} の` : ""}メッセージを削除`,
   "message.bulk_delete": (v) => `🗑️ ${ch(v) ? `${ch(v)} の` : ""}メッセージを一括削除${v.count ? ` (${v.count}件)` : ""}`,
   "message.reaction.add": (v) => `😀 ${actor(v)} がリアクション追加`,
   "message.reaction.remove": (v) => `😀 ${actor(v)} がリアクション削除`,
-  // 音声
   "voice.session.join": (v) => `🎤 ${actor(v)} が${ch(v) ? `${ch(v)}` : "VCチャンネル"} に参加`,
   "voice.session.leave": (v) => `🎤 ${actor(v)} が${ch(v) ? `${ch(v)}` : "VCチャンネル"} から退出`,
   "voice.session.move": (v) =>
@@ -153,20 +168,16 @@ const eventDescriptions: Record<string, (v: EventVars) => string> = {
       ? `🎤 ${actor(v)} が ${target(v)} を${ch(v) ? `${ch(v)}` : "VCチャンネル"} に移動`
       : `🎤 ${actor(v)} が${ch(v) ? `${ch(v)}` : "VCチャンネル"} に移動`,
   "voice.state.update": (v) => {
-    const detail = formatVoiceStateChanges(v.voiceStateChanges);
-    return detail
-      ? `🎤 ${actor(v)} が${detail}`
-      : `🎤 ${actor(v)} の音声状態が更新`;
+    const detail = formatVoiceStateChanges(v.voiceStateChanges, "ja");
+    return detail ? `🎤 ${actor(v)} が${detail}` : `🎤 ${actor(v)} の音声状態が更新`;
   },
   "call.started": (v) => `📞 ${ch(v) ? `${ch(v)} で` : ""}通話開始`,
   "call.ended": (v) => `📞 ${ch(v) ? `${ch(v)} の` : ""}通話終了`,
   "call.updated": (_v) => `📞 通話更新`,
-  // Temp VC
   "voice.temp.created": (v) => `✨ 一時VC作成${v.name ? `: ${v.name}` : ""}`,
   "voice.temp.deleted": (v) => `🗑️ 一時VC削除${v.name ? `: ${v.name}` : ""}`,
   "voice.temp.owner_transferred": (v) => `👑 一時VCオーナー移譲${v.actorId || v.actorName ? ` → ${actor(v, "")}` : ""}`,
   "voice.temp.user_kicked": (v) => `🚫 一時VCから ${target(v)} をキック`,
-  // メンバー
   "member.join": (v) => `👋 ${actor(v)} がサーバーに参加`,
   "member.leave": (v) => `👋 ${actor(v)} がサーバーを退出`,
   "member.update": (v) =>
@@ -177,7 +188,6 @@ const eventDescriptions: Record<string, (v: EventVars) => string> = {
   "member.ban": (v) => `🔨 ${actor(v)} が ${target(v)} をBAN`,
   "member.unban": (v) => `🔓 ${actor(v)} が ${target(v)} のBANを解除`,
   "member.timeout": (v) => `⏱️ ${actor(v)} が ${target(v)} にタイムアウトを適用`,
-  // サーバー構成
   "guild.update": (_v) => `⚙️ サーバー設定を更新`,
   "role.create": (v) => `🏷️ ロール作成${v.name ? `: ${v.name}` : ""}`,
   "role.update": (_v) => `🏷️ ロールを更新`,
@@ -198,17 +208,14 @@ const eventDescriptions: Record<string, (v: EventVars) => string> = {
   "sticker.update": (_v) => `🖼️ スタンプを更新`,
   "sticker.delete": (_v) => `🖼️ スタンプを削除`,
   "webhook.update": (_v) => `🔗 Webhookを更新`,
-  // 募集
   "recruitment.created":  (v) => `🎮 ${actor(v)} が募集作成${v.genre ? ` (${v.genre})` : ""}`,
   "recruitment.full":     (v) => `🎮 募集が満員${v.genre ? ` (${v.genre})` : ""}`,
   "recruitment.closed":   (v) => `🎮 募集を締切${v.genre ? ` (${v.genre})` : ""}`,
   "recruitment.reopened": (v) => `🎮 募集を再オープン${v.genre ? ` (${v.genre})` : ""}`,
-  // TTS
   "tts.session.started": (v) => `🔊 ${actor(v, "")} TTSセッション開始`.trimStart(),
   "tts.session.stopped": (_v) => `🔊 TTSセッション終了`,
   "tts.message.skipped": (_v) => `🔊 TTSメッセージをスキップ`,
   "tts.message.spoken": (_v) => `🔊 TTSメッセージを読み上げ`,
-  // システム
   "system.bot.crashed": (_v) => `🔴 Bot停止`,
   "system.bot.started": (_v) => `🟢 Bot起動`,
   "system.handler.error": (_v) => `⚠️ ハンドラーエラー発生`,
@@ -218,17 +225,159 @@ const eventDescriptions: Record<string, (v: EventVars) => string> = {
   "system.backup.failed": (_v) => `⚠️ バックアップ失敗`,
   "system.backup.completed": (_v) => `✅ バックアップ完了`,
   "system.rate_limit": (_v) => `⚠️ レート制限に到達`,
-  // 監査ログ
   "audit_log.entry": (v) => {
     const a = actor(v, "不明");
     const descFn = v.action != null ? auditLogDescriptions[v.action] : null;
     const desc = descFn ? descFn(v) : v.action != null ? `監査ログを記録 (${v.action})` : "監査ログエントリを記録";
     return `📋 ${a} が${desc}`;
   },
-  // ダッシュボード
   "dashboard.login": (v) => `🔑 ${actor(v, "ユーザー")} がログイン`,
   "dashboard.logout": (v) => `🔑 ${actor(v, "ユーザー")} がログアウト`,
   "config.updated": (_v) => `⚙️ 設定を更新`,
+};
+
+const auditLogDescriptionsEn: Partial<Record<number, (v: EventVars) => string>> = {
+  1:   (_v) => "Updated server settings",
+  10:  (_v) => "Created channel",
+  11:  (_v) => "Updated channel",
+  12:  (_v) => "Deleted channel",
+  13:  (_v) => "Added channel permission",
+  14:  (_v) => "Updated channel permission",
+  15:  (_v) => "Deleted channel permission",
+  20:  (v) => `Kicked ${target(v, "user")}`,
+  21:  (_v) => "Pruned inactive members",
+  22:  (v) => `Banned ${target(v, "user")}`,
+  23:  (v) => `Unbanned ${target(v, "user")}`,
+  24:  (v) => `Updated member info for ${target(v, "user")}`,
+  25:  (v) => `Updated roles for ${target(v, "user")}`,
+  26:  (v) => `Moved ${target(v, "user")} to VC`,
+  27:  (v) => `Disconnected ${target(v, "user")} from VC`,
+  28:  (v) => `Added bot ${target(v, "user")}`,
+  30:  (_v) => "Created role",
+  31:  (_v) => "Updated role",
+  32:  (_v) => "Deleted role",
+  40:  (_v) => "Created invite link",
+  41:  (_v) => "Updated invite link",
+  42:  (_v) => "Deleted invite link",
+  50:  (_v) => "Created webhook",
+  51:  (_v) => "Updated webhook",
+  52:  (_v) => "Deleted webhook",
+  60:  (_v) => "Added emoji",
+  61:  (_v) => "Updated emoji",
+  62:  (_v) => "Deleted emoji",
+  72:  (_v) => "Deleted message",
+  73:  (_v) => "Bulk deleted messages",
+  74:  (_v) => "Pinned message",
+  75:  (_v) => "Unpinned message",
+  80:  (_v) => "Added integration",
+  81:  (_v) => "Updated integration",
+  82:  (_v) => "Deleted integration",
+  83:  (_v) => "Created stage",
+  84:  (_v) => "Updated stage",
+  85:  (_v) => "Deleted stage",
+  90:  (_v) => "Added sticker",
+  91:  (_v) => "Updated sticker",
+  92:  (_v) => "Deleted sticker",
+  100: (_v) => "Created scheduled event",
+  101: (_v) => "Updated scheduled event",
+  102: (_v) => "Deleted scheduled event",
+  110: (_v) => "Created thread",
+  111: (_v) => "Updated thread",
+  112: (_v) => "Deleted thread",
+  121: (_v) => "Updated command permissions",
+  140: (_v) => "Created auto-mod rule",
+  141: (_v) => "Updated auto-mod rule",
+  142: (_v) => "Deleted auto-mod rule",
+  143: (_v) => "Auto-mod: blocked message",
+  144: (_v) => "Auto-mod: flagged in channel",
+  145: (v) => `Timed out ${target(v, "user")}`,
+};
+
+const eventDescriptionsEn: Record<string, (v: EventVars) => string> = {
+  "message.create": (v) => `✉️ ${actor(v, "Unknown")} sent a message${ch(v) ? ` in ${ch(v)}` : ""}`,
+  "message.update": (v) => `✏️ Edited a message${ch(v) ? ` in ${ch(v)}` : ""}`,
+  "message.delete": (v) => `🗑️ Deleted a message${ch(v) ? ` in ${ch(v)}` : ""}`,
+  "message.bulk_delete": (v) => `🗑️ Bulk deleted messages${ch(v) ? ` in ${ch(v)}` : ""}${v.count ? ` (${v.count})` : ""}`,
+  "message.reaction.add": (v) => `😀 ${actor(v, "Unknown")} added a reaction`,
+  "message.reaction.remove": (v) => `😀 ${actor(v, "Unknown")} removed a reaction`,
+  "voice.session.join": (v) => `🎤 ${actor(v, "Unknown")} joined ${ch(v) || "VC"}`,
+  "voice.session.leave": (v) => `🎤 ${actor(v, "Unknown")} left ${ch(v) || "VC"}`,
+  "voice.session.move": (v) =>
+    v.targetId && v.actorId !== v.targetId
+      ? `🎤 ${actor(v, "Unknown")} moved ${target(v, "user")} to ${ch(v) || "VC"}`
+      : `🎤 ${actor(v, "Unknown")} moved to ${ch(v) || "VC"}`,
+  "voice.state.update": (v) => {
+    const detail = formatVoiceStateChanges(v.voiceStateChanges, "en");
+    return detail ? `🎤 ${actor(v, "Unknown")}: ${detail}` : `🎤 ${actor(v, "Unknown")} updated voice state`;
+  },
+  "call.started": (v) => `📞 Call started${ch(v) ? ` in ${ch(v)}` : ""}`,
+  "call.ended": (v) => `📞 Call ended${ch(v) ? ` in ${ch(v)}` : ""}`,
+  "call.updated": (_v) => `📞 Call updated`,
+  "voice.temp.created": (v) => `✨ Temp VC created${v.name ? `: ${v.name}` : ""}`,
+  "voice.temp.deleted": (v) => `🗑️ Temp VC deleted${v.name ? `: ${v.name}` : ""}`,
+  "voice.temp.owner_transferred": (v) => `👑 Temp VC owner transferred${v.actorId || v.actorName ? ` → ${actor(v, "")}` : ""}`,
+  "voice.temp.user_kicked": (v) => `🚫 Kicked ${target(v, "user")} from temp VC`,
+  "member.join": (v) => `👋 ${actor(v, "Unknown")} joined the server`,
+  "member.leave": (v) => `👋 ${actor(v, "Unknown")} left the server`,
+  "member.update": (v) =>
+    v.targetId && v.actorId !== v.targetId
+      ? `✏️ ${actor(v, "Unknown")} updated ${target(v, "user")}'s profile`
+      : `✏️ ${actor(v, "Member")} updated their profile`,
+  "member.kick": (v) => `🦶 ${actor(v, "Unknown")} kicked ${target(v, "user")}`,
+  "member.ban": (v) => `🔨 ${actor(v, "Unknown")} banned ${target(v, "user")}`,
+  "member.unban": (v) => `🔓 ${actor(v, "Unknown")} unbanned ${target(v, "user")}`,
+  "member.timeout": (v) => `⏱️ ${actor(v, "Unknown")} timed out ${target(v, "user")}`,
+  "guild.update": (_v) => `⚙️ Updated server settings`,
+  "role.create": (v) => `🏷️ Created role${v.name ? `: ${v.name}` : ""}`,
+  "role.update": (_v) => `🏷️ Updated role`,
+  "role.delete": (_v) => `🏷️ Deleted role`,
+  "channel.create": (v) => `📁 Created channel${v.name ? `: ${v.name}` : ""}`,
+  "channel.update": (_v) => `📁 Updated channel`,
+  "channel.delete": (_v) => `📁 Deleted channel`,
+  "channel.permission_update": (v) => `🔐 Updated channel permissions${ch(v) ? ` for ${ch(v)}` : ""}`,
+  "thread.create": (_v) => `🧵 Created thread`,
+  "thread.update": (_v) => `🧵 Updated thread`,
+  "thread.delete": (_v) => `🧵 Deleted thread`,
+  "invite.create": (_v) => `🔗 Created invite link`,
+  "invite.delete": (_v) => `🔗 Deleted invite link`,
+  "emoji.create": (_v) => `😀 Added emoji`,
+  "emoji.update": (_v) => `😀 Updated emoji`,
+  "emoji.delete": (_v) => `😀 Deleted emoji`,
+  "sticker.create": (_v) => `🖼️ Added sticker`,
+  "sticker.update": (_v) => `🖼️ Updated sticker`,
+  "sticker.delete": (_v) => `🖼️ Deleted sticker`,
+  "webhook.update": (_v) => `🔗 Updated webhook`,
+  "recruitment.created":  (v) => `🎮 ${actor(v, "Unknown")} created recruitment${v.genre ? ` (${v.genre})` : ""}`,
+  "recruitment.full":     (v) => `🎮 Recruitment full${v.genre ? ` (${v.genre})` : ""}`,
+  "recruitment.closed":   (v) => `🎮 Recruitment closed${v.genre ? ` (${v.genre})` : ""}`,
+  "recruitment.reopened": (v) => `🎮 Recruitment reopened${v.genre ? ` (${v.genre})` : ""}`,
+  "tts.session.started": (v) => `🔊 ${actor(v, "")} TTS session started`.trimStart(),
+  "tts.session.stopped": (_v) => `🔊 TTS session ended`,
+  "tts.message.skipped": (_v) => `🔊 TTS message skipped`,
+  "tts.message.spoken": (_v) => `🔊 TTS message spoken`,
+  "system.bot.crashed": (_v) => `🔴 Bot stopped`,
+  "system.bot.started": (_v) => `🟢 Bot started`,
+  "system.handler.error": (_v) => `⚠️ Handler error`,
+  "system.database.error": (_v) => `⚠️ Database error`,
+  "system.redis.error": (_v) => `⚠️ Redis error`,
+  "system.voicevox.error": (_v) => `⚠️ VOICEVOX error`,
+  "system.backup.failed": (_v) => `⚠️ Backup failed`,
+  "system.backup.completed": (_v) => `✅ Backup completed`,
+  "system.rate_limit": (_v) => `⚠️ Rate limit reached`,
+  "audit_log.entry": (v) => {
+    const a = actor(v, "Unknown");
+    const descFn = v.action != null ? auditLogDescriptionsEn[v.action] : null;
+    const desc = descFn ? descFn(v) : v.action != null ? `audit log entry (${v.action})` : "audit log entry";
+    return `📋 ${a}: ${desc}`;
+  },
+  "dashboard.login": (v) => `🔑 ${actor(v, "User")} logged in`,
+  "dashboard.logout": (v) => `🔑 ${actor(v, "User")} logged out`,
+  "config.updated": (_v) => `⚙️ Settings updated`,
+};
+
+const eventDescriptions: Record<Lang, Record<string, (v: EventVars) => string>> = {
+  ja: eventDescriptionsJa,
+  en: eventDescriptionsEn,
 };
 
 const eventColorPrefixes: Array<[string, EventColorKey]> = [
@@ -254,8 +403,8 @@ const eventColorPrefixes: Array<[string, EventColorKey]> = [
   ["config.", "gray"],
 ];
 
-export function formatEventDescription(eventName: string, vars: EventVars = {}): string {
-  const fn = eventDescriptions[eventName];
+export function formatEventDescription(eventName: string, vars: EventVars = {}, lang: Lang = "ja"): string {
+  const fn = eventDescriptions[lang][eventName];
   if (!fn) return eventName;
   return fn(vars);
 }
@@ -268,14 +417,20 @@ export function getEventColor(eventName: string): EventColorKey {
 }
 
 export function getEventIcon(eventName: string): string {
-  const fn = eventDescriptions[eventName];
+  const fn = eventDescriptions.ja[eventName];
   if (!fn) return "📋";
   const text = fn({ actorId: null, channelId: null });
   return Array.from(text)[0] ?? "📋";
 }
 
-export function formatRelativeTime(date: Date): string {
+export function formatRelativeTime(date: Date, lang: Lang = "ja"): string {
   const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (lang === "en") {
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  }
   if (diff < 60) return `${diff}秒前`;
   if (diff < 3600) return `${Math.floor(diff / 60)}分前`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}時間前`;

@@ -480,7 +480,7 @@ async function refreshActiveVoiceStatus(
     memberIds: activeMembers.map(m => m.userId),
     session,
     state: "active"
-  });
+  }).catch(() => null);
   return true;
 }
 

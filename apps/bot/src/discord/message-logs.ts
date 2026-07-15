@@ -54,6 +54,12 @@ export function installMessageLogHandlers(
       return;
     }
 
+    // embed unfurl: Discord fires MessageUpdate when an embed preview is attached
+    // without changing the text. Skip if the content is identical.
+    if (oldMessage.content !== null && oldMessage.content === newMessage.content) {
+      return;
+    }
+
     dispatcher.dispatch(normalizeMessageUpdate(oldMessage, newMessage));
   });
 

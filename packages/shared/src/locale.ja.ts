@@ -189,6 +189,23 @@ export const ja: Locale = {
       "dashboard.login": "🔑 ダッシュボードログイン",
       "dashboard.logout": "🔑 ダッシュボードログアウト",
       "config.updated": "⚙️ 設定更新",
+      "audit_log.entry": "📋 監査ログエントリ",
+      "automod.rule.create": "🛡️ AutoModルール作成",
+      "automod.rule.update": "🛡️ AutoModルール更新",
+      "automod.rule.delete": "🛡️ AutoModルール削除",
+      "automod.action": "🛡️ AutoMod実行",
+      "event.create": "📅 スケジュールイベント作成",
+      "event.update": "📅 スケジュールイベント更新",
+      "event.delete": "📅 スケジュールイベント削除",
+      "event.user.add": "📅 スケジュールイベント参加",
+      "event.user.remove": "📅 スケジュールイベント退出",
+      "stage.create": "🎙️ ステージ作成",
+      "stage.update": "🎙️ ステージ更新",
+      "stage.delete": "🎙️ ステージ削除",
+      "integration.update": "🔌 連携更新",
+      "message.poll.vote": "📊 投票",
+      "message.poll.unvote": "📊 投票取消",
+      "recruitment.expired": "🎮 募集期限切れ",
     };
     return titles[eventName] ?? `📋 ${eventName}`;
   },
@@ -205,8 +222,38 @@ export const ja: Locale = {
     topic: "トピック",
     color: "カラー",
     ownerId: "オーナー",
+    type: "種類",
+    position: "順序",
+    rateLimitPerUser: "低速モード",
+    hoist: "別表示",
+    mentionable: "メンション可",
   } as Record<string, string>)[field] ?? null,
   logChangeField: ({ label, before, after }) => `${label}: ${before} → ${after}`,
+  logVoiceStateChanges: (changes) => {
+    const labels: Record<string, [string, string]> = {
+      selfMute:                ["マイクをミュート",                           "マイクのミュートを解除"],
+      selfDeaf:                ["スピーカーをミュート",                       "スピーカーのミュートを解除"],
+      selfVideo:               ["カメラ開始",                                 "カメラ停止"],
+      streaming:               ["配信開始",                                   "配信停止"],
+      serverMute:              ["サーバーミュートを適用",                     "サーバーミュートを解除"],
+      serverDeaf:              ["サーバー側でスピーカーミュートを適用",       "サーバー側でスピーカーミュートを解除"],
+      suppress:                ["ステージ発言権なし",                         "ステージ発言権あり"],
+      requestToSpeakTimestamp: ["発言リクエスト",                             "発言リクエスト取消"],
+    };
+    const parts = Object.entries(changes)
+      .map(([key, val]) => {
+        const kl = labels[key];
+        if (!kl) return null;
+        const after = typeof val === "object" && val !== null
+          ? (val as Record<string, unknown>).after
+          : null;
+        return after ? kl[0] : kl[1];
+      })
+      .filter((s): s is string => s !== null);
+    return parts.length > 0 ? parts.join("・") : null;
+  },
+  logChangedFields: (labels) =>
+    labels.length > 0 ? labels.join("・") + "を変更" : null,
   logContentChange: ({ before, after }) => `内容: ${before} → ${after}`,
   commandSuccess: ({ operation }) => `✅ ${operation}が完了しました`,
   commandError: ({ reason }) => `❌ ${reason}`,
