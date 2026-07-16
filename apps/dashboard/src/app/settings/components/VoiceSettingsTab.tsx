@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
-import { Input } from "../../../components/ui/input";
 import { ChannelSelect, FeatureStatus, type DashboardLoc, type SettingsResponse } from "./shared";
 
 interface VoiceSettingsTabProps {
@@ -34,9 +33,11 @@ export function VoiceSettingsTab({
         />
         <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#b5bac1]">
           {loc.tempVcCreateChannelId}
-          <Input
-            onChange={(e) => onTempVcCreateChannelIdChange(e.target.value)}
+          <ChannelSelect
             value={tempVcCreateChannelId}
+            onChange={onTempVcCreateChannelIdChange}
+            channels={settings.availableVoiceChannels ?? []}
+            placeholder={loc.tempVcCreateChannelPlaceholder}
           />
         </label>
         <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#b5bac1]">
@@ -45,7 +46,7 @@ export function VoiceSettingsTab({
             value={tempVcCategoryId}
             onChange={onTempVcCategoryIdChange}
             channels={settings.availableCategories ?? []}
-            placeholder="カテゴリを選択"
+            placeholder={loc.tempVcCategoryPlaceholder}
           />
         </label>
       </CardContent>

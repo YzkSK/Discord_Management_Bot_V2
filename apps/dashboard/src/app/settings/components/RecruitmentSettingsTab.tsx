@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
-import { ChannelSelect, FeatureStatus, type DashboardLoc, type SettingsResponse } from "./shared";
+import { ChannelSelect, type DashboardLoc, type SettingsResponse } from "./shared";
 
 interface RecruitmentSettingsTabProps {
   recruitmentChannelId: string;
@@ -22,20 +22,15 @@ export function RecruitmentSettingsTab({
         <CardTitle>{loc.recruitmentSettings}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3">
-        <FeatureStatus
-          configured={settings.features.recruitment.configured}
-          label={loc.recruitmentSettings}
-          loc={loc}
-        />
-        <div>
-          <label className="block text-sm font-medium mb-1">{loc.recruitmentChannelLabel}</label>
+        <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#b5bac1]">
+          {loc.recruitmentChannelLabel}
           <ChannelSelect
             value={recruitmentChannelId}
             onChange={onRecruitmentChannelIdChange}
             channels={settings.availableTextChannels ?? []}
             placeholder={loc.recruitmentChannelPlaceholder}
           />
-        </div>
+        </label>
       </CardContent>
     </Card>
   );

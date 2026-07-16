@@ -50,12 +50,12 @@ export function UserSpeakerTable({
           type="search"
           value={query}
           onChange={(e) => handleQuery(e.target.value)}
-          placeholder="ユーザーIDで検索..."
+          placeholder={loc.ttsUserSearchPlaceholder}
           className="w-full rounded-md border border-[#3f4147] bg-[#383a40] px-3 py-1.5 text-sm text-[#f2f3f5] placeholder-[#4e5058] focus:border-[#5865f2] focus:outline-none"
         />
         {query && (
           <span className="shrink-0 text-xs text-[#b5bac1]">
-            {filtered.length} / {userSpeakers.length} 件
+            {loc.ttsResultCount({ shown: filtered.length, total: userSpeakers.length })}
           </span>
         )}
       </div>
@@ -65,7 +65,7 @@ export function UserSpeakerTable({
           <TableHeader>
             <TableRow>
               <TableHead scope="col">{loc.accessGrantUserId}</TableHead>
-              <TableHead scope="col">話者</TableHead>
+              <TableHead scope="col">{loc.ttsSpeakerLabel}</TableHead>
               <TableHead scope="col">{loc.updated}</TableHead>
               <TableHead scope="col"></TableHead>
             </TableRow>
@@ -74,7 +74,7 @@ export function UserSpeakerTable({
             {visible.length === 0 ? (
               <TableRow>
                 <TableCell className="py-8 text-center text-[#80848e]" colSpan={4}>
-                  {query ? "検索結果がありません" : `${loc.ttsUserSpeakers}: 0`}
+                  {query ? loc.ttsNoSearchResults : `${loc.ttsUserSpeakers}: 0`}
                 </TableCell>
               </TableRow>
             ) : visible.map((speaker) => (
@@ -86,14 +86,14 @@ export function UserSpeakerTable({
                 <TableCell className="text-xs text-[#b5bac1]">{speaker.updatedAt}</TableCell>
                 <TableCell>
                   <Button
-                    aria-label={`${speakerMap.get(speaker.speakerId) ?? `話者 ${speaker.speakerId}`} を試聴`}
+                    aria-label={loc.ttsPreviewAria({ speaker: speakerMap.get(speaker.speakerId) ?? `#${speaker.speakerId}` })}
                     disabled={playingId !== null}
                     onClick={() => void playPreview(speaker.speakerId)}
                     size="sm"
                     type="button"
                     variant="outline"
                   >
-                    {playingId === speaker.speakerId ? "再生中..." : "試聴"}
+                    {playingId === speaker.speakerId ? loc.ttsPlayingPreview : loc.panelPreview}
                   </Button>
                 </TableCell>
               </TableRow>
@@ -105,7 +105,7 @@ export function UserSpeakerTable({
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
           <span className="text-xs text-[#b5bac1]">
-            {safePage + 1} / {totalPages} ページ
+            {loc.ttsPageInfo({ page: safePage + 1, total: totalPages })}
           </span>
           <div className="flex gap-1">
             <Button
@@ -115,7 +115,7 @@ export function UserSpeakerTable({
               onClick={() => setPage(safePage - 1)}
               type="button"
             >
-              ‹ 前
+              {loc.ttsPrevPage}
             </Button>
             <Button
               size="sm"
@@ -124,7 +124,7 @@ export function UserSpeakerTable({
               onClick={() => setPage(safePage + 1)}
               type="button"
             >
-              次 ›
+              {loc.ttsNextPage}
             </Button>
           </div>
         </div>

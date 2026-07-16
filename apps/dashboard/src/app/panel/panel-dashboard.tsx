@@ -1,12 +1,19 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { BookOpen, Mic2, Users } from "lucide-react";
+import type { GuildLanguage } from "@discord-bot/shared";
+import { isGuildLanguage } from "@discord-bot/shared";
 
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";
+import { Skeleton } from "../../components/ui/skeleton";
+import { getDashboardLocale, detectBrowserLanguage } from "../../lib/locale";
+import type { DashboardLoc } from "../settings/components/shared";
+
+const UI_LANG_KEY = "dashboard-ui-lang";
 
 interface VoicevoxSpeaker {
   id: number;
@@ -30,28 +37,38 @@ interface DiscordChannel {
 const input =
   "w-full rounded-md border border-[#3f4147] bg-[#383a40] px-3 py-1.5 text-sm text-[#f2f3f5] placeholder-[#4e5058] focus:border-[#5865f2] focus:outline-none";
 
-const label = "text-xs font-medium text-[#b5bac1]";
+const labelCls = "text-xs font-medium text-[#b5bac1]";
 
 function Field({ labelText, children }: { labelText: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <p className={label}>{labelText}</p>
+      <p className={labelCls}>{labelText}</p>
       {children}
     </div>
   );
 }
 
 export function PanelDashboard({ guildId }: { guildId: string }) {
+  const [uiLang, setUiLang] = useState<GuildLanguage>("en");
+
+  useEffect(() => {
+    const stored = localStorage.getItem(UI_LANG_KEY);
+    if (stored !== null && isGuildLanguage(stored)) setUiLang(stored);
+    else setUiLang(detectBrowserLanguage());
+  }, []);
+
+  const loc = getDashboardLocale(uiLang);
+
   return (
     <div className="flex flex-col gap-4">
-      <SpeakerPanel guildId={guildId} />
-      <DictionaryPanel guildId={guildId} />
-      <RecruitmentPanel guildId={guildId} />
+      <SpeakerPanel guildId={guildId} loc={loc} />
+      <DictionaryPanel guildId={guildId} loc={loc} />
+      <RecruitmentPanel guildId={guildId} loc={loc} />
     </div>
   );
 }
 
-function SpeakerPanel({ guildId }: { guildId: string }) {
+function SpeakerPanel({ guildId, loc }: { guildId: string; loc: DashboardLoc }) {
   const [setting, setSetting] = useState<SpeakerSetting | null>(null);
   const [speakers, setSpeakers] = useState<VoicevoxSpeaker[]>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -79,12 +96,12 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
           if (first) setSelectedId(String(first.id));
         }
       })
-      .catch((e: unknown) => { console.error("panel-dashboard: load failed", e); toast.error("データの読み込みに失敗しました。"); })
+      .catch((e: unknown) => { console.error("panel-dashboard: load failed", e); toast.error(loc.panelDataLoadFailed); })
       .finally(() => setLoading(false));
-  }, [guildId]);
+  }, [guildId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function currentLabel() {
-    if (!setting) return "サーバーデフォルト";
+    if (!setting) return loc.panelServerDefault;
     const found = speakers.find((s) => s.id === setting.speakerId);
     return found ? found.label : `ID ${setting.speakerId}`;
   }
@@ -102,14 +119,14 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
       });
       if (!res.ok) {
         const data = (await res.json()) as { error?: string };
-        toast.error(data.error ?? "保存に失敗しました。");
+        toast.error(data.error ?? loc.panelSaveFailed);
         return;
       }
       const data = (await res.json()) as { setting: SpeakerSetting };
       setSetting(data.setting);
-      toast.success("話者を変更しました。");
+      toast.success(loc.panelSpeakerChanged);
     } catch {
-      toast.error("通信エラーが発生しました。");
+      toast.error(loc.panelCommunicationError);
     } finally {
       setSaving(false);
     }
@@ -126,9 +143,9 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
       setSetting(null);
       const first = speakers[0];
       if (first) setSelectedId(String(first.id));
-      toast.success("個人設定をリセットしました。サーバーデフォルトが使用されます。");
+      toast.success(loc.panelSpeakerReset);
     } catch {
-      toast.error("通信エラーが発生しました。");
+      toast.error(loc.panelCommunicationError);
     } finally {
       setSaving(false);
     }
@@ -148,19 +165,23 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-[#f2f3f5]">
           <Mic2 className="h-4 w-4 text-[#c9cdfb]" />
-          TTS 話者設定
+          {loc.panelTtsSpeakerSettings}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {loading ? (
-          <p className="text-sm text-[#b5bac1]">読み込み中...</p>
+          <div className="flex flex-col gap-3">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-8 w-24" />
+          </div>
         ) : (
           <form onSubmit={(e) => void handleSave(e)} className="flex flex-col gap-3">
-            <p className={label}>
-              現在の設定:{" "}
+            <p className={labelCls}>
+              {loc.panelCurrentSetting}{" "}
               <span className="text-[#dbdee1]">{currentLabel()}</span>
             </p>
-            <Field labelText="話者を選択">
+            <Field labelText={loc.panelSelectSpeaker}>
               {speakers.length > 0 ? (
                 <select
                   value={selectedId}
@@ -179,7 +200,7 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
                   min={0}
                   value={selectedId}
                   onChange={(e) => setSelectedId(e.target.value)}
-                  placeholder="スピーカーID"
+                  placeholder={loc.panelSpeakerIdPlaceholder}
                   className={input}
                 />
               )}
@@ -192,10 +213,10 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
                 onClick={() => void handlePreview()}
                 disabled={!selectedId}
               >
-                試聴
+                {loc.panelPreview}
               </Button>
               <Button type="submit" size="sm" disabled={saving || !selectedId}>
-                {saving ? "保存中..." : "変更"}
+                {saving ? loc.panelSavingEllipsis : loc.panelChange}
               </Button>
               {setting && (
                 <Button
@@ -205,7 +226,7 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
                   onClick={() => void handleClear()}
                   disabled={saving}
                 >
-                  リセット
+                  {loc.panelReset}
                 </Button>
               )}
             </div>
@@ -216,7 +237,7 @@ function SpeakerPanel({ guildId }: { guildId: string }) {
   );
 }
 
-function DictionaryPanel({ guildId }: { guildId: string }) {
+function DictionaryPanel({ guildId, loc }: { guildId: string; loc: DashboardLoc }) {
   const [entries, setEntries] = useState<DictionaryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [fromText, setFromText] = useState("");
@@ -229,9 +250,9 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
     fetch(`/api/panel/dictionary?guildId=${guildId}`)
       .then((r) => r.json() as Promise<{ entries: DictionaryEntry[] }>)
       .then((data) => setEntries(data.entries ?? []))
-      .catch((e: unknown) => { console.error("panel-dashboard: load failed", e); toast.error("データの読み込みに失敗しました。"); })
+      .catch((e: unknown) => { console.error("panel-dashboard: load failed", e); toast.error(loc.panelDataLoadFailed); })
       .finally(() => setLoading(false));
-  }, [guildId]);
+  }, [guildId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     loadEntries();
@@ -249,15 +270,15 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
       });
       if (!res.ok) {
         const data = (await res.json()) as { error?: string };
-        toast.error(data.error ?? "登録に失敗しました。");
+        toast.error(data.error ?? loc.panelRegistrationFailed);
         return;
       }
       setFromText("");
       setToText("");
-      toast.success("登録しました。");
+      toast.success(loc.panelRegistered);
       loadEntries();
     } catch {
-      toast.error("通信エラーが発生しました。");
+      toast.error(loc.panelCommunicationError);
     } finally {
       setSaving(false);
     }
@@ -272,7 +293,7 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
       });
       loadEntries();
     } catch {
-      toast.error("削除に失敗しました。");
+      toast.error(loc.panelDeleteFailed);
     }
   }
 
@@ -282,28 +303,28 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-[#f2f3f5]">
           <BookOpen className="h-4 w-4 text-[#c9cdfb]" />
-          辞書登録（個人）
+          {loc.panelPersonalDictionary}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <form onSubmit={(e) => void handleAdd(e)} className="flex flex-col gap-3">
           <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
-            <Field labelText="変換前">
+            <Field labelText={loc.panelBeforeConversion}>
               <input
                 type="text"
                 value={fromText}
                 onChange={(e) => setFromText(e.target.value)}
-                placeholder="例: ほげ"
+                placeholder={loc.panelExampleBefore}
                 className={input}
               />
             </Field>
             <span className="pb-1.5 text-[#b5bac1]">→</span>
-            <Field labelText="変換後">
+            <Field labelText={loc.panelAfterConversion}>
               <input
                 type="text"
                 value={toText}
                 onChange={(e) => setToText(e.target.value)}
-                placeholder="例: ほうげい"
+                placeholder={loc.panelExampleAfter}
                 className={input}
               />
             </Field>
@@ -314,22 +335,26 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
               size="sm"
               disabled={saving || !fromText.trim() || !toText.trim()}
             >
-              {saving ? "登録中..." : "追加"}
+              {saving ? loc.panelRegistering : loc.panelAdd}
             </Button>
           </div>
         </form>
 
         {loading ? (
-          <p className="text-sm text-[#b5bac1]">読み込み中...</p>
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-3/4" />
+          </div>
         ) : entries.length === 0 ? (
-          <p className="text-sm text-[#b5bac1]">登録された辞書エントリはありません。</p>
+          <p className="text-sm text-[#b5bac1]">{loc.panelNoDictionaryEntries}</p>
         ) : (
           <div className="rounded-md border border-[#1e1f22]">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[#1e1f22] text-left">
-                  <th className="px-3 py-2 text-xs font-medium text-[#b5bac1]">変換前</th>
-                  <th className="px-3 py-2 text-xs font-medium text-[#b5bac1]">変換後</th>
+                  <th className="px-3 py-2 text-xs font-medium text-[#b5bac1]">{loc.panelBeforeConversion}</th>
+                  <th className="px-3 py-2 text-xs font-medium text-[#b5bac1]">{loc.panelAfterConversion}</th>
                   <th className="px-3 py-2" />
                 </tr>
               </thead>
@@ -350,7 +375,7 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
                         onClick={() => setPendingDeleteFrom(entry.fromText)}
                         className="text-xs text-[#b5bac1] hover:text-red-400"
                       >
-                        削除
+                        {loc.panelDelete}
                       </button>
                     </td>
                   </tr>
@@ -364,8 +389,8 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
 
     {pendingDeleteFrom && (
       <ConfirmDialog
-        title="辞書エントリを削除しますか？"
-        description={`「${pendingDeleteFrom}」の変換ルールを削除します。`}
+        title={loc.panelConfirmDeleteTitle}
+        description={loc.panelConfirmDeleteDesc({ from: pendingDeleteFrom })}
         onConfirm={() => {
           void handleDelete(pendingDeleteFrom);
           setPendingDeleteFrom(null);
@@ -377,7 +402,7 @@ function DictionaryPanel({ guildId }: { guildId: string }) {
   );
 }
 
-function RecruitmentPanel({ guildId }: { guildId: string }) {
+function RecruitmentPanel({ guildId, loc }: { guildId: string; loc: DashboardLoc }) {
   const [configChannelId, setConfigChannelId] = useState<string | null>(null);
   const [channels, setChannels] = useState<DiscordChannel[]>([]);
   const [selectedChannelId, setSelectedChannelId] = useState("");
@@ -406,9 +431,9 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
         const firstCh = list[0];
         if (firstCh) setSelectedChannelId(firstCh.id);
       })
-      .catch((e: unknown) => { console.error("panel-dashboard: load failed", e); toast.error("データの読み込みに失敗しました。"); })
+      .catch((e: unknown) => { console.error("panel-dashboard: load failed", e); toast.error(loc.panelDataLoadFailed); })
       .finally(() => setConfigLoading(false));
-  }, [guildId]);
+  }, [guildId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const needsChannelPicker = !configChannelId;
   const capacityNum = parseInt(capacity, 10);
@@ -427,11 +452,11 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
     e.preventDefault();
     const cap = parseInt(capacity, 10);
     if (!genre.trim() || !content.trim() || !Number.isFinite(cap) || cap < 1 || cap > 99) {
-      toast.error("全項目を正しく入力してください（定員: 1〜99）。");
+      toast.error(loc.panelFillAllFieldsCapacity);
       return;
     }
     if (needsChannelPicker && !selectedChannelId) {
-      toast.error("投稿先チャンネルを選択してください。");
+      toast.error(loc.panelSelectChannelPrompt);
       return;
     }
     setSubmitting(true);
@@ -440,7 +465,7 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
         ? undefined
         : parseInt(deadlineDays.trim(), 10);
       if (deadlineDaysParsed !== undefined && (isNaN(deadlineDaysParsed) || deadlineDaysParsed < 1 || deadlineDaysParsed > 30)) {
-        toast.error("締め切りは1〜30の整数を入力してください。");
+        toast.error(loc.panelDeadlineRangeError);
         return;
       }
 
@@ -460,16 +485,16 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
-        toast.error(data.error ?? "作成に失敗しました。");
+        toast.error(data.error ?? loc.panelCreationFailed);
         return;
       }
       setGenre("");
       setCapacity("4");
       setContent("");
       setDeadlineDays("");
-      toast.success("募集を作成しました。");
+      toast.success(loc.panelRecruitmentCreated);
     } catch {
-      toast.error("通信エラーが発生しました。");
+      toast.error(loc.panelCommunicationError);
     } finally {
       setSubmitting(false);
     }
@@ -480,16 +505,22 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-[#f2f3f5]">
           <Users className="h-4 w-4 text-[#c9cdfb]" />
-          募集作成
+          {loc.panelCreateRecruitment}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {configLoading ? (
-          <p className="text-sm text-[#b5bac1]">読み込み中...</p>
+          <div className="flex flex-col gap-3">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-8 w-28" />
+          </div>
         ) : (
           <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-3">
             {needsChannelPicker && (
-              <Field labelText="投稿先チャンネル">
+              <Field labelText={loc.panelPostChannel}>
                 {channels.length > 0 ? (
                   <select
                     value={selectedChannelId}
@@ -504,14 +535,14 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
                   </select>
                 ) : (
                   <p className="text-xs text-red-400">
-                    チャンネル一覧を取得できませんでした。サーバー設定から募集チャンネルを設定してください。
+                    {loc.panelChannelListError}
                   </p>
                 )}
               </Field>
             )}
             <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between">
-                <p className={label}>タイトル</p>
+                <p className={labelCls}>{loc.panelTitle}</p>
                 <span className={`text-xs tabular-nums ${genre.length >= 80 ? "text-red-400" : "text-[#b5bac1]"}`}>
                   {genre.length}/80
                 </span>
@@ -521,12 +552,12 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
                 maxLength={80}
                 value={genre}
                 onChange={(e) => setGenre(e.target.value)}
-                placeholder="例: 原神　螺旋12層"
+                placeholder={loc.panelExampleTitle}
                 className={input}
               />
             </div>
             <div className="flex flex-col gap-1">
-              <p className={label}>定員（1〜99）</p>
+              <p className={labelCls}>{loc.panelCapacity}</p>
               <input
                 type="number"
                 min={1}
@@ -535,11 +566,11 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
                 onChange={(e) => setCapacity(e.target.value)}
                 className={`${input} w-24 ${capacityInvalid ? "border-red-500" : ""}`}
               />
-              {capacityInvalid && <p className="text-xs text-red-400">1〜99の整数を入力してください</p>}
+              {capacityInvalid && <p className="text-xs text-red-400">{loc.panelCapacityError}</p>}
             </div>
             <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between">
-                <p className={label}>内容</p>
+                <p className={labelCls}>{loc.panelContent}</p>
                 <span className={`text-xs tabular-nums ${content.length >= 1000 ? "text-red-400" : "text-[#b5bac1]"}`}>
                   {content.length}/1000
                 </span>
@@ -549,31 +580,31 @@ function RecruitmentPanel({ guildId }: { guildId: string }) {
                 rows={3}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="募集の説明を入力..."
+                placeholder={loc.panelContentPlaceholder}
                 className={input}
               />
             </div>
             <div className="flex flex-col gap-1">
-              <p className={label}>締め切り（日数・省略で7日）</p>
+              <p className={labelCls}>{loc.panelDeadline}</p>
               <input
                 type="number"
                 min={1}
                 max={30}
                 value={deadlineDays}
                 onChange={(e) => setDeadlineDays(e.target.value)}
-                placeholder="1〜30"
+                placeholder={loc.panelDeadlinePlaceholder}
                 className={`${input} w-24 ${deadlineDaysInvalid ? "border-red-500" : ""}`}
               />
-              {deadlineDaysInvalid && <p className="text-xs text-red-400">1〜30の整数を入力してください</p>}
+              {deadlineDaysInvalid && <p className="text-xs text-red-400">{loc.panelDeadlineError}</p>}
             </div>
             <div>
               <Button
                 type="submit"
                 size="sm"
                 disabled={submitting || !canSubmit}
-                title={!canSubmit ? "全項目を正しく入力してください" : undefined}
+                title={!canSubmit ? loc.panelFillAllFields : undefined}
               >
-                {submitting ? "作成中..." : "募集を作成"}
+                {submitting ? loc.panelCreating : loc.panelCreateButton}
               </Button>
             </div>
           </form>

@@ -156,7 +156,7 @@ export function AccessGrantsTab({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
-              ユーザー情報を読み込み中...
+              {loc.accessLoadingUser}
             </div>
           ) : (
           <Table>
@@ -188,7 +188,7 @@ export function AccessGrantsTab({
                   </TableCell>
                   <TableCell>
                     <Button
-                      aria-label="アクセス権限を削除"
+                      aria-label={loc.accessDeleteGrant}
                       disabled={deletingGrantKey === accessGrantKey(grant)}
                       onClick={() => setPendingDeleteGrant(grant)}
                       size="icon"
@@ -237,8 +237,8 @@ export function AccessGrantsTab({
 
     {pendingDeleteGrant && (
       <ConfirmDialog
-        title="アクセス権限を削除しますか？"
-        description={`${formatGrantTarget(pendingDeleteGrant, availableRoles)} の権限を削除します。`}
+        title={loc.accessDeleteGrantTitle}
+        description={loc.accessDeleteGrantDesc({ target: formatGrantTarget(pendingDeleteGrant, availableRoles) })}
         onConfirm={() => {
           onDeleteAccessGrant(pendingDeleteGrant);
           setPendingDeleteGrant(null);
@@ -249,9 +249,9 @@ export function AccessGrantsTab({
 
     {confirmRoleRemoval && (
       <ConfirmDialog
-        title="管理ロールを削除しますか？"
-        description="既存の管理ロールを外すと、そのロールを持つユーザーがダッシュボードにアクセスできなくなります。"
-        confirmLabel="保存"
+        title={loc.accessDeleteRoleTitle}
+        description={loc.accessDeleteRoleDesc}
+        confirmLabel={loc.save}
         onConfirm={onConfirmRoleRemoval}
         onCancel={onCancelRoleRemoval}
       />

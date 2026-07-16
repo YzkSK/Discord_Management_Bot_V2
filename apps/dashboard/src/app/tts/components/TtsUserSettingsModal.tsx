@@ -1,10 +1,17 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Plus, Save, Trash2, User } from "lucide-react";
+import { isGuildLanguage } from "@discord-bot/shared";
+import type { GuildLanguage } from "@discord-bot/shared";
 import { Button } from "../../../components/ui/button";
+import { Skeleton } from "../../../components/ui/skeleton";
 import { SettingsModal } from "../../../components/settings-modal";
 import { usePreviewAudio } from "./usePreviewAudio";
+import { detectBrowserLanguage, getDashboardLocale } from "../../../lib/locale";
+
+const UI_LANG_KEY = "dashboard-ui-lang";
+type Loc = ReturnType<typeof getDashboardLocale>;
 
 interface PersonalSpeakerSetting {
   speakerId: number;
@@ -23,8 +30,9 @@ interface VoicevoxSpeakerOption {
   label: string;
 }
 
-function PersonalSpeakerSection({ guildId }: { guildId: string }) {
-  const [setting, setSetting] = useState<PersonalSpeakerSetting | null | undefined>(undefined);
+export function PersonalSpeakerSection({ guildId, loc }: { guildId: string; loc: Loc }) {
+  const [loading, setLoading] = useState(true);
+  const [setting, setSetting] = useState<PersonalSpeakerSetting | null>(null);
   const [speakers, setSpeakers] = useState<VoicevoxSpeakerOption[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -32,6 +40,7 @@ function PersonalSpeakerSection({ guildId }: { guildId: string }) {
   const { playingId, playPreview } = usePreviewAudio();
 
   const load = useCallback(async () => {
+    setLoading(true);
     const [speakerRes, listRes] = await Promise.all([
       fetch(`/api/panel/speaker?guildId=${encodeURIComponent(guildId)}`),
       fetch(`/api/panel/speakers?guildId=${encodeURIComponent(guildId)}`),
@@ -45,6 +54,7 @@ function PersonalSpeakerSection({ guildId }: { guildId: string }) {
       const data = await listRes.json() as { speakers: VoicevoxSpeakerOption[] };
       setSpeakers(data.speakers);
     }
+    setLoading(false);
   }, [guildId]);
 
   useEffect(() => { void load(); }, [load]);
@@ -59,7 +69,7 @@ function PersonalSpeakerSection({ guildId }: { guildId: string }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ guildId, speakerId: selectedId }),
       });
-      if (!res.ok) { setError("保存に失敗しました"); return; }
+      if (!res.ok) { setError(loc.panelSaveFailed); return; }
       const data = await res.json() as { setting: PersonalSpeakerSetting };
       setSetting(data.setting);
     } finally {
@@ -82,16 +92,24 @@ function PersonalSpeakerSection({ guildId }: { guildId: string }) {
     }
   }
 
-  if (setting === undefined) return null;
+  if (loading) {
+    return (
+      <div className="grid gap-2">
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-8 w-full" />
+      </div>
+    );
+  }
 
   const currentLabel = setting
-    ? (speakers.find((s) => s.id === setting.speakerId)?.label ?? `話者 ${setting.speakerId}`)
-    : "未設定（サーバーデフォルト）";
+    ? (speakers.find((s) => s.id === setting.speakerId)?.label ?? `ID ${setting.speakerId}`)
+    : loc.ttsNotSet;
 
   return (
     <div className="grid gap-2">
-      <p className="text-xs font-semibold text-[#dbdee1]">個人話者設定</p>
-      <p className="text-xs text-[#b5bac1]">現在：{currentLabel}</p>
+      <p className="text-xs font-semibold text-[#dbdee1]">{loc.ttsPersonalSpeakerTitle}</p>
+      <p className="text-xs text-[#b5bac1]">{loc.panelCurrentSetting} {currentLabel}</p>
       <div className="flex flex-wrap gap-2">
         {speakers.length > 0 ? (
           <select
@@ -99,17 +117,17 @@ function PersonalSpeakerSection({ guildId }: { guildId: string }) {
             onChange={(e) => setSelectedId(e.target.value ? Number(e.target.value) : null)}
             className="flex-1 rounded-md border border-[#3f4147] bg-[#1e1f22] px-3 py-1.5 text-sm text-[#dbdee1] focus:outline-none focus:ring-1 focus:ring-[#5865f2]/50"
           >
-            <option value="">選択してください</option>
+            <option value="">{loc.ttsSelectPlaceholder}</option>
             {speakers.map((s) => (
               <option key={s.id} value={s.id}>{s.label}</option>
             ))}
           </select>
         ) : (
-          <p className="text-xs text-[#80848e]">話者リストを取得できません</p>
+          <p className="text-xs text-[#80848e]">{loc.ttsSpeakerListUnavailable}</p>
         )}
         <Button size="sm" type="button" onClick={() => void save()} disabled={saving || selectedId === null}>
           <Save className="h-3.5 w-3.5" />
-          保存
+          {loc.save}
         </Button>
         {setting && (
           <>
@@ -120,7 +138,7 @@ function PersonalSpeakerSection({ guildId }: { guildId: string }) {
               disabled={saving || playingId !== null}
               onClick={() => void playPreview(setting.speakerId)}
             >
-              {playingId === setting.speakerId ? "再生中..." : "試聴"}
+              {playingId === setting.speakerId ? loc.ttsPlayingPreview : loc.panelPreview}
             </Button>
             <Button
               size="icon"
@@ -128,7 +146,7 @@ function PersonalSpeakerSection({ guildId }: { guildId: string }) {
               variant="ghost"
               disabled={saving}
               onClick={() => void clear()}
-              aria-label="リセット"
+              aria-label={loc.panelReset}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -140,7 +158,8 @@ function PersonalSpeakerSection({ guildId }: { guildId: string }) {
   );
 }
 
-function PersonalDictionarySection({ guildId }: { guildId: string }) {
+export function PersonalDictionarySection({ guildId, loc }: { guildId: string; loc: Loc }) {
+  const [loading, setLoading] = useState(true);
   const [entries, setEntries] = useState<PersonalDictEntry[]>([]);
   const [fromText, setFromText] = useState("");
   const [toText, setToText] = useState("");
@@ -148,10 +167,13 @@ function PersonalDictionarySection({ guildId }: { guildId: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    setLoading(true);
     const res = await fetch(`/api/panel/dictionary?guildId=${encodeURIComponent(guildId)}`);
-    if (!res.ok) return;
-    const data = await res.json() as { entries: PersonalDictEntry[] };
-    setEntries(data.entries);
+    if (res.ok) {
+      const data = await res.json() as { entries: PersonalDictEntry[] };
+      setEntries(data.entries);
+    }
+    setLoading(false);
   }, [guildId]);
 
   useEffect(() => { void load(); }, [load]);
@@ -166,7 +188,7 @@ function PersonalDictionarySection({ guildId }: { guildId: string }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ guildId, fromText, toText, priority: 0, isEnabled: true }),
       });
-      if (!res.ok) { setError("登録に失敗しました"); return; }
+      if (!res.ok) { setError(loc.ttsRegisterFailed); return; }
       setFromText("");
       setToText("");
       await load();
@@ -184,9 +206,18 @@ function PersonalDictionarySection({ guildId }: { guildId: string }) {
     await load();
   }
 
+  if (loading) {
+    return (
+      <div className="grid gap-2">
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-16 w-full" />
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-2">
-      <p className="text-xs font-semibold text-[#dbdee1]">個人辞書</p>
+      <p className="text-xs font-semibold text-[#dbdee1]">{loc.ttsPersonalDictTitle}</p>
 
       {entries.length > 0 ? (
         <div className="divide-y divide-[#1e1f22] overflow-hidden rounded-md border border-[#1e1f22]">
@@ -199,7 +230,7 @@ function PersonalDictionarySection({ guildId }: { guildId: string }) {
                 type="button"
                 onClick={() => void deleteEntry(e.fromText)}
                 className="shrink-0 rounded p-1 text-[#b5bac1] hover:text-[#f23f42] transition-colors"
-                aria-label={`${e.fromText} を削除`}
+                aria-label={`${e.fromText} → ${e.toText}`}
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
@@ -207,7 +238,7 @@ function PersonalDictionarySection({ guildId }: { guildId: string }) {
           ))}
         </div>
       ) : (
-        <p className="text-xs text-[#80848e]">個人辞書エントリがありません</p>
+        <p className="text-xs text-[#80848e]">{loc.ttsNoDictEntries}</p>
       )}
 
       <form className="grid gap-2 pt-1" onSubmit={(e) => void addEntry(e)}>
@@ -215,20 +246,20 @@ function PersonalDictionarySection({ guildId }: { guildId: string }) {
           <input
             value={fromText}
             onChange={(e) => setFromText(e.target.value)}
-            placeholder="変換前"
+            placeholder={loc.panelBeforeConversion}
             required
             className="min-w-0 flex-1 rounded-md border border-[#3f4147] bg-[#1e1f22] px-3 py-1.5 text-sm text-[#dbdee1] placeholder:text-[#80848e] focus:outline-none focus:ring-1 focus:ring-[#5865f2]/50"
           />
           <input
             value={toText}
             onChange={(e) => setToText(e.target.value)}
-            placeholder="変換後"
+            placeholder={loc.panelAfterConversion}
             required
             className="min-w-0 flex-1 rounded-md border border-[#3f4147] bg-[#1e1f22] px-3 py-1.5 text-sm text-[#dbdee1] placeholder:text-[#80848e] focus:outline-none focus:ring-1 focus:ring-[#5865f2]/50"
           />
           <Button size="sm" type="submit" disabled={submitting || !fromText || !toText}>
             <Plus className="h-3.5 w-3.5" />
-            登録
+            {loc.ttsRegister}
           </Button>
         </div>
         {error && <p className="text-xs text-[#f23f42]">{error}</p>}
@@ -239,24 +270,34 @@ function PersonalDictionarySection({ guildId }: { guildId: string }) {
 
 export function TtsUserSettingsAction({ guildId }: { guildId: string }) {
   const [open, setOpen] = useState(false);
+  const [uiLang, setUiLang] = useState<GuildLanguage>("en");
+
+  useEffect(() => {
+    const stored = localStorage.getItem(UI_LANG_KEY);
+    if (stored !== null && isGuildLanguage(stored)) setUiLang(stored);
+    else setUiLang(detectBrowserLanguage());
+  }, []);
+
+  const loc = getDashboardLocale(uiLang);
+
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
         className="flex items-center gap-1.5 rounded-md bg-[#383a40] px-3 py-1.5 text-xs font-medium text-[#dbdee1] hover:bg-[#404349] hover:text-[#f2f3f5] transition-colors"
-        aria-label="個人TTS設定"
+        aria-label={loc.ttsPersonalSettingsTitle}
       >
         <User className="h-3.5 w-3.5" />
-        個人設定
+        {loc.ttsPersonalSettingsButton}
       </button>
       {open && (
         <SettingsModal onClose={() => setOpen(false)}>
           <div className="grid gap-5">
-            <p className="text-sm font-semibold text-[#f2f3f5]">個人TTS設定</p>
-            <PersonalSpeakerSection guildId={guildId} />
+            <p className="text-sm font-semibold text-[#f2f3f5]">{loc.ttsPersonalSettingsTitle}</p>
+            <PersonalSpeakerSection guildId={guildId} loc={loc} />
             <div className="border-t border-[#1e1f22]" />
-            <PersonalDictionarySection guildId={guildId} />
+            <PersonalDictionarySection guildId={guildId} loc={loc} />
           </div>
         </SettingsModal>
       )}

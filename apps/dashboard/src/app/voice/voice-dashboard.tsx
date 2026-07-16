@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { isGuildLanguage } from "@discord-bot/shared";
 import type { GuildLanguage } from "@discord-bot/shared";
 import { Crown, Mic2, Timer, Users } from "lucide-react";
 import { UserMention } from "../../components/user-mention";
@@ -14,6 +15,8 @@ import {
 } from "recharts";
 
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
+
+const UI_LANG_KEY = "dashboard-ui-lang";
 import { LoadingSpinner } from "../../components/loading-spinner";
 
 const CLOCK_REFRESH_MS = 1_000;
@@ -70,7 +73,9 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
   useVoiceRealtime(guildId, stableReload);
 
   useEffect(() => {
-    setUiLang(detectBrowserLanguage());
+    const stored = localStorage.getItem(UI_LANG_KEY);
+    if (stored !== null && isGuildLanguage(stored)) setUiLang(stored);
+    else setUiLang(detectBrowserLanguage());
   }, []);
 
   useEffect(() => {
@@ -85,7 +90,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
 
   const peakData = useMemo(() => {
     const bins = Array.from({ length: 24 }, (_, h) => ({
-      hour: `${h}時`,
+      hour: loc.voiceHourLabel({ h }),
       count: 0,
     }));
     (data?.recentSessions ?? []).forEach((s) => {
@@ -98,7 +103,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
   if (loading) return <LoadingSpinner />;
 
   if (!data) {
-    return <ErrorAlert message={error ?? loc.voiceFailedToLoad} onRetry={reload} />;
+    return <ErrorAlert message={error ?? loc.voiceFailedToLoad} onRetry={reload} retryLabel={loc.retry} />;
   }
 
   return (
@@ -143,7 +148,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
           <h2 className="text-sm font-semibold text-[#b5bac1]">
             {loc.voiceActiveCalls}
           </h2>
-          <span className="relative flex h-2 w-2" title="リアルタイム更新">
+          <span className="relative flex h-2 w-2" title={loc.voiceRealtimeUpdate}>
             <span className="absolute inline-flex h-full w-full animate-ping rounded-[50%] bg-indigo-400 opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-[50%] bg-[#5865f2]" />
           </span>
@@ -176,7 +181,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
                   <div className="mt-2 flex items-center gap-4 text-xs text-[#b5bac1]">
                     <span className="flex items-center gap-1">
                       <Users className="h-3 w-3" />
-                      {s.memberCount}人
+                      {s.memberCount}{loc.personUnit}
                     </span>
                     <span className="flex items-center gap-1">
                       <Timer className="h-3 w-3" />
@@ -214,7 +219,7 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
                 </div>
                 {vc.deleteScheduledAt && (
                   <p className="mt-1 text-xs text-amber-500/70">
-                    {renderDeleteScheduled(new Date(vc.deleteScheduledAt), now)}
+                    {renderDeleteScheduled(new Date(vc.deleteScheduledAt), now, loc)}
                   </p>
                 )}
               </div>
@@ -223,10 +228,10 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
         </section>
       )}
 
-      {/* ピーク時間チャート */}
+      {/* Peak hours chart */}
       <section>
         <h2 className="mb-3 text-sm font-semibold text-[#b5bac1]">
-          ピーク時間帯
+          {loc.voicePeakHours}
         </h2>
         <div className="rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4">
           <ResponsiveContainer width="100%" height={120}>
@@ -260,12 +265,12 @@ export function VoiceDashboard({ guildId }: { guildId: string }) {
   );
 }
 
-function renderDeleteScheduled(deleteAt: Date, now: Date): string {
+function renderDeleteScheduled(deleteAt: Date, now: Date, loc: ReturnType<typeof getDashboardLocale>): string {
   const diffSeconds = Math.floor((deleteAt.getTime() - now.getTime()) / 1000);
   if (diffSeconds > 0) {
-    return `あと${diffSeconds}秒で削除`;
+    return loc.voiceDeletionIn({ seconds: diffSeconds });
   }
-  return "削除保留中";
+  return loc.voiceDeletionPending;
 }
 
 function formatDuration(totalSeconds: number) {

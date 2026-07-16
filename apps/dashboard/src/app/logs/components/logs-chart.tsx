@@ -12,6 +12,7 @@ import {
 
 import { getEventColor } from "../../../lib/event-display";
 import type { LogItem } from "../hooks/use-logs-data";
+import type { getDashboardLocale } from "../../../lib/locale";
 
 const CHART_COLORS: Record<string, string> = {
   blue: "var(--chart-blue)",
@@ -38,18 +39,18 @@ const COLOR_LABELS: Record<string, string> = {
 const MS_PER_HOUR = 3_600_000;
 const PEAK_HOURS = 24;
 
-export function LogsChart({ logs }: { logs: LogItem[] }) {
+export function LogsChart({ logs, loc }: { logs: LogItem[]; loc: ReturnType<typeof getDashboardLocale> }) {
   const chartData = useMemo(() => {
     const now = Date.now();
     const bins: Record<string, Record<string, number>> = {};
     for (let h = PEAK_HOURS - 1; h >= 0; h--) {
-      const label = `${new Date(now - h * MS_PER_HOUR).getHours()}時`;
+      const label = loc.logsHourLabel({ h: new Date(now - h * MS_PER_HOUR).getHours() });
       bins[label] = {};
     }
     logs.forEach((log) => {
       const d = new Date(log.receivedAt);
       if (now - d.getTime() > PEAK_HOURS * MS_PER_HOUR) return;
-      const label = `${d.getHours()}時`;
+      const label = loc.logsHourLabel({ h: d.getHours() });
       const colorKey = getEventColor(log.eventName);
       bins[label] = bins[label] ?? {};
       bins[label][colorKey] = (bins[label][colorKey] ?? 0) + 1;
@@ -60,7 +61,7 @@ export function LogsChart({ logs }: { logs: LogItem[] }) {
   return (
     <div className="rounded-xl border border-[#1e1f22] bg-[#2b2d31] shadow-sm p-4">
       <p className="mb-3 text-xs font-medium text-[#b5bac1]">
-        直近24時間のイベント頻度
+        {loc.logsEventFrequency}
       </p>
       <ResponsiveContainer width="100%" height={80}>
         <BarChart

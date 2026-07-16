@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -9,6 +9,10 @@ import { useBeforeUnload } from "../../hooks/use-before-unload";
 import { detectBrowserLanguage, getDashboardLocale } from "../../lib/locale";
 import { VoiceSettingsTab } from "../settings/components/VoiceSettingsTab";
 import { SettingsModal } from "../../components/settings-modal";
+import type { GuildLanguage } from "@discord-bot/shared";
+import { isGuildLanguage } from "@discord-bot/shared";
+
+const UI_LANG_KEY = "dashboard-ui-lang";
 
 function VoiceSettingsCard({ guildId }: { guildId: string }) {
   const [settingsData, setSettingsData] = useState<SettingsResponse | null>(null);
@@ -17,8 +21,15 @@ function VoiceSettingsCard({ guildId }: { guildId: string }) {
   const [createChannelId, setCreateChannelId] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [saved, setSaved] = useState({ createChannelId: "", categoryId: "" });
+  const [uiLang, setUiLang] = useState<GuildLanguage>("en");
 
-  const loc = getDashboardLocale(detectBrowserLanguage());
+  useEffect(() => {
+    const stored = localStorage.getItem(UI_LANG_KEY);
+    if (stored !== null && isGuildLanguage(stored)) setUiLang(stored);
+    else setUiLang(detectBrowserLanguage());
+  }, []);
+
+  const loc = getDashboardLocale(uiLang);
   useBeforeUnload(
     !loading && (createChannelId !== saved.createChannelId || categoryId !== saved.categoryId)
   );
@@ -53,7 +64,7 @@ function VoiceSettingsCard({ guildId }: { guildId: string }) {
     try {
       await updateTempVcSettings(guildId, createChannelId, categoryId);
       setSaved({ createChannelId, categoryId });
-      toast.success("Voice設定を保存しました。");
+      toast.success(loc.settingsSaved);
     } catch (e) {
       toast.error(toSettingsError(e));
     } finally {
@@ -72,7 +83,7 @@ function VoiceSettingsCard({ guildId }: { guildId: string }) {
           className="flex items-center gap-1.5 rounded-md bg-[#383a40] px-3 py-1.5 text-xs text-[#dbdee1] hover:bg-[#404249] disabled:opacity-40"
         >
           <Save className="h-3 w-3" />
-          {saving ? loc.saving : "保存"}
+          {saving ? loc.saving : loc.saveChanges}
         </button>
       </div>
       <VoiceSettingsTab
@@ -89,15 +100,26 @@ function VoiceSettingsCard({ guildId }: { guildId: string }) {
 
 export function VoiceSettingsAction({ guildId }: { guildId: string }) {
   const [open, setOpen] = useState(false);
+  const [uiLang, setUiLang] = useState<GuildLanguage>("en");
+
+  useEffect(() => {
+    const stored = localStorage.getItem(UI_LANG_KEY);
+    if (stored !== null && isGuildLanguage(stored)) setUiLang(stored);
+    else setUiLang(detectBrowserLanguage());
+  }, []);
+
+  const loc = getDashboardLocale(uiLang);
+
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
         className="flex items-center gap-1.5 rounded-md border border-[#3f4147] px-2.5 py-1.5 text-xs text-[#b5bac1] hover:border-[#3f4147] hover:text-[#dbdee1]"
-        aria-label="Voice設定"
+        aria-label={loc.serverSettings}
       >
         <Settings className="h-3.5 w-3.5" />
+        {loc.serverSettings}
       </button>
       {open && (
         <SettingsModal onClose={() => setOpen(false)}>

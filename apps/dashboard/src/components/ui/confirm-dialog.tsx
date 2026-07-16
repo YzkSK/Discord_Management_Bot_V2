@@ -14,8 +14,8 @@ interface ConfirmDialogProps {
 export function ConfirmDialog({
   title,
   description,
-  confirmLabel = "削除",
-  cancelLabel = "キャンセル",
+  confirmLabel = "Delete",
+  cancelLabel = "Cancel",
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
